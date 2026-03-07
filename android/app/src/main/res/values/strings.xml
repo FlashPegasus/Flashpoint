@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FlashPoint</string>
+    <string name="title_activity_main">FlashPoint</string>
+    <string name="package_name">com.flashpoint.app</string>
+    <string name="custom_url_scheme">com.flashpoint.app</string>
+</resources>
