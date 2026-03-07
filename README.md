@@ -1,3 +1,12 @@
+# ⚡ FlashPoint - Gerenciador de Torneios
+
+> [!TIP]
+> **Acesso Rápido:**
+> - 📜 [**Histórico de Alterações**](./HISTORICO.md) - Onde paramos e o que foi feito.
+> - 🛠️ [**Guia do Projeto**](./GUIA_PROJETO.md) - Regras, comandos e segurança.
+
+---
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
