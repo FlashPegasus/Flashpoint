@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Calendar, Users as UsersIcon, Trophy } from 'lucide-react';
 import PageShell from '../components/layout';
@@ -65,7 +65,7 @@ const Discover: React.FC = () => {
                                     <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${t.format === 'multiplayer' ? 'bg-purple/10 text-purple' : 'bg-blue/10 text-blue'}`} style={{ color: t.format === 'multiplayer' ? 'var(--color-purple)' : 'var(--color-blue)' }}>
                                         {t.format === 'multiplayer' ? 'Multijogador' : '1 vs 1'}
                                     </div>
-                                    <span className="text-xs text-muted">{t.status === 'registration' ? 'InscriÃ§Ãµes Abertas' : t.status}</span>
+                                    <span className="text-xs text-muted">{t.status === 'registration' ? 'Inscrições Abertas' : t.status === 'ongoing' ? 'Em Andamento' : 'Concluído'}</span>
                                 </div>
                                 <h3 className="text-xl font-bold mb-2 group-hover:text-purple transition-colors">{t.name}</h3>
                                 <div className="flex flex-col gap-2 text-sm text-secondary mb-6">

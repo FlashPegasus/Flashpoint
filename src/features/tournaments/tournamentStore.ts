@@ -29,8 +29,13 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
     },
 
     loadTournament: async (id: string) => {
-        const tournament = await tournamentService.getTournamentById(id);
-        set({ activeTournament: tournament || null });
+        set({ isLoading: true });
+        try {
+            const tournament = await tournamentService.getTournamentById(id);
+            set({ activeTournament: tournament || null, isLoading: false });
+        } catch (err) {
+            set({ isLoading: false });
+        }
     },
 
     createTournament: async (data) => {

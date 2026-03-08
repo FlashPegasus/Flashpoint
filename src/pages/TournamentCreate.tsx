@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, Save, HelpCircle } from 'lucide-react';
 import PageShell from '../components/layout';
@@ -17,8 +17,8 @@ const TournamentCreate: React.FC = () => {
         return (
             <PageShell>
                 <div className="container section text-center pt-20">
-                    <h2 className="text-2xl font-bold mb-4">Contas de Convidado nÃ£o podem criar torneios</h2>
-                    <p className="text-secondary mb-8">Para organizar eventos e evitar span, vocÃª precisa vincular um e-mail ou Google na sua conta.</p>
+                    <h2 className="text-2xl font-bold mb-4">Contas de Convidado não podem criar torneios</h2>
+                    <p className="text-secondary mb-8">Para organizar eventos e evitar span, você precisa vincular um e-mail ou Google na sua conta.</p>
                     <Button onClick={() => navigate('/profile')} variant="glow">Proteger Conta Local</Button>
                 </div>
             </PageShell>
@@ -64,7 +64,7 @@ const TournamentCreate: React.FC = () => {
         <PageShell>
             <div className="container section max-w-3xl">
                 <div className="mb-10 text-center">
-                    <h1 className="text-4xl mb-4">Create Tournament</h1>
+                    <h1 className="text-4xl mb-4">Criar Torneio</h1>
                     <div className="flex justify-center gap-2">
                         {[1, 2, 3].map(i => (
                             <div
@@ -77,52 +77,52 @@ const TournamentCreate: React.FC = () => {
                 </div>
 
                 {step === 1 && (
-                    <Card title="Basic Information" className="animate-fade-in">
+                    <Card title="Informações Básicas" className="animate-fade-in">
                         <div className="flex flex-col gap-6">
                             <Input
-                                label="Tournament Name"
-                                placeholder="e.g. Commander Night #42"
+                                label="Nome do Torneio"
+                                placeholder="ex: Commander Night #42"
                                 value={formData.name}
                                 onChange={e => setFormData({ ...formData, name: e.target.value })}
                             />
                             <div className="grid grid-cols-2 gap-4">
                                 <Input
-                                    label="Date"
+                                    label="Data"
                                     type="date"
                                     value={formData.date}
                                     onChange={e => setFormData({ ...formData, date: e.target.value })}
                                 />
                                 <Input
-                                    label="Location"
-                                    placeholder="Store or Online"
+                                    label="Local"
+                                    placeholder="Loja ou Online"
                                     value={formData.location}
                                     onChange={e => setFormData({ ...formData, location: e.target.value })}
                                 />
                             </div>
                             <div className="flex flex-col gap-2">
-                                <label className="text-sm font-bold text-primary ml-1 uppercase tracking-wider text-[10px]">Description</label>
+                                <label className="text-sm font-bold text-primary ml-1 uppercase tracking-wider text-[10px]">Descrição</label>
                                 <textarea
                                     className="w-full glass p-3 focus:outline-none min-h-[100px] border-white/5 bg-white/5 text-primary placeholder:text-muted"
-                                    placeholder="Share details about entry fees, prizes, and rules..."
+                                    placeholder="Compartilhe detalhes sobre taxas de inscrição, prêmios e regras..."
                                     value={formData.description}
                                     onChange={e => setFormData({ ...formData, description: e.target.value })}
                                 />
                             </div>
                             <Button onClick={nextStep} className="self-end" disabled={!formData.name}>
-                                Next <ChevronRight size={18} className="ml-1" />
+                                Próximo <ChevronRight size={18} className="ml-1" />
                             </Button>
                         </div>
                     </Card>
                 )}
 
                 {step === 2 && (
-                    <Card title="Format & Scoring" className="animate-fade-in">
+                    <Card title="Formato & Pontuação" className="animate-fade-in">
                         <div className="flex flex-col gap-6">
                             <Select
-                                label="Match Format"
+                                label="Formato da Partida"
                                 options={[
-                                    { value: '1v1', label: '1v1 (Standard)' },
-                                    { value: 'multiplayer', label: 'Multiplayer (Commander/Casual)' }
+                                    { value: '1v1', label: '1v1 (Padrão)' },
+                                    { value: 'multiplayer', label: 'Multijogador (Commander/Casual)' }
                                 ]}
                                 value={formData.format}
                                 onChange={e => setFormData({ ...formData, format: e.target.value as TournamentFormat })}
@@ -130,10 +130,10 @@ const TournamentCreate: React.FC = () => {
 
                             {formData.format === '1v1' && (
                                 <Select
-                                    label="Pairing Mode"
+                                    label="Modo de Pareamento"
                                     options={[
-                                        { value: 'standard', label: 'Standard Swiss (Minimize Score Gap)' },
-                                        { value: 'fair', label: 'Fair Swiss (Minimize Repetitions)' }
+                                        { value: 'standard', label: 'Suíço Padrão (Foco em Pontuação)' },
+                                        { value: 'fair', label: 'Suíço Justo (Foco em Não Repetir Mesas)' }
                                     ]}
                                     value={formData.pairingMode}
                                     onChange={e => setFormData({ ...formData, pairingMode: e.target.value as 'standard' | 'fair' })}
@@ -144,18 +144,18 @@ const TournamentCreate: React.FC = () => {
                                 <Select
                                     label="Tempo Limitado (Rodadas)?"
                                     options={[
-                                        { value: 'true', label: 'Sim (Com CronÃ´metro)' },
-                                        { value: 'false', label: 'NÃ£o (Tempo Livre)' }
+                                        { value: 'true', label: 'Sim (Com Cronômetro)' },
+                                        { value: 'false', label: 'Não (Tempo Livre)' }
                                     ]}
                                     value={formData.hasTimer.toString()}
                                     onChange={e => setFormData({ ...formData, hasTimer: e.target.value === 'true' })}
                                 />
                                 {formData.format === 'multiplayer' && (
                                     <Select
-                                        label="Permitir Byes (VitÃ³ria AutomÃ¡tica)?"
+                                        label="Permitir Byes (Vitória Automática)?"
                                         options={[
                                             { value: 'true', label: 'Sim (Recomendado)' },
-                                            { value: 'false', label: 'NÃ£o (Redistribuir Mesas)' }
+                                            { value: 'false', label: 'Não (Redistribuir Mesas)' }
                                         ]}
                                         value={formData.allowByes.toString()}
                                         onChange={e => setFormData({ ...formData, allowByes: e.target.value === 'true' })}
@@ -166,7 +166,7 @@ const TournamentCreate: React.FC = () => {
                             {formData.format === 'multiplayer' && (
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="flex flex-col gap-2">
-                                        <label className="text-[10px] font-bold text-primary ml-1 uppercase tracking-wider">MÃ­n. Jogadores por Mesa</label>
+                                        <label className="text-[10px] font-bold text-primary ml-1 uppercase tracking-wider">Mín. Jogadores por Mesa</label>
                                         <div className="flex items-center justify-between glass p-2 rounded-xl border border-white/5">
                                             <button type="button"
                                                 className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-lg transition-colors"
@@ -180,7 +180,7 @@ const TournamentCreate: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="flex flex-col gap-2">
-                                        <label className="text-[10px] font-bold text-primary ml-1 uppercase tracking-wider">MÃ¡x. Jogadores por Mesa</label>
+                                        <label className="text-[10px] font-bold text-primary ml-1 uppercase tracking-wider">Máx. Jogadores por Mesa</label>
                                         <div className="flex items-center justify-between glass p-2 rounded-xl border border-white/5">
                                             <button type="button"
                                                 className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-lg transition-colors"
@@ -199,18 +199,18 @@ const TournamentCreate: React.FC = () => {
                             <div className="p-4 glass rounded-xl border-purple/30" style={{ borderLeft: '4px solid var(--color-purple)' }}>
                                 <div className="flex items-center gap-2 mb-2">
                                     <HelpCircle size={16} className="text-purple" style={{ color: 'var(--color-purple)' }} />
-                                    <span className="font-bold text-sm uppercase">Automatic Scoring</span>
+                                    <span className="font-bold text-sm uppercase">Pontuação Automática</span>
                                 </div>
                                 <p className="text-xs text-secondary mb-2">
                                     {formData.format === '1v1'
-                                        ? 'Standard Swiss: 3 points per win, 1 per draw, 0 per loss.'
-                                        : 'Position-based: Points are awarded based on table finishing order.'}
+                                        ? 'Suíço Padrão: 3 pts vitória, 1 pt empate, 0 pt derrota.'
+                                        : 'Posicional: Os pontos são dados de acordo com a colocação final na mesa.'}
                                 </p>
                                 {formData.format === 'multiplayer' && (
                                     <div className="flex flex-wrap gap-2 mt-3">
                                         {[1, 2, 3, 4].map(pos => (
                                             <div key={pos} className="px-3 py-1 glass rounded-lg text-[10px] font-bold">
-                                                {pos}Âº: {formData.scoring.positions?.[4]?.[pos] || 0} pts
+                                                {pos}º: {formData.scoring.positions?.[4]?.[pos] || 0} pts
                                             </div>
                                         ))}
                                     </div>
@@ -219,10 +219,10 @@ const TournamentCreate: React.FC = () => {
 
                             <div className="flex justify-between">
                                 <Button variant="ghost" onClick={prevStep}>
-                                    <ChevronLeft size={18} className="mr-1" /> Back
+                                    <ChevronLeft size={18} className="mr-1" /> Voltar
                                 </Button>
                                 <Button onClick={nextStep}>
-                                    Next <ChevronRight size={18} className="ml-1" />
+                                    Próximo <ChevronRight size={18} className="ml-1" />
                                 </Button>
                             </div>
                         </div>
@@ -230,13 +230,13 @@ const TournamentCreate: React.FC = () => {
                 )}
 
                 {step === 3 && (
-                    <Card title="Review & Launch" className="animate-fade-in">
+                    <Card title="Revisar & Criar" className="animate-fade-in">
                         <div className="flex flex-col gap-6">
                             <div className="glass p-6 rounded-2xl">
                                 <div className="flex justify-between items-start mb-4">
                                     <div>
                                         <h3 className="text-2xl">{formData.name}</h3>
-                                        <p className="text-secondary">{formData.date} â€¢ {formData.location}</p>
+                                        <p className="text-secondary">{formData.date} ⬢ {formData.location}</p>
                                     </div>
                                     <div className="px-3 py-1 glass rounded-full text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--color-purple)' }}>
                                         {formData.format}
@@ -244,22 +244,22 @@ const TournamentCreate: React.FC = () => {
                                 </div>
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div className="flex flex-col gap-1">
-                                        <span className="text-muted">Table Size</span>
-                                        <span>{formData.format === '1v1' ? '2 players' : `${formData.minPlayersPerTable}-${formData.maxPlayersPerTable} players`}</span>
+                                        <span className="text-muted">Tamanho da Mesa</span>
+                                        <span>{formData.format === '1v1' ? '2 jogadores' : `${formData.minPlayersPerTable}-${formData.maxPlayersPerTable} jogadores`}</span>
                                     </div>
                                     <div className="flex flex-col gap-1">
-                                        <span className="text-muted">Late Registration</span>
-                                        <span>{formData.allowLateRegistration ? 'Enabled' : 'Disabled'}</span>
+                                        <span className="text-muted">Inscrição Tardia</span>
+                                        <span>{formData.allowLateRegistration ? 'Permitida' : 'Proibida'}</span>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="flex justify-between">
                                 <Button variant="ghost" onClick={prevStep}>
-                                    <ChevronLeft size={18} className="mr-1" /> Back
+                                    <ChevronLeft size={18} className="mr-1" /> Voltar
                                 </Button>
                                 <Button onClick={handleCreate} variant="glow" className="px-10">
-                                    <Save size={18} className="mr-2" /> Launch Tournament
+                                    <Save size={18} className="mr-2" /> Criar Torneio
                                 </Button>
                             </div>
                         </div>

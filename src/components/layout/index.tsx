@@ -31,7 +31,7 @@ export const Navbar: React.FC = () => {
                         <Trophy size={20} color="white" />
                     </div>
                     <span className="text-xl font-bold font-outfit tracking-tight">FlashPoint</span>
-                    <span className="text-sm" title="PortuguÃªs - Brasil">ðŸ‡§ðŸ‡·</span>
+                    <span className="text-sm" title="Português - Brasil">🇧🇷</span>
                 </Link>
 
                 {/* Desktop Menu */}
@@ -45,7 +45,7 @@ export const Navbar: React.FC = () => {
                         </Link>
                         {user && (
                             <Link to="/my-area" className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
-                                <LayoutDashboard size={14} /><span>Minha Ãrea</span>
+                                <LayoutDashboard size={14} /><span>Minha Área</span>
                             </Link>
                         )}
                     </div>
@@ -67,7 +67,7 @@ export const Navbar: React.FC = () => {
                                         }
                                     </div>
                                     <span className="text-[10px] font-bold uppercase tracking-wider">
-                                        {isGuest ? 'ðŸ‘¤ Convidado' : user.name}
+                                        {isGuest ? '🧑‍🤝‍🧑 Convidado' : user.name}
                                     </span>
                                 </Link>
                                 <button onClick={handleLogout} className="text-muted hover:text-red transition-colors">
@@ -94,7 +94,7 @@ export const Navbar: React.FC = () => {
                     <div className="flex flex-col gap-6">
                         <Link to="/discover" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-wider">Descobrir</Link>
                         <Link to="/leagues" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-wider">Ligas</Link>
-                        {user && <Link to="/my-area" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-wider">Minha Ãrea</Link>}
+                        {user && <Link to="/my-area" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-wider">Minha Área</Link>}
                         <div className="h-px bg-white/10"></div>
                         <Link to="/en" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
                             <img src="https://flagcdn.com/w40/gb.png" alt="English" className="h-4 rounded-sm" />
@@ -115,9 +115,9 @@ export const Navbar: React.FC = () => {
     );
 };
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——————————————————————————————————————————————————————————————————————————
 // BottomNav
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——————————————————————————————————————————————————————————————————————————
 export const BottomNav: React.FC = () => {
     const { user } = useAuthStore();
     if (!user) return null;
@@ -128,7 +128,7 @@ export const BottomNav: React.FC = () => {
                 {[
                     { to: '/discover', icon: <Search size={20} />, label: 'Explorar' },
                     { to: '/leagues', icon: <Trophy size={20} />, label: 'Ligas' },
-                    { to: '/my-area', icon: <LayoutDashboard size={20} />, label: 'Ãrea' },
+                    { to: '/my-area', icon: <LayoutDashboard size={20} />, label: 'Área' },
                     { to: '/profile', icon: <User size={20} />, label: 'Perfil' },
                 ].map(({ to, icon, label }) => (
                     <NavLink
@@ -165,11 +165,11 @@ const PageShell: React.FC<PageShellProps> = ({ children }) => {
             </main>
             <footer className="py-16 mt-auto border-t border-white/5 bg-white/[0.02]">
                 <div className="container text-center text-muted">
-                    <p>Â© {new Date().getFullYear()} FlashPoint - Gerenciador de Torneios TCG</p>
+                    <p>© {new Date().getFullYear()} FlashPoint - Gerenciador de Torneios TCG</p>
                     <p className="text-sm mt-1">Feito para a comunidade de TCG.</p>
                     <p className="text-xs mt-3">
                         <a href="/privacidade" className="hover:text-accent transition-colors underline underline-offset-2">
-                            PolÃ­tica de Privacidade
+                            Política de Privacidade
                         </a>
                     </p>
                 </div>

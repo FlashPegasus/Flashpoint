@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, UserCircle, Eye, EyeOff, UserPlus, LogIn } from 'lucide-react';
 import { useAuthStore } from '../features/auth/authStore';
@@ -17,8 +17,14 @@ const Login: React.FC = () => {
     const [googleUser, setGoogleUser] = React.useState<{ uid: string; suggestedName: string; avatar: string } | null>(null);
     const [googleUsername, setGoogleUsername] = React.useState('');
 
-    const { login, register, loginWithGoogle, loginAnonymously, updateProfile, isLoading, error } = useAuthStore();
+    const { login, register, loginWithGoogle, loginAnonymously, updateProfile, isLoading, error, user } = useAuthStore();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (user) {
+            navigate('/my-area');
+        }
+    }, [user, navigate]);
 
     const handleEmailSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -26,15 +32,15 @@ const Login: React.FC = () => {
 
         if (mode === 'register') {
             if (password !== confirmPassword) {
-                setValidationError('As senhas nÃ£o coincidem.');
+                setValidationError('As senhas não coincidem.');
                 return;
             }
             if (password.length < 6) {
-                setValidationError('A senha deve ter no mÃ­nimo 6 caracteres.');
+                setValidationError('A senha deve ter no mínimo 6 caracteres.');
                 return;
             }
             if (!name.trim()) {
-                setValidationError('Digite um nome de usuÃ¡rio.');
+                setValidationError('Digite um nome de usuário.');
                 return;
             }
             await register(email, password, name);
@@ -61,7 +67,7 @@ const Login: React.FC = () => {
 
     const handleGoogleUsernameConfirm = async (e: React.FormEvent) => {
         e.preventDefault();
-        const finalName = googleUsername.trim() || googleUser?.suggestedName || 'UsuÃ¡rio';
+        const finalName = googleUsername.trim() || googleUser?.suggestedName || 'Usuário';
         await updateProfile({ name: finalName });
         navigate('/my-area');
     };
@@ -89,14 +95,14 @@ const Login: React.FC = () => {
                         </div>
                         <h2 className="text-2xl font-bold mb-1">Bem-vindo!</h2>
                         <p className="text-secondary text-sm mb-6">
-                            VocÃª entrou com Google. Como quer ser chamado nos torneios?
+                            Você entrou com Google. Como quer ser chamado nos torneios?
                         </p>
                         <form onSubmit={handleGoogleUsernameConfirm} className="flex flex-col gap-4">
                             <input
                                 type="text"
                                 value={googleUsername}
                                 onChange={e => setGoogleUsername(e.target.value)}
-                                placeholder="Seu nome de usuÃ¡rio no torneio"
+                                placeholder="Seu nome de usuário no torneio"
                                 maxLength={30}
                                 className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-accent"
                             />
@@ -106,7 +112,7 @@ const Login: React.FC = () => {
                                 className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                                 style={{ backgroundColor: 'var(--color-purple)', color: 'white', opacity: isLoading ? 0.7 : 1 }}
                             >
-                                {isLoading ? 'Aguarde...' : 'Confirmar e Entrar â†’'}
+                                {isLoading ? 'Aguarde...' : 'Confirmar e Entrar � '}
                             </button>
                         </form>
                     </div>
@@ -147,7 +153,7 @@ const Login: React.FC = () => {
                             {mode === 'register' && (
                                 <div className="relative">
                                     <Input
-                                        label="Nome de usuÃ¡rio"
+                                        label="Nome de usuário"
                                         type="text"
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
@@ -176,7 +182,7 @@ const Login: React.FC = () => {
                                     type={showPassword ? 'text' : 'password'}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                                    placeholder="⬢⬢⬢⬢⬢⬢⬢⬢"
                                     required
                                 />
                                 <button
@@ -195,7 +201,7 @@ const Login: React.FC = () => {
                                         type={showPassword ? 'text' : 'password'}
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
-                                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                                        placeholder="⬢⬢⬢⬢⬢⬢⬢⬢"
                                         required
                                     />
                                     <Lock className="absolute right-4 bottom-3 text-muted" size={18} />
@@ -248,7 +254,7 @@ const Login: React.FC = () => {
                         </div>
 
                         <p className="text-[10px] text-muted text-center mt-6 px-4 leading-relaxed">
-                            Ao continuar, vocÃª concorda com nossos termos. Contas de Convidado sÃ£o temporÃ¡rias e os dados podem ser perdidos se o cache do navegador for limpo.
+                            Ao continuar, você concorda com nossos termos. Contas de Convidado são temporárias e os dados podem ser perdidos se o cache do navegador for limpo.
                         </p>
                     </div>
                 </div>

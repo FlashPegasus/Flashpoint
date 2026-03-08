@@ -1,9 +1,9 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Play, CheckCircle2, Trophy, Plus, UserMinus, ChevronRight, Edit3, Copy, Check, Clock, RefreshCw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import PageShell from '../components/layout';
-import { Button, Card, Input, Modal } from '../components/ui';
+import { Button, Card, Input, Modal, LoadingScreen } from '../components/ui';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { useAuthStore } from '../features/auth/authStore';
 import { tournamentService } from '../features/tournaments/tournamentService';
@@ -15,7 +15,7 @@ const TournamentDashboard: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { user } = useAuthStore();
-    const { activeTournament, loadTournament, addParticipant, generateRound, regenerateRound, submitResult, withdrawParticipant, completeTournament } = useTournamentStore();
+    const { activeTournament, loadTournament, isLoading, addParticipant, generateRound, regenerateRound, submitResult, withdrawParticipant, completeTournament } = useTournamentStore();
     const [activeTab, setActiveTab] = useState<'participants' | 'rounds' | 'standings' | 'settings'>('participants');
     const [newPlayerName, setNewPlayerName] = useState('');
     const [linkCopied, setLinkCopied] = useState(false);
@@ -62,7 +62,7 @@ const TournamentDashboard: React.FC = () => {
 
             // Toast notifications for time
             if (minutes === 5 && seconds === 0) {
-                toast('Faltam 5 minutos para o fim do round!', { icon: 'â°', duration: 5000 });
+                toast('Faltam 5 minutos para o fim do round!', { icon: '⏰', duration: 5000 });
             }
 
             setTimeLeft(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
@@ -85,15 +85,21 @@ const TournamentDashboard: React.FC = () => {
         }
     };
 
-    if (!activeTournament) return <PageShell><div className="container section">Torneio nÃ£o encontrado</div></PageShell>;
+    if (isLoading && !activeTournament) return <LoadingScreen message="Carregando torneio..." />;
+
+    if (!activeTournament) return <PageShell><div className="container section">Torneio não encontrado</div></PageShell>;
 
     const isOrganizer = activeTournament.organizerId === user?.id;
 
-    const handleAddPlayer = () => {
+    const handleAddPlayer = async () => {
         if (newPlayerName.trim() && id) {
-            addParticipant(id, { name: newPlayerName.trim() }).catch(() => toast.error('Erro ao adicionar jogador.'));
-            setNewPlayerName('');
-            toast.success('Jogador adicionado!');
+            try {
+                await addParticipant(id, { name: newPlayerName.trim() });
+                setNewPlayerName('');
+                toast.success('Jogador adicionado!');
+            } catch (err: any) {
+                toast.error(err.message || 'Erro ao adicionar jogador.');
+            }
         }
     };
 
@@ -147,7 +153,7 @@ const TournamentDashboard: React.FC = () => {
             <div className="container py-8">
                 <Breadcrumbs
                     items={[
-                        { label: 'Minha Ãrea', path: '/my-area' },
+                        { label: 'Minha Área', path: '/my-area' },
                         { label: activeTournament.name }
                     ]}
                 />
@@ -160,7 +166,7 @@ const TournamentDashboard: React.FC = () => {
                         </div>
                         <h1 className="text-4xl font-outfit">{activeTournament.name}</h1>
                         <div className="flex items-center gap-4 mt-1">
-                            <p className="text-secondary">{activeTournament.date} â€¢ {activeTournament.location}</p>
+                            <p className="text-secondary">{activeTournament.date} ⬢ {activeTournament.location}</p>
                             {timeLeft && (
                                 <div className="flex items-center gap-2 px-3 py-1 glass rounded-full border-purple/30 text-purple font-mono font-bold animate-pulse">
                                     <Clock size={14} />
@@ -172,7 +178,7 @@ const TournamentDashboard: React.FC = () => {
                     <div className="flex gap-2">
                         {isOrganizer && activeTournament.status === 'registration' && (
                             <Button variant="glow" onClick={() => id && generateRound(id)}>
-                                <Play size={18} className="mr-2" /> Iniciar 1Âª Rodada
+                                <Play size={18} className="mr-2" /> Iniciar 1ª Rodada
                             </Button>
                         )}
                         {isOrganizer && activeTournament.status === 'ongoing' && activeTournament.rounds.every(r => r.status === 'completed') && (
@@ -182,7 +188,7 @@ const TournamentDashboard: React.FC = () => {
                         )}
                         {isOrganizer && activeTournament.status === 'ongoing' && !activeTournament.currentRoundEndTime && (
                             <Button variant="secondary" onClick={async () => {
-                                const duration = prompt('DuraÃ§Ã£o do round em minutos:', '50');
+                                const duration = prompt('Duração do round em minutos:', '50');
                                 if (duration && id) {
                                     const t = await tournamentService.getTournamentById(id);
                                     if (t) {
@@ -197,7 +203,7 @@ const TournamentDashboard: React.FC = () => {
                                 <Clock size={18} className="mr-2" /> Iniciar Timer
                             </Button>
                         )}
-                        <Button variant="secondary" onClick={() => navigate(`/tournament/${id}/public`)}>PÃ¡gina PÃºblica</Button>
+                        <Button variant="secondary" onClick={() => navigate(`/tournament/${id}/public`)}>Página Pública</Button>
                     </div>
                 </div>
 
@@ -206,8 +212,8 @@ const TournamentDashboard: React.FC = () => {
                     {[
                         { id: 'participants', label: 'Participantes' },
                         { id: 'rounds', label: 'Rodadas' },
-                        { id: 'standings', label: 'ClassificaÃ§Ã£o' },
-                        { id: 'settings', label: 'ConfiguraÃ§Ãµes' }
+                        { id: 'standings', label: 'Classificação' },
+                        { id: 'settings', label: 'Configurações' }
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -246,7 +252,7 @@ const TournamentDashboard: React.FC = () => {
                                                                 <div className="flex items-center gap-2 mt-0.5">
                                                                     {p.commanderName && (
                                                                         <span className="text-[10px] text-purple font-bold uppercase tracking-tight" style={{ color: 'var(--color-purple)' }}>
-                                                                            ðŸŽ´ {p.commanderName}
+                                                                            ⚔️ {p.commanderName}
                                                                         </span>
                                                                     )}
                                                                     {p.decklistUrl && (
@@ -294,7 +300,7 @@ const TournamentDashboard: React.FC = () => {
                                 )}
 
                                 {isOrganizer && (
-                                    <Card title="ðŸ”— Convite AutomÃ¡tico">
+                                    <Card title="�x Convite Automático">
                                         <div className="flex flex-col items-center gap-6">
                                             <button
                                                 onClick={() => setIsQRModalOpen(true)}
@@ -322,10 +328,10 @@ const TournamentDashboard: React.FC = () => {
                             {activeTournament.rounds.length === 0 ? (
                                 <Card className="text-center py-12">
                                     <Play size={48} className="mx-auto mb-4 text-muted opacity-20" />
-                                    <h3 className="text-xl mb-2">Torneio nÃ£o comeÃ§ou</h3>
-                                    <p className="text-secondary mb-6">Adicione participantes e inicie a primeira rodada para comeÃ§ar.</p>
+                                    <h3 className="text-xl mb-2">Torneio não começou</h3>
+                                    <p className="text-secondary mb-6">Adicione participantes e inicie a primeira rodada para começar.</p>
                                     {isOrganizer && (
-                                        <Button onClick={() => id && generateRound(id)}>Gerar 1Âª Rodada</Button>
+                                        <Button onClick={() => id && generateRound(id)}>Gerar 1ª Rodada</Button>
                                     )}
                                 </Card>
                             ) : (
@@ -335,7 +341,7 @@ const TournamentDashboard: React.FC = () => {
                                             <h3 className="text-2xl font-outfit">Rodada {round.number}</h3>
                                             <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase ${round.status === 'completed' ? 'bg-green/10 text-green' : 'bg-purple/10 text-purple'}`} style={{ color: round.status === 'completed' ? 'var(--color-green)' : 'var(--color-purple)' }}>
                                                 {round.status === 'completed' && <CheckCircle2 size={14} />}
-                                                {round.status === 'completed' ? 'ConcluÃ­da' : 'Pendente'}
+                                                {round.status === 'completed' ? 'Concluída' : 'Pendente'}
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -354,7 +360,7 @@ const TournamentDashboard: React.FC = () => {
                                                                     <span className="text-sm truncate font-medium">{player?.name || 'Desconhecido'}</span>
                                                                     {table.status === 'completed' && (
                                                                         <span className="px-2 py-0.5 glass rounded text-[10px] font-bold text-gold" style={{ color: 'var(--color-gold)' }}>
-                                                                            {res?.position}Âº â€¢ {res?.points} pts
+                                                                            {res?.position}º ⬢ {res?.points} pts
                                                                         </span>
                                                                     )}
                                                                 </div>
@@ -368,7 +374,7 @@ const TournamentDashboard: React.FC = () => {
                                                             className={`mt-4 w-full border border-white/10 hover:border-purple/50 ${table.status === 'completed' ? 'bg-green/5 opacity-70' : 'bg-white/5'}`}
                                                             onClick={() => handleOpenResultModal(round.number, table)}
                                                         >
-                                                            <Edit3 size={14} className="mr-2" /> {table.status === 'completed' ? 'Editar Resultados' : 'LanÃ§ar Resultados'}
+                                                            <Edit3 size={14} className="mr-2" /> {table.status === 'completed' ? 'Editar Resultados' : 'Lançar Resultados'}
                                                         </Button>
                                                     )}
                                                 </Card>
@@ -379,7 +385,7 @@ const TournamentDashboard: React.FC = () => {
                             )}
                             {isOrganizer && activeTournament.rounds.every(r => r.status === 'completed') && activeTournament.rounds.length > 0 && activeTournament.status === 'ongoing' && (
                                 <Button variant="glow" onClick={() => id && generateRound(id)} className="self-center mt-4">
-                                    PrÃ³xima Rodada <ChevronRight size={18} className="ml-2" />
+                                    Próxima Rodada <ChevronRight size={18} className="ml-2" />
                                 </Button>
                             )}
 
@@ -387,12 +393,12 @@ const TournamentDashboard: React.FC = () => {
                                 activeTournament.rounds.length > 0 &&
                                 activeTournament.rounds[activeTournament.rounds.length - 1].status === 'pending' && (
                                     <div className="mt-8 flex flex-col items-center gap-2 border-t border-white/5 pt-8">
-                                        <p className="text-xs text-muted mb-2">Problemas no pareamento? VocÃª pode regerar a rodada atual.</p>
+                                        <p className="text-xs text-muted mb-2">Problemas no pareamento? Você pode regerar a rodada atual.</p>
                                         <Button
                                             variant="ghost"
                                             size="sm"
                                             onClick={() => {
-                                                if (window.confirm("Tem certeza que deseja regerar esta rodada? Todos os resultados nÃ£o salvos serÃ£o perdidos.")) {
+                                                if (window.confirm("Tem certeza que deseja regerar esta rodada? Todos os resultados não salvos serão perdidos.")) {
                                                     id && regenerateRound(id);
                                                 }
                                             }}
@@ -420,22 +426,22 @@ const TournamentDashboard: React.FC = () => {
                                                 </div>
                                                 <div className="text-center">
                                                     <h4 className="text-xl font-outfit">{p.name}</h4>
-                                                    <p className="text-secondary text-sm">{p.totalPoints} Pontos â€¢ {p.buchholz} BH</p>
+                                                    <p className="text-secondary text-sm">{p.totalPoints} Pontos ⬢ {p.buchholz} BH</p>
                                                 </div>
                                                 <div className="px-4 py-1 rounded-full bg-white/5 text-[10px] font-bold uppercase tracking-widest">
-                                                    {pos === 1 ? 'CampeÃ£o' : `${pos}Âº Lugar`}
+                                                    {pos === 1 ? 'Campeão' : `${pos}º Lugar`}
                                                 </div>
                                             </div>
                                         );
                                     })}
                                 </div>
                             )}
-                            <Card title={activeTournament.status === 'completed' ? "ClassificaÃ§Ã£o Final" : "ClassificaÃ§Ã£o Atual"}>
+                            <Card title={activeTournament.status === 'completed' ? "Classificação Final" : "Classificação Atual"}>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left border-collapse">
                                         <thead>
                                             <tr className="text-muted text-xs uppercase font-bold border-b border-white/5">
-                                                <th className="pb-4 px-2">PosiÃ§Ã£o</th>
+                                                <th className="pb-4 px-2">Posição</th>
                                                 <th className="pb-4 px-2">Jogador</th>
                                                 <th className="pb-4 px-2">Pontos</th>
                                                 <th className="pb-4 px-2">BH</th>
@@ -454,7 +460,7 @@ const TournamentDashboard: React.FC = () => {
                                                     <td className="py-4 px-2 text-secondary text-sm">{p.buchholz || 0}</td>
                                                     <td className="py-4 px-2 text-right">
                                                         <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${p.status === 'active' ? 'bg-green/10 text-green' : 'bg-red/10 text-red'}`} style={{ color: p.status === 'active' ? 'var(--color-green)' : 'var(--color-red)' }}>
-                                                            {p.status}
+                                                            {p.status === 'active' ? 'Ativo' : 'Retirado'}
                                                         </span>
                                                     </td>
                                                 </tr>
@@ -468,7 +474,7 @@ const TournamentDashboard: React.FC = () => {
 
                     {activeTab === 'settings' && (
                         <div className="max-w-xl">
-                            <Card title="ConfiguraÃ§Ãµes do Torneio">
+                            <Card title="Configurações do Torneio">
                                 <div className="flex flex-col gap-6">
                                     <p className="text-secondary text-sm">Gerenciamento administrativo do seu evento.</p>
                                     <div className="grid grid-cols-2 gap-4">
@@ -479,7 +485,7 @@ const TournamentDashboard: React.FC = () => {
                                         <div className="p-4 glass rounded-xl">
                                             <span className="text-xs text-muted">Status</span>
                                             <p className="font-bold uppercase text-purple" style={{ color: 'var(--color-purple)' }}>
-                                                {activeTournament.status === 'registration' ? 'Aberto' : activeTournament.status === 'ongoing' ? 'Em Andamento' : 'ConcluÃ­do'}
+                                                {activeTournament.status === 'registration' ? 'Aberto' : activeTournament.status === 'ongoing' ? 'Em Andamento' : 'Concluído'}
                                             </p>
                                         </div>
                                     </div>
@@ -506,7 +512,7 @@ const TournamentDashboard: React.FC = () => {
                 }
             >
                 <div className="flex flex-col gap-6">
-                    <p className="text-secondary text-sm">Selecione a colocaÃ§Ã£o final de cada jogador na mesa.</p>
+                    <p className="text-secondary text-sm">Selecione a colocação final de cada jogador na mesa.</p>
                     <div className="flex flex-col gap-3">
                         {selectedTable?.table.playerIds.map((pid: string) => {
                             const player = activeTournament.participants.find(p => p.playerId === pid);
@@ -522,11 +528,11 @@ const TournamentDashboard: React.FC = () => {
                                         >
                                             {activeTournament.format === 'multiplayer' ? (
                                                 <>
-                                                    <option value="1">ðŸ† 1Âº Lugar (VitÃ³ria)</option>
-                                                    <option value="1">ðŸ›¡ï¸ Empate (1Âº)</option>
-                                                    {selectedTable.table.playerIds.length >= 2 && <option value="2">2Âº Lugar</option>}
-                                                    {selectedTable.table.playerIds.length >= 3 && <option value="3">3Âº Lugar</option>}
-                                                    {selectedTable.table.playerIds.length >= 4 && <option value="4">4Âº Lugar</option>}
+                                                    <option value="1">🏆  1º Lugar (Vitória)</option>
+                                                    <option value="1">�� Empate (1º)</option>
+                                                    {selectedTable.table.playerIds.length >= 2 && <option value="2">2º Lugar</option>}
+                                                    {selectedTable.table.playerIds.length >= 3 && <option value="3">3º Lugar</option>}
+                                                    {selectedTable.table.playerIds.length >= 4 && <option value="4">4º Lugar</option>}
                                                 </>
                                             ) : (
                                                 <>
@@ -555,7 +561,7 @@ const TournamentDashboard: React.FC = () => {
                         <QRCodeSVG value={inviteUrl} size={300} />
                     </div>
                     <h3 className="text-2xl font-bold mb-2">{activeTournament.name}</h3>
-                    <p className="text-secondary text-center mb-8">Aponte a cÃ¢mera para que os jogadores se inscrevam instantaneamente.</p>
+                    <p className="text-secondary text-center mb-8">Aponte a câmera para que os jogadores se inscrevam instantaneamente.</p>
                     <div className="flex gap-4 w-full">
                         <Button variant="secondary" className="flex-1" onClick={handleCopyLink}>Copiar Link</Button>
                         <Button variant="primary" className="flex-1" onClick={() => setIsQRModalOpen(false)}>Fechar</Button>

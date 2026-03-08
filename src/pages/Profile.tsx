@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../features/auth/authStore';
 import { tournamentService } from '../features/tournaments/tournamentService';
 import PageShell from '../components/layout';
@@ -57,8 +57,8 @@ const Profile: React.FC = () => {
                                 <UserIcon size={40} className="text-accent" />
                             )}
                         </div>
-                        <h2 className="text-2xl font-bold mb-1">{isGuest ? 'ðŸ‘¤ Convidado' : user.name}</h2>
-                        <p className="text-secondary mb-4 text-sm">{isGuest ? 'Conta temporÃ¡ria' : user.email}</p>
+                        <h2 className="text-2xl font-bold mb-1">{isGuest ? '�x� Convidado' : user.name}</h2>
+                        <p className="text-secondary mb-4 text-sm">{isGuest ? 'Conta temporária' : user.email}</p>
 
                         <div className="px-4 py-2 bg-accent/10 rounded-full text-accent text-sm font-medium inline-block mb-6 border border-accent/20">
                             {user.role === 'organizer' ? 'Organizador' : user.role === 'player' ? 'Jogador' : 'Admin'}
@@ -82,7 +82,7 @@ const Profile: React.FC = () => {
                                 <h4 className="font-bold text-yellow-300 text-sm">Proteja sua conta</h4>
                             </div>
                             <p className="text-xs text-muted mb-4 leading-relaxed">
-                                VocÃª estÃ¡ como Convidado. Seus dados podem ser perdidos. Vincule um e-mail ou Google para salvar sua conta permanentemente.
+                                Você está como Convidado. Seus dados podem ser perdidos. Vincule um e-mail ou Google para salvar sua conta permanentemente.
                             </p>
                             <button
                                 onClick={() => setShowUpgradeModal(true)}
@@ -95,7 +95,7 @@ const Profile: React.FC = () => {
 
                     {upgradeSuccess && (
                         <div className="glass border border-green-500/30 bg-green-500/5 p-5 rounded-2xl">
-                            <p className="text-green-400 font-bold text-sm text-center">âœ“ Conta criada com sucesso!</p>
+                            <p className="text-green-400 font-bold text-sm text-center">�S Conta criada com sucesso!</p>
                         </div>
                     )}
                 </div>
@@ -104,10 +104,10 @@ const Profile: React.FC = () => {
                 <div className="lg:col-span-2 space-y-8">
                     {stats ? (
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 animate-slide-up">
-                            <StatCard icon={<Trophy size={20} className="text-yellow-400" />} label="VitÃ³rias" value={stats.wins} />
+                            <StatCard icon={<Trophy size={20} className="text-yellow-400" />} label="Vitórias" value={stats.wins} />
                             <StatCard icon={<Star size={20} className="text-accent" />} label="Top 3" value={stats.top3} />
                             <StatCard icon={<Target size={20} className="text-blue-400" />} label="Pontos" value={stats.totalPoints} />
-                            <StatCard icon={<ArrowRight size={20} className="text-purple-400" />} label="Tx. VitÃ³ria" value={stats.winRate || '0%'} />
+                            <StatCard icon={<ArrowRight size={20} className="text-purple-400" />} label="Tx. Vitória" value={stats.winRate || '0%'} />
                         </div>
                     ) : (
                         <div className="h-24 flex items-center justify-center">
@@ -118,7 +118,7 @@ const Profile: React.FC = () => {
                     <div className="glass p-6 animate-slide-up" style={{ animationDelay: '0.1s' }}>
                         <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                             <Calendar size={20} className="text-accent" />
-                            ParticipaÃ§Ã£o Recente
+                            Participação Recente
                         </h3>
                         {stats?.recentTournaments.length > 0 ? (
                             <div className="space-y-4">
@@ -133,7 +133,7 @@ const Profile: React.FC = () => {
                                             <p className="text-xs text-secondary">{new Date(t.date).toLocaleDateString('pt-BR')}</p>
                                         </div>
                                         <div className="text-right">
-                                            <div className="text-sm font-bold">{t.rank ? `#${t.rank}Âº lugar` : 'Sem rank'}</div>
+                                            <div className="text-sm font-bold">{t.rank ? `#${t.rank}º lugar` : 'Sem rank'}</div>
                                             <div className="text-xs text-secondary">{t.points} pts</div>
                                         </div>
                                     </div>
@@ -141,7 +141,7 @@ const Profile: React.FC = () => {
                             </div>
                         ) : (
                             <div className="text-center py-10 text-secondary">
-                                <p>{stats ? 'VocÃª ainda nÃ£o participou de nenhum torneio.' : 'Carregando...'}</p>
+                                <p>{stats ? 'Você ainda não participou de nenhum torneio.' : 'Carregando...'}</p>
                                 {stats && (
                                     <button onClick={() => navigate('/discover')} className="text-accent hover:underline mt-2">
                                         Explorar torneios ativos
@@ -158,7 +158,7 @@ const Profile: React.FC = () => {
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowUpgradeModal(false)}>
                     <div className="glass-card p-8 w-full max-w-md animate-fade-in" onClick={e => e.stopPropagation()}>
                         <h3 className="text-xl font-bold mb-2">Criar conta permanente</h3>
-                        <p className="text-secondary text-sm mb-6">Seus torneios e dados serÃ£o preservados.</p>
+                        <p className="text-secondary text-sm mb-6">Seus torneios e dados serão preservados.</p>
 
                         {error && <p className="text-red-400 text-xs p-2 bg-red-500/10 rounded-lg mb-4 border border-red-500/20">{error}</p>}
 
@@ -182,7 +182,7 @@ const Profile: React.FC = () => {
                             <div className="relative">
                                 <input
                                     type={showUpgradePw ? 'text' : 'password'}
-                                    placeholder="Senha (mÃ­n. 6 caracteres)"
+                                    placeholder="Senha (mín. 6 caracteres)"
                                     value={upgradePassword}
                                     onChange={e => setUpgradePassword(e.target.value)}
                                     required

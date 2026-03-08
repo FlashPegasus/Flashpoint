@@ -1,4 +1,4 @@
-﻿import type { Tournament, Participant, Round, Table, TableResult } from '../../types';
+import type { Tournament, Participant, Round, Table, TableResult } from '../../types';
 import { storage } from '../../utils/storage';
 import { syncService } from './syncService';
 import { v4 as uuidv4 } from 'uuid';
@@ -75,26 +75,38 @@ export const tournamentService = {
         if (!tournament) {
             tournament = await tournamentService.getTournamentById(tournamentId);
         }
-        if (!tournament) throw new Error('Torneio nÃ£o encontrado.');
+        if (!tournament) throw new Error('Torneio não encontrado.');
         if (tournament.status !== 'registration' && tournament.status !== 'draft') {
-            throw new Error('Este torneio nÃ£o estÃ¡ aceitando inscriÃ§Ãµes.');
+            throw new Error('Este torneio não está aceitando inscrições.');
         }
-        const alreadyJoined = tournament.participants.some(p => p.playerId === userId);
-        if (alreadyJoined) throw new Error('VocÃª jÃ¡ estÃ¡ inscrito neste torneio.');
-        if (tournament.maxParticipants && tournament.participants.length >= tournament.maxParticipants) {
-            throw new Error('O torneio estÃ¡ cheio. Nenhuma vaga disponÃ­vel.');
+        const existingParticipant = tournament.participants.find(p => p.playerId === userId);
+        if (existingParticipant) {
+            if (existingParticipant.status === 'withdrawn') {
+                existingParticipant.status = 'active';
+                if (commanderInfo) {
+                    existingParticipant.commanderName = commanderInfo.commanderName || existingParticipant.commanderName;
+                    existingParticipant.commanderImageUrl = commanderInfo.commanderImageUrl || existingParticipant.commanderImageUrl;
+                    existingParticipant.decklistUrl = commanderInfo.decklistUrl || existingParticipant.decklistUrl;
+                }
+            } else {
+                throw new Error('Você já está inscrito neste torneio.');
+            }
+        } else {
+            if (tournament.maxParticipants && tournament.participants.length >= tournament.maxParticipants) {
+                throw new Error('O torneio está cheio. Nenhuma vaga disponível.');
+            }
+            const newParticipant: Participant = {
+                playerId: userId,
+                name: userName,
+                avatar: userAvatar || '',
+                status: 'active',
+                isAnonymous: userId.startsWith('guest_') || (userAvatar === '' && userName === 'Convidado'), // Simple heuristic if not passed
+                joinedRound: 0,
+                totalPoints: 0,
+                ...commanderInfo
+            };
+            tournament.participants.push(newParticipant);
         }
-        const newParticipant: Participant = {
-            playerId: userId,
-            name: userName,
-            avatar: userAvatar || '',
-            status: 'active',
-            isAnonymous: userId.startsWith('guest_') || (userAvatar === '' && userName === 'Convidado'), // Simple heuristic if not passed
-            joinedRound: 0,
-            totalPoints: 0,
-            ...commanderInfo
-        };
-        tournament.participants.push(newParticipant);
         // Persist to Firestore public collection (authoritative for invite links)
         // We MUST use updateDoc with specifically 'participants' to pass Firestore security rules!
         try {
@@ -103,7 +115,7 @@ export const tournamentService = {
             });
         } catch (err: any) {
             console.error('Could not update Firestore public tournament on join:', err);
-            throw new Error('Falha ao entrar no torneio: permissÃ£o negada ou evento nÃ£o existe mais.');
+            throw new Error('Falha ao entrar no torneio: permissão negada ou evento não existe mais.');
         }
         // Also persist to organizer's local/user storage if they're on the same device
         await tournamentService.saveTournament(tournament);
@@ -172,6 +184,21 @@ export const tournamentService = {
         const tournament = await tournamentService.getTournamentById(tournamentId);
         if (!tournament) throw new Error('Tournament not found');
 
+        const existingByName = player.name ? tournament.participants.find(p => p.name.trim().toLowerCase() === player.name!.trim().toLowerCase()) : undefined;
+        const existingById = player.playerId ? tournament.participants.find(p => p.playerId === player.playerId) : undefined;
+
+        const existingParticipant = existingById || existingByName;
+
+        if (existingParticipant) {
+            if (existingParticipant.status === 'withdrawn') {
+                existingParticipant.status = 'active';
+                await tournamentService.saveTournament(tournament);
+                return existingParticipant;
+            } else {
+                throw new Error(existingByName ? `Jogador com o nome "${player.name}" já está ativo na mesa.` : 'Jogador já inscrito e ativo.');
+            }
+        }
+
         const participant: Participant = {
             playerId: player.playerId || uuidv4(),
             name: player.name || 'New Player',
@@ -201,7 +228,7 @@ export const tournamentService = {
                 });
             } catch (err) {
                 console.error('Failed to update public DB on withdraw:', err);
-                throw new Error('Erro ao atualizar desistÃªncia no servidor.');
+                throw new Error('Erro ao atualizar desistência no servidor.');
             }
 
             await tournamentService.saveTournament(tournament);
@@ -220,7 +247,7 @@ export const tournamentService = {
             });
         } catch (err) {
             console.error('Failed to update public DB on remove:', err);
-            throw new Error('Erro ao atualizar exclusÃ£o no servidor.');
+            throw new Error('Erro ao atualizar exclusão no servidor.');
         }
 
         await tournamentService.saveTournament(tournament);

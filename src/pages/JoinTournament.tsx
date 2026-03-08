@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { tournamentService } from '../features/tournaments/tournamentService';
 import { useAuthStore } from '../features/auth/authStore';
@@ -30,7 +30,8 @@ const JoinTournament: React.FC = () => {
                 setTournament(t || null);
                 setLoading(false);
                 if (t && user) {
-                    const already = t.participants.some(p => p.playerId === user.id);
+                    const joinedParticipant = t.participants.find(p => p.playerId === user.id);
+                    const already = !!(joinedParticipant && joinedParticipant.status === 'active');
                     setJoined(already);
                 }
             })
@@ -44,7 +45,7 @@ const JoinTournament: React.FC = () => {
             navigate('/login');
             return;
         }
-        if (!tournament || !id) return;
+        if (!tournament || !id || joining) return;
         setJoining(true);
         setError('');
         try {
@@ -69,7 +70,7 @@ const JoinTournament: React.FC = () => {
         return (
             <PageShell>
                 <div className="container section text-center">
-                    <h2 className="text-2xl font-bold mb-2">Torneio nÃ£o encontrado</h2>
+                    <h2 className="text-2xl font-bold mb-2">Torneio não encontrado</h2>
                     <p className="text-secondary mb-6">O link pode estar incorreto ou o torneio foi removido.</p>
                     <button onClick={() => navigate('/discover')} className="px-6 py-3 rounded-xl font-bold" style={{ backgroundColor: 'var(--color-purple)', color: 'white' }}>
                         Explorar Torneios
@@ -128,7 +129,7 @@ const JoinTournament: React.FC = () => {
                     {!joined && isOpen && !isFull && (
                         <div className="flex flex-col gap-4 mb-8">
                             <div className="h-px bg-white/10 my-2"></div>
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-purple" style={{ color: 'var(--color-purple)' }}>InformaÃ§Ãµes de Deck</h3>
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-purple" style={{ color: 'var(--color-purple)' }}>Informações de Deck</h3>
 
                             <div className="flex flex-col gap-3">
                                 <div className="flex flex-col gap-1">
@@ -166,7 +167,7 @@ const JoinTournament: React.FC = () => {
 
                                 {commanderImageUrl && (
                                     <div className="mt-2 flex flex-col items-center gap-2 animate-fade-in">
-                                        <p className="text-[10px] uppercase font-bold text-muted">PrÃ©-visualizaÃ§Ã£o:</p>
+                                        <p className="text-[10px] uppercase font-bold text-muted">Pré-visualização:</p>
                                         <div className="w-40 h-56 rounded-xl overflow-hidden shadow-2xl border border-white/10 bg-white/5">
                                             <img
                                                 src={commanderImageUrl}
@@ -190,8 +191,8 @@ const JoinTournament: React.FC = () => {
                         <div className="flex flex-col items-center gap-4 p-6 bg-green-500/10 rounded-2xl border border-green-500/30">
                             <CheckCircle size={40} className="text-green-400" />
                             <div className="text-center">
-                                <p className="font-bold text-green-300">InscriÃ§Ã£o confirmada!</p>
-                                <p className="text-sm text-muted mt-1">VocÃª estÃ¡ inscrito neste torneio.</p>
+                                <p className="font-bold text-green-300">Inscrição confirmada!</p>
+                                <p className="text-sm text-muted mt-1">Você está inscrito neste torneio.</p>
                             </div>
                             <button
                                 onClick={() => navigate(`/tournament/${tournament.id}`)}
@@ -203,8 +204,8 @@ const JoinTournament: React.FC = () => {
                         </div>
                     ) : !isOpen ? (
                         <div className="text-center p-6 glass rounded-xl text-secondary">
-                            <p className="font-bold">InscriÃ§Ãµes encerradas</p>
-                            <p className="text-sm mt-1">Este torneio nÃ£o estÃ¡ aceitando novos participantes.</p>
+                            <p className="font-bold">Inscrições encerradas</p>
+                            <p className="text-sm mt-1">Este torneio não está aceitando novos participantes.</p>
                         </div>
                     ) : isFull ? (
                         <div className="text-center p-6 glass rounded-xl text-secondary">
