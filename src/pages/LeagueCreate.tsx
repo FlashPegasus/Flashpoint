@@ -38,26 +38,34 @@ const LeagueCreate: React.FC = () => {
     }
 
     const handleCreate = async () => {
-        if (!formData.name.trim()) { toast.error('Dê um nome à sua liga!'); return; }
+        if (!formData.name.trim()) {
+            toast.error('Dê um nome à sua liga!');
+            return;
+        }
+
         setIsSubmitting(true);
-        console.log('[LeagueCreate] Iniciando criação da liga:', formData.name);
+        console.log('[LeagueCreate] Iniciando criação via async/await...');
 
         try {
+            // 1. Criar a liga e aguardar persistência
             const league = await createLeague({ ...formData, organizerId: user.id });
-            console.log('[LeagueCreate] Liga criada com sucesso:', league.id);
+            console.log('[LeagueCreate] Liga persistida:', league.id);
 
             toast.success(`Liga "${league.name}" criada! 🏆`);
 
-            // Pequeno delay para garantir que o Firestore propagou e evitar loops de carregamento no dashboard
-            setTimeout(() => {
-                navigate(`/league/${league.id}`);
-            }, 100);
+            // 2. Aguardar um curto período para propagação do Firestore (async/await style)
+            await new Promise((resolve) => setTimeout(resolve, 400));
+
+            // 3. Navegar para o dashboard
+            navigate(`/league/${league.id}`);
         } catch (err: any) {
-            console.error('[LeagueCreate] Erro na criação:', err);
-            toast.error(err.message || 'Erro ao criar liga. Verifique sua conexão.');
+            console.error('[LeagueCreate] Falha na criação:', err);
+            toast.error(err.message || 'Erro ao criar liga. Tente novamente.');
             setIsSubmitting(false); // Reset imediato em caso de erro
         } finally {
-            // Não resetamos isSubmitting aqui se tiver sucesso para evitar o 'flicker' do botão antes da navegação
+            // Garantia final de reset do estado caso a navegação demore ou falhe
+            const timeoutId = setTimeout(() => setIsSubmitting(false), 2000);
+            return () => clearTimeout(timeoutId);
         }
     };
 
