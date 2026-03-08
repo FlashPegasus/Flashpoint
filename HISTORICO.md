@@ -2,6 +2,23 @@
 
 Este arquivo serve como um diário de bordo da evolução do projeto. Cada "Fase" concluída deve ser registrada aqui para manter a continuidade do desenvolvimento.
 
+## 2026-03-08: Fase 27 - Gestão Autônoma (Seasons & Members v1.0.3)
+- **Objetivo**: Implementação completa de controle de membros (Ban/Unban) e temporadas de ranking (Archive/Reset).
+- **Implementações**:
+  - Subcoleções `members`, `seasons` e `organizers` para escalabilidade.
+  - Abas "👥 Membros" e "🏅 Temporadas" no Dashboard da Liga.
+  - Fluxo de "Encerrar Temporada" com Snapshot do ranking anterior.
+  - Bloqueio de entrada para usuários banidos.
+  - **Tag**: `v1.0.3-autonomous-stable`
+
+## 2026-03-08: Fase 26 - Ligas Core (Ranking & Streaks v1.0.2)
+- **Objetivo**: Lançamento funcional do sistema de ligas.
+- **Implementações**:
+  - Ranking dinâmico com regra "Melhores X Resultados".
+  - Sistema de Streaks (🔥) baseado em histórico cronológico.
+  - QR Code de convite e vinculação de torneios.
+  - **Tag**: `v1.0.2-leagues-core`
+
 ## 2026-03-07: Fase 25 - A Faxina (Overhaul Arquitetural v1.0.1)
 - **Objetivo**: Simplificação profunda da arquitetura, redução drástica de arquivos mantendo 100% do comportamento.
 - **Implementações**:
