@@ -10,6 +10,7 @@ import { tournamentService } from '../features/tournaments/tournamentService';
 import { syncService } from '../features/tournaments/syncService';
 import { Breadcrumbs } from '../components/ui';
 import { useLeagueStore } from '../features/leagues/leagueStore';
+import { getInviteLink, copyToClipboard } from '../utils/inviteHelper';
 import toast from 'react-hot-toast';
 
 const TournamentDashboard: React.FC = () => {
@@ -112,17 +113,14 @@ const TournamentDashboard: React.FC = () => {
         }
     };
 
-    let baseUrl = window.location.origin;
-    if (baseUrl.includes('localhost') || baseUrl.includes('capacitor://')) {
-        baseUrl = 'https://flashpoint-anti.web.app';
-    }
-    const inviteUrl = `${baseUrl}/join/${id}`;
+    const inviteUrl = id ? getInviteLink('tournament', id) : '';
 
-    const handleCopyLink = () => {
-        navigator.clipboard.writeText(inviteUrl);
-        setLinkCopied(true);
-        toast.success('Link de convite copiado!');
-        setTimeout(() => setLinkCopied(false), 2000);
+    const handleCopyLink = async () => {
+        const success = await copyToClipboard(inviteUrl, 'Link de convite copiado!');
+        if (success) {
+            setLinkCopied(true);
+            setTimeout(() => setLinkCopied(false), 2000);
+        }
     };
 
     const handleOpenResultModal = (roundNum: number, table: any) => {

@@ -8,7 +8,12 @@ import { useLeagueStore } from '../features/leagues/leagueStore';
 import { useAuthStore } from '../features/auth/authStore';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { leagueService } from '../features/leagues/leagueService';
+import { LeagueMembersTab } from '../features/leagues/components/LeagueMembersTab';
+import { LeagueSeasonsTab } from '../features/leagues/components/LeagueSeasonsTab';
+import { getInviteLink, copyToClipboard } from '../utils/inviteHelper';
 import toast from 'react-hot-toast';
+
+export type LeagueTabId = 'ranking' | 'tournaments' | 'info' | 'membros' | 'seasons';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
@@ -19,7 +24,7 @@ const LeagueDashboard: React.FC = () => {
     const { activeLeague, loadLeague, isLoading, recalculateStandings, linkTournament, getAuditLogs, getMembers, updateMemberStatus, getSeasons, archiveSeason } = useLeagueStore();
     const { tournaments } = useTournamentStore();
 
-    const [tab, setTab] = useState<'ranking' | 'tournaments' | 'info' | 'membros' | 'seasons'>('ranking');
+    const [tab, setTab] = useState<LeagueTabId>('ranking');
     const [codeCopied, setCodeCopied] = useState(false);
     const [recalcLoading, setRecalcLoading] = useState(false);
     const [linkMode, setLinkMode] = useState(false);
@@ -38,8 +43,8 @@ const LeagueDashboard: React.FC = () => {
     }, [id, loadLeague]);
 
     useEffect(() => {
-        if ((tab as string) === 'membros') handleLoadMembers();
-        if ((tab as string) === 'seasons') handleLoadSeasons();
+        if (tab === 'membros') handleLoadMembers();
+        if (tab === 'seasons') handleLoadSeasons();
     }, [tab, id]);
 
     // RTDB live updates
@@ -56,15 +61,17 @@ const LeagueDashboard: React.FC = () => {
 
     const isOrganizer = activeLeague.organizerId === user?.id;
 
-    const handleCopyCode = () => {
-        navigator.clipboard.writeText(activeLeague.inviteCode);
-        setCodeCopied(true);
-        setTimeout(() => setCodeCopied(false), 2000);
+    const handleCopyCode = async () => {
+        const success = await copyToClipboard(activeLeague.inviteCode, 'Código copiado!');
+        if (success) {
+            setCodeCopied(true);
+            setTimeout(() => setCodeCopied(false), 2000);
+        }
     };
 
     const handleCopyLink = () => {
-        navigator.clipboard.writeText(`${window.location.origin}/join-league/${activeLeague.inviteCode}`);
-        toast.success('Link copiado!');
+        const inviteUrl = getInviteLink('league', activeLeague.inviteCode);
+        copyToClipboard(inviteUrl, 'Link da liga copiado!');
     };
 
     const handleRecalculate = async () => {
@@ -210,7 +217,7 @@ const LeagueDashboard: React.FC = () => {
 
                 {/* Tabs */}
                 <div className="sticky top-20 z-20 flex gap-2 mb-6 glass p-1 rounded-2xl w-full overflow-x-auto no-scrollbar shadow-2xl backdrop-blur-xl border border-white/10 md:w-fit">
-                    {(['ranking', 'tournaments', 'membros', 'seasons', 'info'] as const).map(t => (
+                    {(['ranking', 'tournaments', 'membros', 'seasons', 'info'] as LeagueTabId[]).map(t => (
                         <button key={t} onClick={() => setTab(t)}
                             className={`px-5 py-2 rounded-xl text-sm font-bold transition-all capitalize whitespace-nowrap ${tab === t ? 'glass border border-purple/30 text-purple' : 'text-secondary hover:text-primary'}`}
                             style={{ color: tab === t ? 'var(--color-purple)' : undefined }}>
@@ -414,76 +421,22 @@ const LeagueDashboard: React.FC = () => {
                                 )}
                             </>
                         )}
-
-                        {tab === ('membros' as any) && (
-                            <div className="flex flex-col gap-4">
-                                <h3 className="text-xl font-bold mb-2">Comunidade da Liga</h3>
-                                {members.length === 0 ? (
-                                    <p className="text-secondary text-center py-10">Buscando membros...</p>
-                                ) : (
-                                    members.map(m => (
-                                        <div key={m.playerId} className="glass p-4 rounded-2xl border border-white/5 flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-purple/20 flex items-center justify-center font-bold text-purple">
-                                                    {m.playerName[0].toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <p className="font-bold flex items-center gap-2">
-                                                        {m.playerName}
-                                                        {m.status === 'banned' && <span className="bg-red-500/20 text-red-500 text-[10px] px-2 py-0.5 rounded-full border border-red-500/30">BANIDO</span>}
-                                                    </p>
-                                                    <p className="text-xs text-muted">Entrou em: {new Date(m.joinedAt).toLocaleDateString()}</p>
-                                                </div>
-                                            </div>
-                                            {isOrganizer && m.playerId !== user?.id && (
-                                                <Button
-                                                    variant={m.status === 'banned' ? 'glow' : 'danger'}
-                                                    className="px-3 py-1 h-auto text-[10px]"
-                                                    onClick={() => handleUpdateMember(m.playerId, m.status === 'banned' ? 'active' : 'banned')}
-                                                >
-                                                    {m.status === 'banned' ? 'Desbanir' : 'Banir'}
-                                                </Button>
-                                            )}
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        )}
-
-                        {tab === ('seasons' as any) && (
-                            <div className="flex flex-col gap-4">
-                                <h3 className="text-xl font-bold mb-2">Salão da Fama</h3>
-                                {seasons.length === 0 ? (
-                                    <div className="text-center py-12 glass rounded-2xl border border-dashed border-white/10">
-                                        <Trophy size={48} className="mx-auto text-secondary/30 mb-3" />
-                                        <p className="text-secondary">A primeira temporada ainda está em progresso!</p>
-                                    </div>
-                                ) : (
-                                    seasons.map(s => (
-                                        <div key={s.id} className="glass p-5 rounded-3xl border border-purple/20 shadow-xl overflow-hidden relative group">
-                                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                                <Trophy size={60} />
-                                            </div>
-                                            <h4 className="text-lg font-bold text-purple mb-1">{s.name}</h4>
-                                            <p className="text-xs text-muted mb-4">{new Date(s.startDate).toLocaleDateString()} — {new Date(s.endDate).toLocaleDateString()}</p>
-
-                                            <div className="space-y-2">
-                                                {s.standings.slice(0, 3).map((std: any, i: number) => (
-                                                    <div key={std.playerId} className="flex justify-between items-center text-sm p-2 bg-white/5 rounded-xl">
-                                                        <span className="flex gap-2">
-                                                            <span className="text-gold">{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
-                                                            {std.playerName}
-                                                        </span>
-                                                        <span className="font-bold text-purple">{std.totalPoints} pts</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        )}
                     </Card>
+                )}
+
+                {/* MEMBERS TAB */}
+                {tab === 'membros' && (
+                    <LeagueMembersTab
+                        members={members}
+                        isOrganizer={isOrganizer}
+                        userId={user?.id}
+                        onUpdateMember={handleUpdateMember}
+                    />
+                )}
+
+                {/* SEASONS TAB */}
+                {tab === 'seasons' && (
+                    <LeagueSeasonsTab seasons={seasons} />
                 )}
             </div>
 
@@ -495,7 +448,7 @@ const LeagueDashboard: React.FC = () => {
             >
                 <div className="flex flex-col items-center justify-center p-8">
                     <div className="p-6 bg-white rounded-[2.5rem] shadow-2xl mb-6">
-                        <QRCodeSVG value={`${window.location.origin}/join-league/${activeLeague.inviteCode}`} size={300} />
+                        <QRCodeSVG value={getInviteLink('league', activeLeague.inviteCode)} size={300} />
                     </div>
                     <h3 className="text-2xl font-bold mb-2">{activeLeague.name}</h3>
                     <p className="text-secondary text-center mb-8">Aponte a câmera para que os jogadores entrem na liga instantaneamente.</p>
