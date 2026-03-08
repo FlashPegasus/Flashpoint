@@ -149,7 +149,7 @@ export const leagueService = {
         await setDoc(memberRef, member);
 
         await leagueService.addAuditLog(leagueId, 'JOIN_LEAGUE', `Jogador ${userName} entrou na liga`, userId);
-        await leagueService._notifyUpdate(leagueId);
+        leagueService._notifyUpdate(leagueId);
     },
 
     getMembers: async (leagueId: string): Promise<LeagueMember[]> => {
@@ -175,7 +175,7 @@ export const leagueService = {
         }
 
         await leagueService.addAuditLog(leagueId, status === 'banned' ? 'BAN_MEMBER' : 'UNBAN_MEMBER', `Status do jogador ${playerId} alterado para ${status}`, adminId);
-        await leagueService._notifyUpdate(leagueId);
+        leagueService._notifyUpdate(leagueId);
     },
 
     addOrganizer: async (leagueId: string, userId: string, role: 'admin' | 'moderator', adminId: string): Promise<void> => {
@@ -188,7 +188,7 @@ export const leagueService = {
         };
         await setDoc(orgRef, organizer);
         await leagueService.addAuditLog(leagueId, 'ADD_ORGANIZER', `Adicionou ${userId} como ${role}`, adminId);
-        await leagueService._notifyUpdate(leagueId);
+        leagueService._notifyUpdate(leagueId);
     },
 
     getOrganizers: async (leagueId: string): Promise<LeagueOrganizer[]> => {
@@ -223,7 +223,7 @@ export const leagueService = {
         });
 
         await leagueService.addAuditLog(leagueId, 'ARCHIVE_SEASON', `Temporada finalizada: ${seasonName}`, adminId);
-        await leagueService._notifyUpdate(leagueId);
+        leagueService._notifyUpdate(leagueId);
     },
 
     getSeasons: async (leagueId: string): Promise<LeagueSeason[]> => {
@@ -245,7 +245,7 @@ export const leagueService = {
         // Also set leagueId on the tournament
         await updateDoc(doc(db, 'tournaments', tournamentId), { leagueId });
         await leagueService.addAuditLog(leagueId, 'LINK_TOURNAMENT', `Vinculou o torneio: ${tournamentId}`, organizerId);
-        await leagueService._notifyUpdate(leagueId);
+        leagueService._notifyUpdate(leagueId);
     },
 
     unlinkTournament: async (leagueId: string, tournamentId: string, userId: string): Promise<void> => {
@@ -254,7 +254,7 @@ export const leagueService = {
         });
         await updateDoc(doc(db, 'tournaments', tournamentId), { leagueId: null });
         await leagueService.addAuditLog(leagueId, 'UNLINK_TOURNAMENT', `Desvinculou o torneio: ${tournamentId}`, userId);
-        await leagueService._notifyUpdate(leagueId);
+        leagueService._notifyUpdate(leagueId);
     },
 
     /**
@@ -330,7 +330,7 @@ export const leagueService = {
         const cachedTopRanking = standings.slice(0, 10);
 
         await updateDoc(doc(db, LEAGUES_COLLECTION, leagueId), { standings, cachedTopRanking });
-        await leagueService._notifyUpdate(leagueId);
+        leagueService._notifyUpdate(leagueId);
     },
 
     updateLeague: async (leagueId: string, data: Partial<League>, userId?: string): Promise<void> => {
@@ -338,7 +338,7 @@ export const leagueService = {
         if (userId) {
             await leagueService.addAuditLog(leagueId, 'UPDATE_LEAGUE', `Alterou configurações da liga`, userId);
         }
-        await leagueService._notifyUpdate(leagueId);
+        leagueService._notifyUpdate(leagueId);
     },
 
     deleteLeague: async (leagueId: string): Promise<void> => {
