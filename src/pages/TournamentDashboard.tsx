@@ -309,7 +309,7 @@ const TournamentDashboard: React.FC = () => {
                                 )}
 
                                 {isOrganizer && (
-                                    <Card title="✉️ Convite Automático">
+                                    <Card title="  Convite Automático">
                                         <div className="flex flex-col items-center gap-6">
                                             <button
                                                 onClick={() => setIsQRModalOpen(true)}

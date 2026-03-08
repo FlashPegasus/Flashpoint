@@ -64,9 +64,18 @@ export const useLeagueStore = create<LeagueStore>((set) => ({
     },
 
     createLeague: async (data) => {
-        const league = await leagueService.createLeague(data);
-        set(state => ({ myLeagues: [...state.myLeagues, league] }));
-        return league;
+        set({ isLoading: true });
+        try {
+            const league = await leagueService.createLeague(data);
+            set(state => ({
+                myLeagues: [...state.myLeagues, league],
+                isLoading: false
+            }));
+            return league;
+        } catch (err) {
+            set({ isLoading: false });
+            throw err;
+        }
     },
 
     joinLeagueByCode: async (code, userId, userName) => {

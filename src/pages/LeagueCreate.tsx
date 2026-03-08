@@ -40,14 +40,24 @@ const LeagueCreate: React.FC = () => {
     const handleCreate = async () => {
         if (!formData.name.trim()) { toast.error('Dê um nome à sua liga!'); return; }
         setIsSubmitting(true);
+        console.log('[LeagueCreate] Iniciando criação da liga:', formData.name);
+
         try {
             const league = await createLeague({ ...formData, organizerId: user.id });
-            toast.success(`Liga "${league.name}" criada! Código: ${league.inviteCode} 🏆`);
-            navigate(`/league/${league.id}`);
+            console.log('[LeagueCreate] Liga criada com sucesso:', league.id);
+
+            toast.success(`Liga "${league.name}" criada! 🏆`);
+
+            // Pequeno delay para garantir que o Firestore propagou e evitar loops de carregamento no dashboard
+            setTimeout(() => {
+                navigate(`/league/${league.id}`);
+            }, 100);
         } catch (err: any) {
-            toast.error(err.message || 'Erro ao criar liga.');
+            console.error('[LeagueCreate] Erro na criação:', err);
+            toast.error(err.message || 'Erro ao criar liga. Verifique sua conexão.');
+            setIsSubmitting(false); // Reset imediato em caso de erro
         } finally {
-            setIsSubmitting(false);
+            // Não resetamos isSubmitting aqui se tiver sucesso para evitar o 'flicker' do botão antes da navegação
         }
     };
 
