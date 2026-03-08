@@ -5,7 +5,7 @@ import PageShell from '../components/layout';
 import { Button, Card } from '../components/ui';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { useAuthStore } from '../features/auth/authStore';
-import { Breadcrumbs, LoadingScreen } from '../components/ui';
+import { Breadcrumbs, LoadingScreen, Modal, Input } from '../components/ui';
 import toast from 'react-hot-toast';
 
 const TournamentPublic: React.FC = () => {
@@ -13,6 +13,12 @@ const TournamentPublic: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuthStore();
     const { activeTournament, loadTournament, addParticipant } = useTournamentStore();
+
+    const [isJoining, setIsJoining] = React.useState(false);
+    const [joinData, setJoinData] = React.useState({
+        commanderName: '',
+        decklistUrl: ''
+    });
 
     useEffect(() => {
         if (id) loadTournament(id);
@@ -30,8 +36,14 @@ const TournamentPublic: React.FC = () => {
         }
         if (id) {
             try {
-                await addParticipant(id, { playerId: user.id, name: user.name });
+                await addParticipant(id, {
+                    playerId: user.id,
+                    name: user.name,
+                    commanderName: joinData.commanderName,
+                    decklistUrl: joinData.decklistUrl
+                });
                 toast.success('Inscrição confirmada!');
+                setIsJoining(false);
             } catch (err) {
                 toast.error('Erro ao entrar no torneio.');
             }
@@ -108,6 +120,25 @@ const TournamentPublic: React.FC = () => {
                                         </p>
                                         <p className="text-[10px] text-green/70 uppercase font-bold mt-1">Você está inscrito</p>
                                     </div>
+                                    <div className="flex flex-col gap-2">
+                                        {joinedParticipant.commanderName && (
+                                            <div className="px-4 py-3 glass rounded-xl text-xs border border-purple/20">
+                                                <span className="text-muted block uppercase text-[10px] mb-1">Seu Comandante</span>
+                                                <span className="font-bold text-purple" style={{ color: 'var(--color-purple)' }}>⚔️ {joinedParticipant.commanderName}</span>
+                                            </div>
+                                        )}
+                                        {joinedParticipant.decklistUrl && (
+                                            <a
+                                                href={joinedParticipant.decklistUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="px-4 py-3 glass rounded-xl text-xs border border-blue/20 hover:bg-blue/5 transition-colors block"
+                                            >
+                                                <span className="text-muted block uppercase text-[10px] mb-1">Sua Decklist</span>
+                                                <span className="font-bold text-blue underline">Ver Link Externo</span>
+                                            </a>
+                                        )}
+                                    </div>
                                     {user?.id === activeTournament.organizerId ? (
                                         <Button variant="glow" onClick={() => navigate(`/tournament/${id}`)}>Ir para Painel do Organizador</Button>
                                     ) : (
@@ -115,7 +146,12 @@ const TournamentPublic: React.FC = () => {
                                     )}
                                 </div>
                             ) : (
-                                <Button variant="glow" className="w-full text-lg py-5" onClick={handleJoin} disabled={activeTournament.status !== 'registration'}>
+                                <Button
+                                    variant="glow"
+                                    className="w-full text-lg py-5"
+                                    onClick={() => activeTournament.format === 'multiplayer' ? setIsJoining(true) : handleJoin()}
+                                    disabled={activeTournament.status !== 'registration'}
+                                >
                                     {activeTournament.status === 'registration' ? 'Entrar no Torneio' : 'Inscrições Encerradas'}
                                 </Button>
                             )}
@@ -132,6 +168,36 @@ const TournamentPublic: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            <Modal
+                isOpen={isJoining}
+                onClose={() => setIsJoining(false)}
+                title="Detalhes da Inscrição"
+                footer={
+                    <div className="flex gap-4 justify-end">
+                        <Button variant="secondary" onClick={() => setIsJoining(false)}>Cancelar</Button>
+                        <Button variant="glow" onClick={handleJoin}>Confirmar Inscrição</Button>
+                    </div>
+                }
+            >
+                <div className="flex flex-col gap-6">
+                    <p className="text-secondary text-sm">Opcional: Informe o seu Comandante ou Decklist para que os outros jogadores possam conhecer seu deck.</p>
+                    <div className="flex flex-col gap-4">
+                        <Input
+                            label="Nome do Comandante (Opcional)"
+                            placeholder="Ex: Kenrith, the Returned King"
+                            value={joinData.commanderName}
+                            onChange={e => setJoinData(prev => ({ ...prev, commanderName: e.target.value }))}
+                        />
+                        <Input
+                            label="Link da Decklist (Opcional)"
+                            placeholder="Moxfield, Archidekt, etc."
+                            value={joinData.decklistUrl}
+                            onChange={e => setJoinData(prev => ({ ...prev, decklistUrl: e.target.value }))}
+                        />
+                    </div>
+                </div>
+            </Modal>
         </PageShell>
     );
 };

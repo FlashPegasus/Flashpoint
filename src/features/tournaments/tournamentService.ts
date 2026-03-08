@@ -424,6 +424,17 @@ export const tournamentService = {
         await tournamentService.saveTournament(tournament);
     },
 
+    toggleCheckIn: async (tournamentId: string, playerId: string, status: boolean): Promise<void> => {
+        const tournament = await tournamentService.getTournamentById(tournamentId);
+        if (!tournament) throw new Error('Tournament not found');
+
+        const participant = tournament.participants.find(p => p.playerId === playerId);
+        if (!participant) throw new Error('Participant not found');
+
+        participant.checkedIn = status;
+        await tournamentService.saveTournament(tournament);
+    },
+
     getUserStats: async (userId: string) => {
         const tournaments = await tournamentService.getTournaments();
         const participation = tournaments.filter(t =>

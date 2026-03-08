@@ -1,6 +1,6 @@
 ﻿import React from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Trophy, Users, LayoutDashboard, LogOut, Search, Menu, X, Sun, Moon, User } from 'lucide-react';
+import { Trophy, Users, LayoutDashboard, LogOut, Search, Menu, X, Sun, Moon, User, Bell } from 'lucide-react';
 import { useAuthStore } from '../../features/auth/authStore';
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -13,6 +13,8 @@ export const Navbar: React.FC = () => {
     const [theme, setTheme] = React.useState<'light' | 'dark'>(
         (localStorage.getItem('theme') as 'light' | 'dark') || 'dark'
     );
+
+    const [isNotifOpen, setIsNotifOpen] = React.useState(false);
 
     React.useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme);
@@ -54,6 +56,24 @@ export const Navbar: React.FC = () => {
                         <Link to="/en" title="English / Translate" className="flex items-center hover:scale-110 transition-transform">
                             <img src="https://flagcdn.com/w40/gb.png" alt="English" className="h-4 rounded-sm" />
                         </Link>
+                        <div className="relative">
+                            <button
+                                onClick={() => setIsNotifOpen(!isNotifOpen)}
+                                className="p-2 text-secondary hover:text-primary transition-all relative"
+                            >
+                                <Bell size={18} />
+                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-black"></span>
+                            </button>
+                            {isNotifOpen && (
+                                <div className="absolute top-full right-0 mt-2 w-64 glass-card p-4 shadow-2xl border border-white/10 z-[60] animate-fade-in">
+                                    <p className="text-xs font-bold uppercase tracking-widest text-muted mb-3">Notificações</p>
+                                    <div className="text-center py-8 opacity-40">
+                                        <Bell size={24} className="mx-auto mb-2" />
+                                        <p className="text-[10px]">Nenhuma notificação por enquanto.</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                         <button onClick={toggleTheme} className="p-2 text-secondary hover:text-primary transition-all">
                             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
                         </button>
@@ -103,6 +123,16 @@ export const Navbar: React.FC = () => {
                         {user ? (
                             <div className="flex flex-col gap-4">
                                 <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-wider">Perfil</Link>
+                                <button
+                                    onClick={() => {
+                                        setIsNotifOpen(!isNotifOpen);
+                                        // On mobile we might just show a toast or a simpler inline list
+                                        alert("Nenhuma notificação por enquanto.");
+                                    }}
+                                    className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-secondary"
+                                >
+                                    <Bell size={16} /> Notificações
+                                </button>
                                 <button onClick={handleLogout} className="text-left text-sm font-bold uppercase tracking-wider text-red">Sair</button>
                             </div>
                         ) : (

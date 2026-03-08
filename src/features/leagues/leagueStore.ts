@@ -5,11 +5,14 @@ import { leagueService } from './leagueService';
 interface LeagueStore {
     myLeagues: League[];
     publicLeagues: League[];
+    lastPublicDoc: any | null;
+    hasMorePublic: boolean;
     activeLeague: League | null;
     isLoading: boolean;
 
     loadMyLeagues: (userId: string) => Promise<void>;
     loadPublicLeagues: () => Promise<void>;
+    loadMorePublicLeagues: () => Promise<void>;
     loadLeague: (leagueId: string) => Promise<void>;
     createLeague: (data: Partial<League> & { organizerId: string; name: string }) => Promise<League>;
     joinLeagueByCode: (code: string, userId: string, userName: string) => Promise<League>;
@@ -29,6 +32,8 @@ interface LeagueStore {
 export const useLeagueStore = create<LeagueStore>((set) => ({
     myLeagues: [],
     publicLeagues: [],
+    lastPublicDoc: null,
+    hasMorePublic: true,
     activeLeague: null,
     isLoading: false,
 
@@ -44,10 +49,33 @@ export const useLeagueStore = create<LeagueStore>((set) => ({
     },
 
     loadPublicLeagues: async () => {
+        set({ isLoading: true, publicLeagues: [], lastPublicDoc: null, hasMorePublic: true });
+        try {
+            const { leagues, lastVisible } = await leagueService.getPublicLeagues();
+            set({
+                publicLeagues: leagues,
+                lastPublicDoc: lastVisible,
+                hasMorePublic: leagues.length === 10,
+                isLoading: false
+            });
+        } catch (err) {
+            set({ isLoading: false });
+        }
+    },
+
+    loadMorePublicLeagues: async () => {
+        const { lastPublicDoc, publicLeagues, hasMorePublic, isLoading } = useLeagueStore.getState();
+        if (!hasMorePublic || isLoading || !lastPublicDoc) return;
+
         set({ isLoading: true });
         try {
-            const leagues = await leagueService.getPublicLeagues();
-            set({ publicLeagues: leagues, isLoading: false });
+            const { leagues, lastVisible } = await leagueService.getPublicLeagues(lastPublicDoc);
+            set({
+                publicLeagues: [...publicLeagues, ...leagues],
+                lastPublicDoc: lastVisible,
+                hasMorePublic: leagues.length === 10,
+                isLoading: false
+            });
         } catch (err) {
             set({ isLoading: false });
         }

@@ -42,6 +42,7 @@ export interface Participant {
     avatar?: string;
     status: 'active' | 'withdrawn' | 'late';
     isAnonymous?: boolean;
+    checkedIn?: boolean;
     joinedRound: number;
     deckName?: string;
     commanderName?: string;
@@ -144,6 +145,7 @@ export interface LeagueSeason {
 export interface League {
     id: string;
     name: string;
+    primaryColor?: string;
     description: string;
     organizerId: string;
     startDate: string;

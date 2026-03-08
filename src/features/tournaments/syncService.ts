@@ -1,5 +1,6 @@
 ﻿import { rtdb } from '../../lib/firebase';
 import { ref, onValue, set, serverTimestamp } from 'firebase/database';
+import { withTimeout } from '../../utils/promiseHelper';
 
 export const syncService = {
     /**
@@ -9,9 +10,13 @@ export const syncService = {
     notifyUpdate: async (tournamentId: string) => {
         try {
             const syncRef = ref(rtdb, `sync/${tournamentId}`);
-            await set(syncRef, {
-                lastUpdated: serverTimestamp()
-            });
+            await withTimeout(
+                set(syncRef, {
+                    lastUpdated: serverTimestamp()
+                }),
+                3000,
+                'Sync notification timeout'
+            );
         } catch (err) {
             console.warn('Sync notification failed:', err);
         }

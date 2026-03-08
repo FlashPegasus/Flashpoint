@@ -5,6 +5,7 @@ import PageShell from '../components/layout';
 import { Button, Card, Input } from '../components/ui';
 import { useAuthStore } from '../features/auth/authStore';
 import { useLeagueStore } from '../features/leagues/leagueStore';
+import { TCG_PRESETS, type ScoringPreset } from '../utils/tcgPresets';
 import toast from 'react-hot-toast';
 
 const LeagueCreate: React.FC = () => {
@@ -57,6 +58,17 @@ const LeagueCreate: React.FC = () => {
     };
 
     const update = (field: string, value: unknown) => setFormData(prev => ({ ...prev, [field]: value }));
+
+    const applyPreset = (preset: ScoringPreset) => {
+        setFormData(prev => ({
+            ...prev,
+            pointsParticipation: preset.leaguePoints.participation,
+            pointsWin: preset.leaguePoints.win,
+            pointsTop4: preset.leaguePoints.top4,
+            pointsTop8: preset.leaguePoints.top8
+        }));
+        toast.success(`Preset "${preset.name}" aplicado!`);
+    };
 
     return (
         <PageShell>
@@ -122,8 +134,26 @@ const LeagueCreate: React.FC = () => {
                         </div>
                     </Card>
 
+                    {/* Presets Quick-Select */}
+                    <Card title="⚡ Presets de Formato (TCG)">
+                        <p className="text-secondary text-xs mb-4">Escolha um formato para configurar automaticamente os pontos da liga.</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {TCG_PRESETS.map(preset => (
+                                <button
+                                    key={preset.id}
+                                    onClick={() => applyPreset(preset)}
+                                    className="glass p-4 rounded-2xl border border-white/5 hover:border-purple/40 text-left transition-all active:scale-95 group"
+                                >
+                                    <div className="text-2xl mb-2">{preset.icon}</div>
+                                    <h3 className="font-bold text-sm mb-1 group-hover:text-purple transition-colors">{preset.name}</h3>
+                                    <p className="text-[10px] text-muted leading-tight">{preset.description}</p>
+                                </button>
+                            ))}
+                        </div>
+                    </Card>
+
                     {/* Scoring */}
-                    <Card title="Sistema de Pontuação">
+                    <Card title="🏆 Sistema de Pontuação">
                         <div className="flex flex-col gap-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <Input label="Pontos por Participação" type="number" value={formData.pointsParticipation} onChange={e => update('pointsParticipation', +e.target.value)} />

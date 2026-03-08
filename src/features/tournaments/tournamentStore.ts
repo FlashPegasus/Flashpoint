@@ -16,6 +16,7 @@ interface TournamentState {
     regenerateRound: (tournamentId: string) => Promise<void>;
     submitResult: (tournamentId: string, roundNumber: number, tableId: string, results: TableResult[]) => Promise<void>;
     completeTournament: (tournamentId: string) => Promise<void>;
+    toggleCheckIn: (tournamentId: string, playerId: string, status: boolean) => Promise<void>;
 }
 
 export const useTournamentStore = create<TournamentState>((set, get) => ({
@@ -74,5 +75,10 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
         await tournamentService.completeTournament(id);
         await get().loadTournament(id);
         await get().loadTournaments();
-    }
+    },
+
+    toggleCheckIn: async (id, playerId, status) => {
+        await tournamentService.toggleCheckIn(id, playerId, status);
+        await get().loadTournament(id);
+    },
 }));

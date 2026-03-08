@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Trophy, Users, Calendar, Copy, Check, RefreshCw, Link, Trash2 } from 'lucide-react';
+import { Trophy, Users, Calendar, Copy, Check, RefreshCw, Link } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import PageShell from '../components/layout';
 import { Button, Card, LoadingScreen, Modal, Input } from '../components/ui';
@@ -10,10 +10,11 @@ import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { leagueService } from '../features/leagues/leagueService';
 import { LeagueMembersTab } from '../features/leagues/components/LeagueMembersTab';
 import { LeagueSeasonsTab } from '../features/leagues/components/LeagueSeasonsTab';
+import { LeagueDetailsTab } from '../features/leagues/components/LeagueDetailsTab';
 import { getInviteLink, copyToClipboard } from '../utils/inviteHelper';
 import toast from 'react-hot-toast';
 
-export type LeagueTabId = 'ranking' | 'tournaments' | 'info' | 'membros' | 'seasons';
+export type LeagueTabId = 'ranking' | 'tournaments' | 'membros' | 'temporadas' | 'ajustes';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
@@ -44,7 +45,7 @@ const LeagueDashboard: React.FC = () => {
 
     useEffect(() => {
         if (tab === 'membros') handleLoadMembers();
-        if (tab === 'seasons') handleLoadSeasons();
+        if (tab === 'temporadas') handleLoadSeasons();
     }, [tab, id]);
 
     // RTDB live updates
@@ -165,7 +166,7 @@ const LeagueDashboard: React.FC = () => {
             toast.success('Temporada finalizada e arquivada! Ranking resetado. 🏅');
             setIsSeasonModalOpen(false);
             setSeasonName('');
-            setTab('seasons');
+            setTab('temporadas');
         } catch (err: any) {
             toast.error(err.message || 'Erro ao arquivar temporada');
         }
@@ -176,7 +177,13 @@ const LeagueDashboard: React.FC = () => {
 
     return (
         <PageShell>
-            <div className="container py-8 animate-fade-in">
+            <div
+                className="container py-8 flex flex-col gap-8 animate-fade-in"
+                style={{
+                    '--color-purple': activeLeague.primaryColor || '#8b5cf6',
+                    '--shadow-glow': `0 0 20px ${(activeLeague.primaryColor || '#8b5cf6')}4D`
+                } as any}
+            >
                 {/* Header */}
                 <div className="relative mb-8 overflow-hidden rounded-3xl glass border border-white/5 p-8"
                     style={{ background: activeLeague.bannerUrl ? `linear-gradient(to bottom, rgba(0,0,0,0.6), rgba(10,10,20,0.95)), url(${activeLeague.bannerUrl}) center/cover` : 'rgba(255,255,255,0.03)' }}>
@@ -217,11 +224,11 @@ const LeagueDashboard: React.FC = () => {
 
                 {/* Tabs */}
                 <div className="sticky top-20 z-20 flex gap-2 mb-6 glass p-1 rounded-2xl w-full overflow-x-auto no-scrollbar shadow-2xl backdrop-blur-xl border border-white/10 md:w-fit">
-                    {(['ranking', 'tournaments', 'membros', 'seasons', 'info'] as LeagueTabId[]).map(t => (
+                    {(['ranking', 'tournaments', 'membros', 'temporadas', 'ajustes'] as LeagueTabId[]).map(t => (
                         <button key={t} onClick={() => setTab(t)}
                             className={`px-5 py-2 rounded-xl text-sm font-bold transition-all capitalize whitespace-nowrap ${tab === t ? 'glass border border-purple/30 text-purple' : 'text-secondary hover:text-primary'}`}
                             style={{ color: tab === t ? 'var(--color-purple)' : undefined }}>
-                            {t === 'ranking' ? '🏆 Ranking' : t === 'tournaments' ? '⚔️ Torneios' : t === 'membros' ? '👥 Membros' : t === 'seasons' ? '🏅 Temporadas' : 'ℹ️ Configurações'}
+                            {t === 'ranking' ? '🏆 Ranking' : t === 'tournaments' ? '⚔️ Torneios' : t === 'membros' ? '👥 Membros' : t === 'temporadas' ? '🏅 Temporadas' : 'ℹ️ Ajustes'}
                         </button>
                     ))}
                 </div>
@@ -314,115 +321,22 @@ const LeagueDashboard: React.FC = () => {
                     </div>
                 )}
 
-                {/* INFO TAB */}
-                {tab === 'info' && (
-                    <Card title="Configurações da Liga">
-                        {isOrganizer && !editMode && (
-                            <div className="flex justify-end mb-4">
-                                <Button size="sm" variant="secondary" onClick={() => {
-                                    setEditData({
-                                        name: activeLeague.name,
-                                        description: activeLeague.description,
-                                        pointsParticipation: activeLeague.pointsParticipation,
-                                        pointsWin: activeLeague.pointsWin,
-                                        pointsTop4: activeLeague.pointsTop4,
-                                        pointsTop8: activeLeague.pointsTop8,
-                                        bestXof: activeLeague.bestXof || '',
-                                        visibility: activeLeague.visibility,
-                                    });
-                                    setEditMode(true);
-                                }}>✏️ Editar Informações</Button>
-                            </div>
-                        )}
-
-                        {editMode ? (
-                            <div className="flex flex-col gap-4 animate-fade-in">
-                                <label className="text-xs text-secondary mt-2">Nome da Liga</label>
-                                <input className="w-full glass p-3 border-white/5 text-primary"
-                                    value={editData.name} onChange={e => setEditData({ ...editData, name: e.target.value })} />
-
-                                <label className="text-xs text-secondary mt-2">Descrição</label>
-                                <textarea className="w-full glass p-3 border-white/5 text-primary"
-                                    value={editData.description} onChange={e => setEditData({ ...editData, description: e.target.value })} />
-
-                                <label className="text-xs text-secondary mt-2">Visibilidade</label>
-                                <select className="w-full glass p-3 border-white/5 text-primary bg-bg-dark"
-                                    value={editData.visibility} onChange={e => setEditData({ ...editData, visibility: e.target.value })}>
-                                    <option value="public">🌍 Pública (Aparece na lista)</option>
-                                    <option value="private">🔒 Privada (Apenas por código)</option>
-                                </select>
-
-                                <div className="grid grid-cols-2 gap-4 mt-4">
-                                    <div>
-                                        <label className="text-xs text-secondary mb-1 block">Pts Participação</label>
-                                        <input type="number" className="w-full glass p-2 border-white/5 text-primary"
-                                            value={editData.pointsParticipation} onChange={e => setEditData({ ...editData, pointsParticipation: +e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-secondary mb-1 block">Pts Vitória (1º)</label>
-                                        <input type="number" className="w-full glass p-2 border-white/5 text-primary"
-                                            value={editData.pointsWin} onChange={e => setEditData({ ...editData, pointsWin: +e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-secondary mb-1 block">Pts Top 4</label>
-                                        <input type="number" className="w-full glass p-2 border-white/5 text-primary"
-                                            value={editData.pointsTop4} onChange={e => setEditData({ ...editData, pointsTop4: +e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-secondary mb-1 block">Pts Top 8</label>
-                                        <input type="number" className="w-full glass p-2 border-white/5 text-primary"
-                                            value={editData.pointsTop8} onChange={e => setEditData({ ...editData, pointsTop8: +e.target.value })} />
-                                    </div>
-                                    <div className="col-span-2">
-                                        <label className="text-xs text-secondary mb-1 block">Melhores X Torneios (Deixe vazio para somar tudo)</label>
-                                        <input type="number" className="w-full glass p-2 border-white/5 text-primary" placeholder="Ex: 8"
-                                            value={editData.bestXof} onChange={e => setEditData({ ...editData, bestXof: e.target.value ? +e.target.value : undefined })} />
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-white/5">
-                                    <Button variant="ghost" onClick={() => setEditMode(false)}>Cancelar</Button>
-                                    <Button variant="glow" onClick={handleSaveEdit}>Salvar Alterações</Button>
-                                </div>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="grid grid-cols-2 gap-4 text-sm mt-2">
-                                    {[
-                                        { label: 'Participação', value: activeLeague.pointsParticipation ?? 1 },
-                                        { label: 'Vitória (1º)', value: activeLeague.pointsWin ?? 5 },
-                                        { label: 'Top 4', value: activeLeague.pointsTop4 ?? 3 },
-                                        { label: 'Top 8', value: activeLeague.pointsTop8 ?? 2 },
-                                    ].map(item => (
-                                        <div key={item.label} className="glass rounded-xl p-4 border border-white/5">
-                                            <p className="text-muted text-xs mb-1">{item.label}</p>
-                                            <p className="text-2xl font-bold" style={{ color: 'var(--color-purple)' }}>{item.value} pts</p>
-                                        </div>
-                                    ))}
-                                </div>
-                                {activeLeague.bestXof && (
-                                    <div className="mt-4 p-4 glass rounded-2xl border border-purple/20">
-                                        <p className="font-bold text-sm">💎 Regra "Melhores X Torneios"</p>
-                                        <p className="text-muted text-xs mt-1">Apenas os <strong>{activeLeague.bestXof} melhores resultados</strong> de cada jogador contam para o ranking.</p>
-                                    </div>
-                                )}
-                                {isOrganizer && (
-                                    <div className="mt-8 pt-4 border-t border-purple/20 flex flex-col gap-4">
-                                        <Button variant="glow" className="w-full flex justify-center items-center" onClick={() => setIsSeasonModalOpen(true)}>
-                                            <Trophy size={16} className="mr-2" /> Encerrar Temporada
-                                        </Button>
-                                        <Button variant="secondary" className="w-full flex justify-center items-center" onClick={handleOpenAudit}>
-                                            <RefreshCw size={16} className="mr-2" /> Histórico de Ações (Audit)
-                                        </Button>
-                                        <Button variant="danger" className="w-full flex justify-center items-center opacity-70 hover:opacity-100 transition-opacity" onClick={handleDeleteLeague}>
-                                            <Trash2 size={16} className="mr-2" /> Excluir Liga
-                                        </Button>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </Card>
+                {/* AJUSTES TAB */}
+                {tab === 'ajustes' && (
+                    <LeagueDetailsTab
+                        activeLeague={activeLeague}
+                        isOrganizer={isOrganizer}
+                        editMode={editMode}
+                        editData={editData}
+                        setEditMode={setEditMode}
+                        setEditData={setEditData}
+                        handleSaveEdit={handleSaveEdit}
+                        handleOpenAudit={handleOpenAudit}
+                        handleDeleteLeague={handleDeleteLeague}
+                        setIsSeasonModalOpen={setIsSeasonModalOpen}
+                    />
                 )}
+
 
                 {/* MEMBERS TAB */}
                 {tab === 'membros' && (
@@ -435,7 +349,7 @@ const LeagueDashboard: React.FC = () => {
                 )}
 
                 {/* SEASONS TAB */}
-                {tab === 'seasons' && (
+                {tab === 'temporadas' && (
                     <LeagueSeasonsTab seasons={seasons} />
                 )}
             </div>

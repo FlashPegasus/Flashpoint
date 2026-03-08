@@ -6,7 +6,9 @@ import { Button, Card, Input, Select } from '../components/ui';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { useLeagueStore } from '../features/leagues/leagueStore';
 import { useAuthStore } from '../features/auth/authStore';
+import { TCG_PRESETS, type ScoringPreset } from '../utils/tcgPresets';
 import type { TournamentFormat } from '../types';
+import toast from 'react-hot-toast';
 
 const TournamentCreate: React.FC = () => {
     const navigate = useNavigate();
@@ -20,18 +22,6 @@ const TournamentCreate: React.FC = () => {
             loadMyLeagues(user.id);
         }
     }, [user, loadMyLeagues]);
-
-    if (user?.isAnonymous) {
-        return (
-            <PageShell>
-                <div className="container section text-center pt-20">
-                    <h2 className="text-2xl font-bold mb-4">Contas de Convidado não podem criar torneios</h2>
-                    <p className="text-secondary mb-8">Para organizar eventos e evitar span, você precisa vincular um e-mail ou Google na sua conta.</p>
-                    <Button onClick={() => navigate('/profile')} variant="glow">Proteger Conta Local</Button>
-                </div>
-            </PageShell>
-        );
-    }
 
     const [formData, setFormData] = useState({
         name: '',
@@ -56,12 +46,23 @@ const TournamentCreate: React.FC = () => {
         allowWithdrawal: true
     });
 
+    if (user?.isAnonymous) {
+        return (
+            <PageShell>
+                <div className="container section text-center pt-20">
+                    <h2 className="text-2xl font-bold mb-4">Contas de Convidado não podem criar torneios</h2>
+                    <p className="text-secondary mb-8">Para organizar eventos e evitar span, você precisa vincular um e-mail ou Google na sua conta.</p>
+                    <Button onClick={() => navigate('/profile')} variant="glow">Proteger Conta Local</Button>
+                </div>
+            </PageShell>
+        );
+    }
+
     const nextStep = () => setStep(step + 1);
     const prevStep = () => setStep(step - 1);
 
     const handleCreate = async () => {
         const payload = { ...formData, organizerId: user?.id || 'anonymous' };
-        // Don't save the temporary leagueId field inside the tournament directly, it's managed via relationships
         const { leagueId, ...tournamentData } = payload as any;
 
         const tournament = await createTournament(tournamentData);
@@ -75,6 +76,20 @@ const TournamentCreate: React.FC = () => {
             }
             navigate(`/tournament/${tournament.id}`);
         }
+    };
+
+    const applyPreset = (preset: ScoringPreset) => {
+        setFormData(prev => ({
+            ...prev,
+            format: preset.id === 'modern' ? '1v1' : 'multiplayer',
+            scoring: {
+                ...prev.scoring,
+                positions: preset.tournamentScoring.positions
+            },
+            minPlayersPerTable: preset.id === 'commander' ? 3 : prev.minPlayersPerTable,
+            maxPlayersPerTable: preset.id === 'commander' ? 4 : prev.maxPlayersPerTable
+        }));
+        toast.success(`Preset "${preset.name}" aplicado!`);
     };
 
     return (
@@ -138,125 +153,147 @@ const TournamentCreate: React.FC = () => {
                                     onChange={e => setFormData({ ...formData, description: e.target.value })}
                                 />
                             </div>
-                            <Button onClick={nextStep} className="self-end" disabled={!formData.name}>
-                                Próximo <ChevronRight size={18} className="ml-1" />
-                            </Button>
-                        </div>
-                    </Card>
-                )}
-
-                {step === 2 && (
-                    <Card title="Formato & Pontuação" className="animate-fade-in">
-                        <div className="flex flex-col gap-6">
-                            <Select
-                                label="Formato da Partida"
-                                options={[
-                                    { value: '1v1', label: '1v1 (Padrão)' },
-                                    { value: 'multiplayer', label: 'Multijogador (Commander/Casual)' }
-                                ]}
-                                value={formData.format}
-                                onChange={e => setFormData({ ...formData, format: e.target.value as TournamentFormat })}
-                            />
-
-                            {formData.format === '1v1' && (
-                                <Select
-                                    label="Modo de Pareamento"
-                                    options={[
-                                        { value: 'standard', label: 'Suíço Padrão (Foco em Pontuação)' },
-                                        { value: 'fair', label: 'Suíço Justo (Foco em Não Repetir Mesas)' }
-                                    ]}
-                                    value={formData.pairingMode}
-                                    onChange={e => setFormData({ ...formData, pairingMode: e.target.value as 'standard' | 'fair' })}
-                                />
-                            )}
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <Select
-                                    label="Tempo Limitado (Rodadas)?"
-                                    options={[
-                                        { value: 'true', label: 'Sim (Com Cronômetro)' },
-                                        { value: 'false', label: 'Não (Tempo Livre)' }
-                                    ]}
-                                    value={formData.hasTimer.toString()}
-                                    onChange={e => setFormData({ ...formData, hasTimer: e.target.value === 'true' })}
-                                />
-                                {formData.format === 'multiplayer' && (
-                                    <Select
-                                        label="Permitir Byes (Vitória Automática)?"
-                                        options={[
-                                            { value: 'true', label: 'Sim (Recomendado)' },
-                                            { value: 'false', label: 'Não (Redistribuir Mesas)' }
-                                        ]}
-                                        value={formData.allowByes.toString()}
-                                        onChange={e => setFormData({ ...formData, allowByes: e.target.value === 'true' })}
-                                    />
-                                )}
-                            </div>
-
-                            {formData.format === 'multiplayer' && (
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="flex flex-col gap-2">
-                                        <label className="text-[10px] font-bold text-primary ml-1 uppercase tracking-wider">Mín. Jogadores por Mesa</label>
-                                        <div className="flex items-center justify-between glass p-2 rounded-xl border border-white/5">
-                                            <button type="button"
-                                                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-lg transition-colors"
-                                                onClick={() => setFormData({ ...formData, minPlayersPerTable: Math.max(2, formData.minPlayersPerTable - 1) })}
-                                            >-</button>
-                                            <span className="font-outfit text-xl font-bold">{formData.minPlayersPerTable}</span>
-                                            <button type="button"
-                                                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-lg transition-colors"
-                                                onClick={() => setFormData({ ...formData, minPlayersPerTable: Math.min(formData.maxPlayersPerTable, formData.minPlayersPerTable + 1) })}
-                                            >+</button>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col gap-2">
-                                        <label className="text-[10px] font-bold text-primary ml-1 uppercase tracking-wider">Máx. Jogadores por Mesa</label>
-                                        <div className="flex items-center justify-between glass p-2 rounded-xl border border-white/5">
-                                            <button type="button"
-                                                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-lg transition-colors"
-                                                onClick={() => setFormData({ ...formData, maxPlayersPerTable: Math.max(formData.minPlayersPerTable, formData.maxPlayersPerTable - 1) })}
-                                            >-</button>
-                                            <span className="font-outfit text-xl font-bold">{formData.maxPlayersPerTable}</span>
-                                            <button type="button"
-                                                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-lg transition-colors"
-                                                onClick={() => setFormData({ ...formData, maxPlayersPerTable: formData.maxPlayersPerTable + 1 })}
-                                            >+</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="p-4 glass rounded-xl border-purple/30" style={{ borderLeft: '4px solid var(--color-purple)' }}>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <HelpCircle size={16} className="text-purple" style={{ color: 'var(--color-purple)' }} />
-                                    <span className="font-bold text-sm uppercase">Pontuação Automática</span>
-                                </div>
-                                <p className="text-xs text-secondary mb-2">
-                                    {formData.format === '1v1'
-                                        ? 'Suíço Padrão: 3 pts vitória, 1 pt empate, 0 pt derrota.'
-                                        : 'Posicional: Os pontos são dados de acordo com a colocação final na mesa.'}
-                                </p>
-                                {formData.format === 'multiplayer' && (
-                                    <div className="flex flex-wrap gap-2 mt-3">
-                                        {[1, 2, 3, 4].map(pos => (
-                                            <div key={pos} className="px-3 py-1 glass rounded-lg text-[10px] font-bold">
-                                                {pos}º: {formData.scoring.positions?.[4]?.[pos] || 0} pts
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex justify-between">
-                                <Button variant="ghost" onClick={prevStep}>
-                                    <ChevronLeft size={18} className="mr-1" /> Voltar
-                                </Button>
-                                <Button onClick={nextStep}>
+                            <div className="flex justify-end">
+                                <Button onClick={nextStep} disabled={!formData.name}>
                                     Próximo <ChevronRight size={18} className="ml-1" />
                                 </Button>
                             </div>
                         </div>
                     </Card>
+                )}
+
+                {step === 2 && (
+                    <div className="flex flex-col gap-6 animate-fade-in">
+                        {/* Presets Quick-Select */}
+                        <Card title="⚡ Presets de Formato">
+                            <p className="text-secondary text-[10px] mb-4 uppercase tracking-tighter">Configuração rápida baseada no TCG</p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                {TCG_PRESETS.map(preset => (
+                                    <button
+                                        key={preset.id}
+                                        type="button"
+                                        onClick={() => applyPreset(preset)}
+                                        className="glass p-3 rounded-2xl border border-white/5 hover:border-purple/40 text-left transition-all active:scale-95 group"
+                                    >
+                                        <div className="text-xl mb-1">{preset.icon}</div>
+                                        <h3 className="font-bold text-[11px] group-hover:text-purple transition-colors">{preset.name}</h3>
+                                    </button>
+                                ))}
+                            </div>
+                        </Card>
+
+                        <Card title="Formato & Pontuação">
+                            <div className="flex flex-col gap-6">
+                                <Select
+                                    label="Formato da Partida"
+                                    options={[
+                                        { value: '1v1', label: '1v1 (Padrão)' },
+                                        { value: 'multiplayer', label: 'Multijogador (Commander/Casual)' }
+                                    ]}
+                                    value={formData.format}
+                                    onChange={e => setFormData({ ...formData, format: e.target.value as TournamentFormat })}
+                                />
+
+                                {formData.format === '1v1' && (
+                                    <Select
+                                        label="Modo de Pareamento"
+                                        options={[
+                                            { value: 'standard', label: 'Suíço Padrão (Foco em Pontuação)' },
+                                            { value: 'fair', label: 'Suíço Justo (Foco em Não Repetir Mesas)' }
+                                        ]}
+                                        value={formData.pairingMode}
+                                        onChange={e => setFormData({ ...formData, pairingMode: e.target.value as 'standard' | 'fair' })}
+                                    />
+                                )}
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Select
+                                        label="Tempo Limitado (Rodadas)?"
+                                        options={[
+                                            { value: 'true', label: 'Sim (Com Cronômetro)' },
+                                            { value: 'false', label: 'Não (Tempo Livre)' }
+                                        ]}
+                                        value={formData.hasTimer.toString()}
+                                        onChange={e => setFormData({ ...formData, hasTimer: e.target.value === 'true' })}
+                                    />
+                                    {formData.format === 'multiplayer' && (
+                                        <Select
+                                            label="Permitir Byes (Vitória Automática)?"
+                                            options={[
+                                                { value: 'true', label: 'Sim (Recomendado)' },
+                                                { value: 'false', label: 'Não (Redistribuir Mesas)' }
+                                            ]}
+                                            value={formData.allowByes.toString()}
+                                            onChange={e => setFormData({ ...formData, allowByes: e.target.value === 'true' })}
+                                        />
+                                    )}
+                                </div>
+
+                                {formData.format === 'multiplayer' && (
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="flex flex-col gap-2">
+                                            <label className="text-[10px] font-bold text-primary ml-1 uppercase tracking-wider">Mín. Jogadores por Mesa</label>
+                                            <div className="flex items-center justify-between glass p-2 rounded-xl border border-white/5">
+                                                <button type="button"
+                                                    className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-lg transition-colors"
+                                                    onClick={() => setFormData({ ...formData, minPlayersPerTable: Math.max(2, formData.minPlayersPerTable - 1) })}
+                                                >-</button>
+                                                <span className="font-outfit text-xl font-bold">{formData.minPlayersPerTable}</span>
+                                                <button type="button"
+                                                    className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-lg transition-colors"
+                                                    onClick={() => setFormData({ ...formData, minPlayersPerTable: Math.min(formData.maxPlayersPerTable, formData.minPlayersPerTable + 1) })}
+                                                >+</button>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col gap-2">
+                                            <label className="text-[10px] font-bold text-primary ml-1 uppercase tracking-wider">Máx. Jogadores por Mesa</label>
+                                            <div className="flex items-center justify-between glass p-2 rounded-xl border border-white/5">
+                                                <button type="button"
+                                                    className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-lg transition-colors"
+                                                    onClick={() => setFormData({ ...formData, maxPlayersPerTable: Math.max(formData.minPlayersPerTable, formData.maxPlayersPerTable - 1) })}
+                                                >-</button>
+                                                <span className="font-outfit text-xl font-bold">{formData.maxPlayersPerTable}</span>
+                                                <button type="button"
+                                                    className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-lg transition-colors"
+                                                    onClick={() => setFormData({ ...formData, maxPlayersPerTable: formData.maxPlayersPerTable + 1 })}
+                                                >+</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="p-4 glass rounded-xl border-purple/30" style={{ borderLeft: '4px solid var(--color-purple)' }}>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <HelpCircle size={16} className="text-purple" style={{ color: 'var(--color-purple)' }} />
+                                        <span className="font-bold text-sm uppercase">Pontuação Automática</span>
+                                    </div>
+                                    <p className="text-xs text-secondary mb-2">
+                                        {formData.format === '1v1'
+                                            ? 'Suíço Padrão: 3 pts vitória, 1 pt empate, 0 pt derrota.'
+                                            : 'Posicional: Os pontos são dados de acordo com a colocação final na mesa.'}
+                                    </p>
+                                    {formData.format === 'multiplayer' && (
+                                        <div className="flex flex-wrap gap-2 mt-3">
+                                            {[1, 2, 3, 4].map(pos => (
+                                                <div key={pos} className="px-3 py-1 glass rounded-lg text-[10px] font-bold">
+                                                    {pos}º: {formData.scoring.positions?.[4]?.[pos] || 0} pts
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex justify-between">
+                                    <Button variant="ghost" type="button" onClick={prevStep}>
+                                        <ChevronLeft size={18} className="mr-1" /> Voltar
+                                    </Button>
+                                    <Button type="button" onClick={nextStep}>
+                                        Próximo <ChevronRight size={18} className="ml-1" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
                 )}
 
                 {step === 3 && (
@@ -285,10 +322,10 @@ const TournamentCreate: React.FC = () => {
                             </div>
 
                             <div className="flex justify-between">
-                                <Button variant="ghost" onClick={prevStep}>
+                                <Button variant="ghost" type="button" onClick={prevStep}>
                                     <ChevronLeft size={18} className="mr-1" /> Voltar
                                 </Button>
-                                <Button onClick={handleCreate} variant="glow" className="px-10">
+                                <Button type="button" onClick={handleCreate} variant="glow" className="px-10">
                                     <Save size={18} className="mr-2" /> Criar Torneio
                                 </Button>
                             </div>
@@ -301,4 +338,3 @@ const TournamentCreate: React.FC = () => {
 };
 
 export default TournamentCreate;
-

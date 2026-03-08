@@ -17,9 +17,26 @@ const TournamentDashboard: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { user } = useAuthStore();
-    const { activeTournament, loadTournament, isLoading, addParticipant, generateRound, regenerateRound, submitResult, withdrawParticipant, completeTournament } = useTournamentStore();
+    const {
+        activeTournament, loadTournament, isLoading, addParticipant,
+        generateRound, regenerateRound, submitResult, withdrawParticipant,
+        completeTournament, toggleCheckIn
+    } = useTournamentStore();
     const { myLeagues, loadMyLeagues, linkTournament } = useLeagueStore();
     const [activeTab, setActiveTab] = useState<'participants' | 'rounds' | 'standings' | 'settings'>('participants');
+
+    const handleToggleCheckIn = async () => {
+        if (!id || !user || !activeTournament) return;
+        const participant = activeTournament.participants.find(p => p.playerId === user.id);
+        if (!participant) return;
+
+        try {
+            await toggleCheckIn(id, user.id, !participant.checkedIn);
+            toast.success(participant.checkedIn ? 'Check-in cancelado.' : 'Check-in realizado com sucesso!');
+        } catch (err) {
+            toast.error('Erro ao realizar check-in.');
+        }
+    };
 
     useEffect(() => {
         if (user?.id && !user.isAnonymous) {
@@ -210,6 +227,14 @@ const TournamentDashboard: React.FC = () => {
                                 <Clock size={18} className="mr-2" /> Iniciar Timer
                             </Button>
                         )}
+                        {!isOrganizer && activeTournament.status === 'registration' && activeTournament.participants.some(p => p.playerId === user?.id) && (
+                            <Button
+                                variant={activeTournament.participants.find(p => p.playerId === user?.id)?.checkedIn ? 'secondary' : 'glow'}
+                                onClick={handleToggleCheckIn}
+                            >
+                                {activeTournament.participants.find(p => p.playerId === user?.id)?.checkedIn ? 'Presença Confirmada ✅' : 'Confirmar Presença'}
+                            </Button>
+                        )}
                         <Button variant="secondary" onClick={() => navigate(`/tournament/${id}/public`)}>Página Pública</Button>
                     </div>
                 </div>
@@ -254,8 +279,15 @@ const TournamentDashboard: React.FC = () => {
                                                                 }
                                                             </div>
                                                             <div>
-                                                                <span className={p.status === 'withdrawn' ? 'text-muted line-through' : ''}>{p.name}</span>
-                                                                {p.status === 'withdrawn' && <span className="ml-2 text-[10px] uppercase font-bold text-white/40 glass px-2 py-0.5 rounded-full">Retirado</span>}
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={p.status === 'withdrawn' ? 'text-muted line-through' : ''}>{p.name}</span>
+                                                                    {p.checkedIn && (
+                                                                        <span title="Presença Confirmada">
+                                                                            <CheckCircle2 size={12} className="text-green" style={{ color: 'var(--color-green)' }} />
+                                                                        </span>
+                                                                    )}
+                                                                    {p.status === 'withdrawn' && <span className="ml-2 text-[10px] uppercase font-bold text-white/40 glass px-2 py-0.5 rounded-full">Retirado</span>}
+                                                                </div>
                                                                 <div className="flex items-center gap-2 mt-0.5">
                                                                     {p.commanderName && (
                                                                         <span className="text-[10px] text-purple font-bold uppercase tracking-tight" style={{ color: 'var(--color-purple)' }}>

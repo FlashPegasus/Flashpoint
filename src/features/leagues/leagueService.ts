@@ -7,6 +7,7 @@ import {
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { tournamentService } from '../tournaments/tournamentService';
+import { withTimeout } from '../../utils/promiseHelper';
 
 const LEAGUES_COLLECTION = 'leagues';
 
@@ -103,10 +104,26 @@ export const leagueService = {
         return snap.docs[0].data() as League;
     },
 
-    getPublicLeagues: async (): Promise<League[]> => {
-        const q = query(collection(db, LEAGUES_COLLECTION), where('visibility', '==', 'public'));
+    getPublicLeagues: async (lastDoc?: any): Promise<{ leagues: League[], lastVisible: any }> => {
+        const leaguesRef = collection(db, LEAGUES_COLLECTION);
+        let q = query(
+            leaguesRef,
+            where('visibility', '==', 'public'),
+            where('status', '==', 'active'),
+            orderBy('createdAt', 'desc'),
+            limit(10)
+        );
+
+        if (lastDoc) {
+            const { startAfter } = await import('firebase/firestore');
+            q = query(q, startAfter(lastDoc));
+        }
+
         const snap = await getDocs(q);
-        return snap.docs.map(d => d.data() as League);
+        const leagues = snap.docs.map(d => d.data() as League);
+        const lastVisible = snap.docs[snap.docs.length - 1];
+
+        return { leagues, lastVisible };
     },
 
     getUserLeagues: async (userId: string): Promise<League[]> => {
@@ -355,9 +372,13 @@ export const leagueService = {
     _notifyUpdate: async (leagueId: string) => {
         try {
             const syncRef = ref(rtdb, `sync/leagues/${leagueId}`);
-            await set(syncRef, { lastUpdated: serverTimestamp() });
+            await withTimeout(
+                set(syncRef, { lastUpdated: serverTimestamp() }),
+                3000,
+                'RTDB sync timeout'
+            );
         } catch (err) {
-            console.warn('League sync signal failed:', err);
+            console.warn(`[RTDB Fallback] League sync signal failed or timed out for ${leagueId}:`, err);
         }
     }
 };
