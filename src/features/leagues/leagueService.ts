@@ -1,9 +1,9 @@
-import type { League, LeagueStanding } from '../../types';
+import type { League, LeagueStanding, LeagueMember, LeagueOrganizer, LeagueSeason } from '../../types';
 import { db, rtdb } from '../../lib/firebase';
 import { onValue, ref, set, serverTimestamp } from 'firebase/database';
 import {
     doc, getDoc, setDoc, updateDoc, deleteDoc,
-    collection, getDocs, query, where, arrayUnion, arrayRemove
+    collection, getDocs, query, where, arrayUnion, arrayRemove, orderBy, limit, addDoc
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { tournamentService } from '../tournaments/tournamentService';
@@ -18,7 +18,41 @@ const generateInviteCode = (): string => {
     return `${word}${num}`;
 };
 
+export interface LeagueAuditLog {
+    id: string;
+    action: string;
+    details: string;
+    userId: string;
+    timestamp: string;
+}
+
 export const leagueService = {
+    addAuditLog: async (leagueId: string, action: string, details: string, userId: string): Promise<void> => {
+        try {
+            const auditRef = collection(db, LEAGUES_COLLECTION, leagueId, 'audit_log');
+            await addDoc(auditRef, {
+                action,
+                details,
+                userId,
+                timestamp: new Date().toISOString()
+            });
+        } catch (err) {
+            console.warn('Failed to add audit log:', err);
+        }
+    },
+
+    getAuditLogs: async (leagueId: string): Promise<LeagueAuditLog[]> => {
+        try {
+            const auditRef = collection(db, LEAGUES_COLLECTION, leagueId, 'audit_log');
+            const q = query(auditRef, orderBy('timestamp', 'desc'), limit(20));
+            const snap = await getDocs(q);
+            return snap.docs.map(d => ({ id: d.id, ...d.data() } as LeagueAuditLog));
+        } catch (err) {
+            console.warn('Failed to get audit logs:', err);
+            return [];
+        }
+    },
+
     createLeague: async (data: Partial<League> & { organizerId: string; name: string }): Promise<League> => {
         const league: League = {
             id: uuidv4(),
@@ -81,21 +115,121 @@ export const leagueService = {
         return snap.docs.map(d => d.data() as League);
     },
 
-    joinLeague: async (leagueId: string, userId: string): Promise<void> => {
+    joinLeagueByCode: async (code: string, userId: string, userName: string): Promise<League> => {
+        const league = await leagueService.getLeagueByInviteCode(code);
+        if (!league) throw new Error('Código de convite inválido ou expirado.');
+        await leagueService.joinLeague(league.id, userId, userName);
+        return league;
+    },
+
+    joinLeague: async (leagueId: string, userId: string, userName: string): Promise<void> => {
         const league = await leagueService.getLeagueById(leagueId);
         if (!league) throw new Error('Liga não encontrada.');
         if (league.memberIds.includes(userId)) throw new Error('Você já é membro desta liga.');
+
+        // 1. Check if user was previously banned
+        const memberRef = doc(db, LEAGUES_COLLECTION, leagueId, 'members', userId);
+        const memberSnap = await getDoc(memberRef);
+        if (memberSnap.exists() && memberSnap.data().status === 'banned') {
+            throw new Error('Você foi banido desta liga e não pode entrar novamente.');
+        }
+
+        // 2. Add to active members array
         await updateDoc(doc(db, LEAGUES_COLLECTION, leagueId), {
             memberIds: arrayUnion(userId)
         });
+
+        // 3. Create/Update member document
+        const member: LeagueMember = {
+            playerId: userId,
+            playerName: userName,
+            joinedAt: new Date().toISOString(),
+            status: 'active'
+        };
+        await setDoc(memberRef, member);
+
+        await leagueService.addAuditLog(leagueId, 'JOIN_LEAGUE', `Jogador ${userName} entrou na liga`, userId);
         await leagueService._notifyUpdate(leagueId);
     },
 
-    joinLeagueByCode: async (code: string, userId: string): Promise<League> => {
-        const league = await leagueService.getLeagueByInviteCode(code);
-        if (!league) throw new Error('Código de convite inválido ou expirado.');
-        await leagueService.joinLeague(league.id, userId);
-        return league;
+    getMembers: async (leagueId: string): Promise<LeagueMember[]> => {
+        const membersRef = collection(db, LEAGUES_COLLECTION, leagueId, 'members');
+        const snap = await getDocs(membersRef);
+        return snap.docs.map(d => d.data() as LeagueMember);
+    },
+
+    updateMemberStatus: async (leagueId: string, playerId: string, status: 'active' | 'banned', adminId: string): Promise<void> => {
+        const memberRef = doc(db, LEAGUES_COLLECTION, leagueId, 'members', playerId);
+        await updateDoc(memberRef, { status });
+
+        if (status === 'banned') {
+            // Remove from active memberIds array
+            await updateDoc(doc(db, LEAGUES_COLLECTION, leagueId), {
+                memberIds: arrayRemove(playerId)
+            });
+        } else {
+            // Re-add to active memberIds array
+            await updateDoc(doc(db, LEAGUES_COLLECTION, leagueId), {
+                memberIds: arrayUnion(playerId)
+            });
+        }
+
+        await leagueService.addAuditLog(leagueId, status === 'banned' ? 'BAN_MEMBER' : 'UNBAN_MEMBER', `Status do jogador ${playerId} alterado para ${status}`, adminId);
+        await leagueService._notifyUpdate(leagueId);
+    },
+
+    addOrganizer: async (leagueId: string, userId: string, role: 'admin' | 'moderator', adminId: string): Promise<void> => {
+        const orgRef = doc(db, LEAGUES_COLLECTION, leagueId, 'organizers', userId);
+        const organizer: LeagueOrganizer = {
+            userId,
+            role,
+            addedBy: adminId,
+            addedAt: new Date().toISOString()
+        };
+        await setDoc(orgRef, organizer);
+        await leagueService.addAuditLog(leagueId, 'ADD_ORGANIZER', `Adicionou ${userId} como ${role}`, adminId);
+        await leagueService._notifyUpdate(leagueId);
+    },
+
+    getOrganizers: async (leagueId: string): Promise<LeagueOrganizer[]> => {
+        const orgsRef = collection(db, LEAGUES_COLLECTION, leagueId, 'organizers');
+        const snap = await getDocs(orgsRef);
+        return snap.docs.map(d => d.data() as LeagueOrganizer);
+    },
+
+    archiveSeason: async (leagueId: string, seasonName: string, adminId: string): Promise<void> => {
+        const league = await leagueService.getLeagueById(leagueId);
+        if (!league) throw new Error('Liga não encontrada');
+
+        const season: LeagueSeason = {
+            id: uuidv4(),
+            name: seasonName,
+            startDate: league.startDate,
+            endDate: new Date().toISOString(),
+            standings: league.standings,
+            finalizedAt: new Date().toISOString()
+        };
+
+        // 1. Save snapshot to seasons subcollection
+        const seasonRef = doc(db, LEAGUES_COLLECTION, leagueId, 'seasons', season.id);
+        await setDoc(seasonRef, season);
+
+        // 2. Reset current league ranking and tournament list for the new season
+        await updateDoc(doc(db, LEAGUES_COLLECTION, leagueId), {
+            standings: [],
+            tournamentIds: [],
+            cachedTopRanking: [],
+            startDate: new Date().toISOString() // New season starts now
+        });
+
+        await leagueService.addAuditLog(leagueId, 'ARCHIVE_SEASON', `Temporada finalizada: ${seasonName}`, adminId);
+        await leagueService._notifyUpdate(leagueId);
+    },
+
+    getSeasons: async (leagueId: string): Promise<LeagueSeason[]> => {
+        const seasonsRef = collection(db, LEAGUES_COLLECTION, leagueId, 'seasons');
+        const snap = await getDocs(query(seasonsRef, orderBy('finalizedAt', 'desc')));
+        return snap.docs.map(d => d.data() as LeagueSeason);
     },
 
     linkTournament: async (leagueId: string, tournamentId: string, organizerId: string): Promise<void> => {
@@ -110,13 +244,16 @@ export const leagueService = {
 
         // Also set leagueId on the tournament
         await updateDoc(doc(db, 'tournaments', tournamentId), { leagueId });
+        await leagueService.addAuditLog(leagueId, 'LINK_TOURNAMENT', `Vinculou o torneio: ${tournamentId}`, organizerId);
         await leagueService._notifyUpdate(leagueId);
     },
 
-    unlinkTournament: async (leagueId: string, tournamentId: string): Promise<void> => {
+    unlinkTournament: async (leagueId: string, tournamentId: string, userId: string): Promise<void> => {
         await updateDoc(doc(db, LEAGUES_COLLECTION, leagueId), {
             tournamentIds: arrayRemove(tournamentId)
         });
+        await updateDoc(doc(db, 'tournaments', tournamentId), { leagueId: null });
+        await leagueService.addAuditLog(leagueId, 'UNLINK_TOURNAMENT', `Desvinculou o torneio: ${tournamentId}`, userId);
         await leagueService._notifyUpdate(leagueId);
     },
 
@@ -128,39 +265,61 @@ export const leagueService = {
         const league = await leagueService.getLeagueById(leagueId);
         if (!league) return;
 
-        // Collect per-player scores from each linked tournament
-        const playerScores: Record<string, { points: number; tournaments: number[]; name: string }> = {};
-
+        // Collect all completed tournaments
+        const tournaments = [];
         for (const tId of league.tournamentIds) {
             const tournament = await tournamentService.getTournamentById(tId);
-            if (!tournament || tournament.status !== 'completed') continue;
+            if (tournament && tournament.status === 'completed') {
+                tournaments.push(tournament);
+            }
+        }
 
-            // Award points based on league scoring config
+        // Sort chronologically ascending to calculate streaks properly
+        tournaments.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        // Collect per-player scores
+        const playerScores: Record<string, { pointsList: number[]; name: string; currentStreak: number }> = {};
+
+        for (const tournament of tournaments) {
             tournament.participants.forEach(p => {
                 const rank = p.rank ?? 999;
                 let points = league.pointsParticipation ?? 1;
+
                 if (rank === 1) points += (league.pointsWin ?? 5);
                 else if (rank <= 4) points += (league.pointsTop4 ?? 3);
                 else if (rank <= 8) points += (league.pointsTop8 ?? 2);
 
                 if (!playerScores[p.playerId]) {
-                    playerScores[p.playerId] = { points: 0, tournaments: [], name: p.name };
+                    playerScores[p.playerId] = { pointsList: [], name: p.name, currentStreak: 0 };
                 }
-                playerScores[p.playerId].tournaments.push(points);
+
+                // Top 4 finishes count towards the streak (e.g. "Consistência de Top Cut")
+                if (rank <= 4) {
+                    playerScores[p.playerId].currentStreak += 1;
+                    // Apply streak bonus if streak >= 2
+                    if (playerScores[p.playerId].currentStreak >= 2 && league.streakBonus) {
+                        points += league.streakBonus;
+                    }
+                } else {
+                    playerScores[p.playerId].currentStreak = 0;
+                }
+
+                playerScores[p.playerId].pointsList.push(points);
             });
         }
 
         // Apply "Best X of Y" rule if configured
         const bestX = league.bestXof;
         const standings: LeagueStanding[] = Object.entries(playerScores).map(([playerId, data]) => {
-            let sorted = [...data.tournaments].sort((a, b) => b - a);
+            let sorted = [...data.pointsList].sort((a, b) => b - a);
             if (bestX && sorted.length > bestX) sorted = sorted.slice(0, bestX);
             const total = sorted.reduce((sum, v) => sum + v, 0);
             return {
                 playerId,
                 playerName: data.name,
                 totalPoints: total,
-                tournamentsPlayed: data.tournaments.length,
+                tournamentsPlayed: data.pointsList.length,
+                currentStreak: data.currentStreak,
                 rank: 0
             };
         }).sort((a, b) => b.totalPoints - a.totalPoints);
@@ -174,8 +333,11 @@ export const leagueService = {
         await leagueService._notifyUpdate(leagueId);
     },
 
-    updateLeague: async (leagueId: string, data: Partial<League>): Promise<void> => {
+    updateLeague: async (leagueId: string, data: Partial<League>, userId?: string): Promise<void> => {
         await updateDoc(doc(db, LEAGUES_COLLECTION, leagueId), data as Record<string, unknown>);
+        if (userId) {
+            await leagueService.addAuditLog(leagueId, 'UPDATE_LEAGUE', `Alterou configurações da liga`, userId);
+        }
         await leagueService._notifyUpdate(leagueId);
     },
 

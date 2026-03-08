@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Trophy, Users, Calendar, Copy, Check, RefreshCw, Link, Trash2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import PageShell from '../components/layout';
-import { Button, Card, LoadingScreen, Modal } from '../components/ui';
+import { Button, Card, LoadingScreen, Modal, Input } from '../components/ui';
 import { useLeagueStore } from '../features/leagues/leagueStore';
 import { useAuthStore } from '../features/auth/authStore';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
@@ -16,20 +16,31 @@ const LeagueDashboard: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { user } = useAuthStore();
-    const { activeLeague, loadLeague, isLoading, recalculateStandings, linkTournament } = useLeagueStore();
+    const { activeLeague, loadLeague, isLoading, recalculateStandings, linkTournament, getAuditLogs, getMembers, updateMemberStatus, getSeasons, archiveSeason } = useLeagueStore();
     const { tournaments } = useTournamentStore();
 
-    const [tab, setTab] = useState<'ranking' | 'tournaments' | 'info'>('ranking');
+    const [tab, setTab] = useState<'ranking' | 'tournaments' | 'info' | 'membros' | 'seasons'>('ranking');
     const [codeCopied, setCodeCopied] = useState(false);
     const [recalcLoading, setRecalcLoading] = useState(false);
     const [linkMode, setLinkMode] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [editData, setEditData] = useState<any>({});
     const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+    const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+    const [auditLogs, setAuditLogs] = useState<any[]>([]);
+    const [members, setMembers] = useState<any[]>([]);
+    const [seasons, setSeasons] = useState<any[]>([]);
+    const [isSeasonModalOpen, setIsSeasonModalOpen] = useState(false);
+    const [seasonName, setSeasonName] = useState('');
 
     useEffect(() => {
         if (id) loadLeague(id);
     }, [id, loadLeague]);
+
+    useEffect(() => {
+        if ((tab as string) === 'membros') handleLoadMembers();
+        if ((tab as string) === 'seasons') handleLoadSeasons();
+    }, [tab, id]);
 
     // RTDB live updates
     useEffect(() => {
@@ -109,6 +120,50 @@ const LeagueDashboard: React.FC = () => {
         }
     };
 
+    const handleOpenAudit = async () => {
+        if (!id) return;
+        const logs = await getAuditLogs(id);
+        setAuditLogs(logs);
+        setIsAuditModalOpen(true);
+    };
+
+    const handleLoadMembers = async () => {
+        if (!id) return;
+        const data = await getMembers(id);
+        setMembers(data);
+    };
+
+    const handleLoadSeasons = async () => {
+        if (!id) return;
+        const data = await getSeasons(id);
+        setSeasons(data);
+    };
+
+    const handleUpdateMember = async (playerId: string, status: 'active' | 'banned') => {
+        if (!id || !user) return;
+        try {
+            await updateMemberStatus(id, playerId, status, user.id);
+            toast.success(status === 'banned' ? 'Jogador banido!' : 'Jogador reativado!');
+            const updated = await getMembers(id);
+            setMembers(updated);
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao atualizar membro');
+        }
+    };
+
+    const handleArchiveSeason = async () => {
+        if (!id || !user || !seasonName.trim()) return;
+        try {
+            await archiveSeason(id, seasonName.trim(), user.id);
+            toast.success('Temporada finalizada e arquivada! Ranking resetado. 🏅');
+            setIsSeasonModalOpen(false);
+            setSeasonName('');
+            setTab('seasons');
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao arquivar temporada');
+        }
+    };
+
     const myTournaments = tournaments.filter(t => t.organizerId === user?.id && !activeLeague.tournamentIds.includes(t.id));
     const standings = activeLeague.standings ?? [];
 
@@ -154,12 +209,12 @@ const LeagueDashboard: React.FC = () => {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-2 mb-6 glass p-1 rounded-2xl w-fit">
-                    {(['ranking', 'tournaments', 'info'] as const).map(t => (
+                <div className="sticky top-20 z-20 flex gap-2 mb-6 glass p-1 rounded-2xl w-full overflow-x-auto no-scrollbar shadow-2xl backdrop-blur-xl border border-white/10 md:w-fit">
+                    {(['ranking', 'tournaments', 'membros', 'seasons', 'info'] as const).map(t => (
                         <button key={t} onClick={() => setTab(t)}
-                            className={`px-5 py-2 rounded-xl text-sm font-bold transition-all capitalize ${tab === t ? 'glass border border-purple/30 text-purple' : 'text-secondary hover:text-primary'}`}
+                            className={`px-5 py-2 rounded-xl text-sm font-bold transition-all capitalize whitespace-nowrap ${tab === t ? 'glass border border-purple/30 text-purple' : 'text-secondary hover:text-primary'}`}
                             style={{ color: tab === t ? 'var(--color-purple)' : undefined }}>
-                            {t === 'ranking' ? '🏆 Ranking' : t === 'tournaments' ? '⚔️ Torneios' : 'ℹ️ Info'}
+                            {t === 'ranking' ? '🏆 Ranking' : t === 'tournaments' ? '⚔️ Torneios' : t === 'membros' ? '👥 Membros' : t === 'seasons' ? '🏅 Temporadas' : 'ℹ️ Configurações'}
                         </button>
                     ))}
                 </div>
@@ -188,8 +243,15 @@ const LeagueDashboard: React.FC = () => {
                                             ${i === 0 ? 'border-yellow-400/30 bg-yellow-400/5' : i === 1 ? 'border-gray-400/30' : i === 2 ? 'border-orange-400/30' : 'border-white/5'}`}>
                                         <div className="text-2xl w-10 text-center">{i < 3 ? MEDALS[i] : `#${s.rank}`}</div>
                                         <div className="flex-1">
-                                            <p className="font-bold">{s.playerName}</p>
-                                            <p className="text-xs text-muted">{s.tournamentsPlayed} torneio{s.tournamentsPlayed !== 1 ? 's' : ''}</p>
+                                            <p className="font-bold flex items-center gap-2 flex-wrap">
+                                                {s.playerName}
+                                                {s.currentStreak && s.currentStreak >= 2 ? (
+                                                    <span className="text-[10px] bg-orange-500/20 text-orange-400 font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border border-orange-500/30 animate-pulse">
+                                                        🔥 {s.currentStreak} Top Cut
+                                                    </span>
+                                                ) : null}
+                                            </p>
+                                            <p className="text-xs text-muted mt-1">{s.tournamentsPlayed} torneio{s.tournamentsPlayed !== 1 ? 's' : ''}</p>
                                         </div>
                                         <div className="text-right">
                                             <p className="text-xl font-bold" style={{ color: 'var(--color-purple)' }}>{s.totalPoints}</p>
@@ -338,13 +400,88 @@ const LeagueDashboard: React.FC = () => {
                                     </div>
                                 )}
                                 {isOrganizer && (
-                                    <div className="mt-8 pt-4 border-t border-red/20">
-                                        <Button variant="danger" className="w-full flex justify-center items-center" onClick={handleDeleteLeague}>
+                                    <div className="mt-8 pt-4 border-t border-purple/20 flex flex-col gap-4">
+                                        <Button variant="glow" className="w-full flex justify-center items-center" onClick={() => setIsSeasonModalOpen(true)}>
+                                            <Trophy size={16} className="mr-2" /> Encerrar Temporada
+                                        </Button>
+                                        <Button variant="secondary" className="w-full flex justify-center items-center" onClick={handleOpenAudit}>
+                                            <RefreshCw size={16} className="mr-2" /> Histórico de Ações (Audit)
+                                        </Button>
+                                        <Button variant="danger" className="w-full flex justify-center items-center opacity-70 hover:opacity-100 transition-opacity" onClick={handleDeleteLeague}>
                                             <Trash2 size={16} className="mr-2" /> Excluir Liga
                                         </Button>
                                     </div>
                                 )}
                             </>
+                        )}
+
+                        {tab === ('membros' as any) && (
+                            <div className="flex flex-col gap-4">
+                                <h3 className="text-xl font-bold mb-2">Comunidade da Liga</h3>
+                                {members.length === 0 ? (
+                                    <p className="text-secondary text-center py-10">Buscando membros...</p>
+                                ) : (
+                                    members.map(m => (
+                                        <div key={m.playerId} className="glass p-4 rounded-2xl border border-white/5 flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-purple/20 flex items-center justify-center font-bold text-purple">
+                                                    {m.playerName[0].toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold flex items-center gap-2">
+                                                        {m.playerName}
+                                                        {m.status === 'banned' && <span className="bg-red-500/20 text-red-500 text-[10px] px-2 py-0.5 rounded-full border border-red-500/30">BANIDO</span>}
+                                                    </p>
+                                                    <p className="text-xs text-muted">Entrou em: {new Date(m.joinedAt).toLocaleDateString()}</p>
+                                                </div>
+                                            </div>
+                                            {isOrganizer && m.playerId !== user?.id && (
+                                                <Button
+                                                    variant={m.status === 'banned' ? 'glow' : 'danger'}
+                                                    className="px-3 py-1 h-auto text-[10px]"
+                                                    onClick={() => handleUpdateMember(m.playerId, m.status === 'banned' ? 'active' : 'banned')}
+                                                >
+                                                    {m.status === 'banned' ? 'Desbanir' : 'Banir'}
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
+
+                        {tab === ('seasons' as any) && (
+                            <div className="flex flex-col gap-4">
+                                <h3 className="text-xl font-bold mb-2">Salão da Fama</h3>
+                                {seasons.length === 0 ? (
+                                    <div className="text-center py-12 glass rounded-2xl border border-dashed border-white/10">
+                                        <Trophy size={48} className="mx-auto text-secondary/30 mb-3" />
+                                        <p className="text-secondary">A primeira temporada ainda está em progresso!</p>
+                                    </div>
+                                ) : (
+                                    seasons.map(s => (
+                                        <div key={s.id} className="glass p-5 rounded-3xl border border-purple/20 shadow-xl overflow-hidden relative group">
+                                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                                <Trophy size={60} />
+                                            </div>
+                                            <h4 className="text-lg font-bold text-purple mb-1">{s.name}</h4>
+                                            <p className="text-xs text-muted mb-4">{new Date(s.startDate).toLocaleDateString()} — {new Date(s.endDate).toLocaleDateString()}</p>
+
+                                            <div className="space-y-2">
+                                                {s.standings.slice(0, 3).map((std: any, i: number) => (
+                                                    <div key={std.playerId} className="flex justify-between items-center text-sm p-2 bg-white/5 rounded-xl">
+                                                        <span className="flex gap-2">
+                                                            <span className="text-gold">{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
+                                                            {std.playerName}
+                                                        </span>
+                                                        <span className="font-bold text-purple">{std.totalPoints} pts</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
                         )}
                     </Card>
                 )}
@@ -365,6 +502,54 @@ const LeagueDashboard: React.FC = () => {
                     <div className="flex gap-4 w-full">
                         <Button variant="secondary" className="flex-1" onClick={handleCopyLink}>Copiar Link</Button>
                         <Button variant="primary" className="flex-1" onClick={() => setIsQRModalOpen(false)}>Fechar</Button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Audit Log Modal */}
+            <Modal
+                isOpen={isAuditModalOpen}
+                onClose={() => setIsAuditModalOpen(false)}
+                title="Histórico de Ações da Liga"
+            >
+                <div className="p-4 flex flex-col gap-3 min-h-[300px] max-h-[60vh] overflow-y-auto no-scrollbar">
+                    {auditLogs.length === 0 ? (
+                        <p className="text-secondary text-center mt-10">Nenhum registro de ação encontrado.</p>
+                    ) : (
+                        auditLogs.map(log => (
+                            <div key={log.id} className="glass p-3 rounded-xl border border-white/5 text-sm">
+                                <div className="flex justify-between items-start mb-1">
+                                    <span className="font-bold text-purple">{log.action}</span>
+                                    <span className="text-xs text-muted">{new Date(log.timestamp).toLocaleString('pt-BR')}</span>
+                                </div>
+                                <p className="text-secondary text-xs">{log.details}</p>
+                                <p className="text-xs text-muted mt-2 border-t border-white/5 pt-1">Usuário: <span className="font-mono">{log.userId}</span></p>
+                            </div>
+                        ))
+                    )}
+                </div>
+                <div className="p-4 border-t border-white/5">
+                    <Button variant="secondary" className="w-full" onClick={() => setIsAuditModalOpen(false)}>Fechar</Button>
+                </div>
+            </Modal>
+
+            {/* End Season Modal */}
+            <Modal
+                isOpen={isSeasonModalOpen}
+                onClose={() => setIsSeasonModalOpen(false)}
+                title="⚙️ Finalizar Temporada Atual"
+            >
+                <div className="p-6 flex flex-col gap-4">
+                    <p className="text-sm text-secondary">Isso irá salvar o pódio atual no **Salão da Fama**, resetar o ranking e desvincular todos os torneios para começar uma nova era!</p>
+                    <Input
+                        label="Nome da Temporada"
+                        placeholder="Ex: Season 2024 - Inverno"
+                        value={seasonName}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSeasonName(e.target.value)}
+                    />
+                    <div className="flex gap-2 mt-2">
+                        <Button variant="secondary" className="flex-1" onClick={() => setIsSeasonModalOpen(false)}>Cancelar</Button>
+                        <Button variant="glow" className="flex-1" onClick={handleArchiveSeason} disabled={!seasonName.trim()}>Concluir</Button>
                     </div>
                 </div>
             </Modal>

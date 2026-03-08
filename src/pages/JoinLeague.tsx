@@ -21,7 +21,7 @@ const JoinLeague: React.FC = () => {
         if (!code.trim()) { toast.error('Digite o código de convite!'); return; }
         setIsJoining(true);
         try {
-            const league = await joinLeagueByCode(code.trim().toUpperCase(), user.id);
+            const league = await joinLeagueByCode(code.trim().toUpperCase(), user.id, user.name);
             toast.success(`Bem-vindo à liga "${league.name}"! 🏆`);
             navigate(`/league/${league.id}`);
         } catch (err: any) {

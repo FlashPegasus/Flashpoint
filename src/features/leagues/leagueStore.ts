@@ -12,10 +12,17 @@ interface LeagueStore {
     loadPublicLeagues: () => Promise<void>;
     loadLeague: (leagueId: string) => Promise<void>;
     createLeague: (data: Partial<League> & { organizerId: string; name: string }) => Promise<League>;
-    joinLeagueByCode: (code: string, userId: string) => Promise<League>;
+    joinLeagueByCode: (code: string, userId: string, userName: string) => Promise<League>;
     linkTournament: (leagueId: string, tournamentId: string, organizerId: string) => Promise<void>;
     recalculateStandings: (leagueId: string) => Promise<void>;
     deleteLeague: (leagueId: string) => Promise<void>;
+    getAuditLogs: (leagueId: string) => Promise<any[]>;
+    getMembers: (leagueId: string) => Promise<any[]>;
+    updateMemberStatus: (leagueId: string, playerId: string, status: 'active' | 'banned', adminId: string) => Promise<void>;
+    addOrganizer: (leagueId: string, userId: string, role: 'admin' | 'moderator', adminId: string) => Promise<void>;
+    getOrganizers: (leagueId: string) => Promise<any[]>;
+    archiveSeason: (leagueId: string, seasonName: string, adminId: string) => Promise<void>;
+    getSeasons: (leagueId: string) => Promise<any[]>;
     clearActiveLeague: () => void;
 }
 
@@ -62,8 +69,8 @@ export const useLeagueStore = create<LeagueStore>((set) => ({
         return league;
     },
 
-    joinLeagueByCode: async (code, userId) => {
-        const league = await leagueService.joinLeagueByCode(code, userId);
+    joinLeagueByCode: async (code, userId, userName) => {
+        const league = await leagueService.joinLeagueByCode(code, userId, userName);
         set(state => ({ myLeagues: [...state.myLeagues.filter(l => l.id !== league.id), league] }));
         return league;
     },
@@ -88,6 +95,37 @@ export const useLeagueStore = create<LeagueStore>((set) => ({
             publicLeagues: state.publicLeagues.filter(l => l.id !== leagueId),
             activeLeague: state.activeLeague?.id === leagueId ? null : state.activeLeague
         }));
+    },
+
+    getAuditLogs: async (leagueId) => {
+        return await leagueService.getAuditLogs(leagueId);
+    },
+
+    getMembers: async (leagueId) => {
+        return await leagueService.getMembers(leagueId);
+    },
+
+    updateMemberStatus: async (leagueId, playerId, status, adminId) => {
+        await leagueService.updateMemberStatus(leagueId, playerId, status, adminId);
+    },
+
+    addOrganizer: async (leagueId, userId, role, adminId) => {
+        await leagueService.addOrganizer(leagueId, userId, role, adminId);
+    },
+
+    getOrganizers: async (leagueId) => {
+        return await leagueService.getOrganizers(leagueId);
+    },
+
+    archiveSeason: async (leagueId, seasonName, adminId) => {
+        await leagueService.archiveSeason(leagueId, seasonName, adminId);
+        // Refresh active league after archive/reset
+        const updated = await leagueService.getLeagueById(leagueId);
+        set({ activeLeague: updated || null });
+    },
+
+    getSeasons: async (leagueId) => {
+        return await leagueService.getSeasons(leagueId);
     },
 
     clearActiveLeague: () => set({ activeLeague: null }),

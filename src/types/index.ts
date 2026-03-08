@@ -114,6 +114,31 @@ export interface LeagueStanding {
     totalPoints: number;
     tournamentsPlayed: number;
     rank: number;
+    currentStreak?: number;
+}
+
+export interface LeagueMember {
+    playerId: string;
+    playerName: string;
+    joinedAt: string;
+    status: 'active' | 'banned';
+    nickname?: string;
+}
+
+export interface LeagueOrganizer {
+    userId: string;
+    role: 'master' | 'admin' | 'moderator';
+    addedBy: string;
+    addedAt: string;
+}
+
+export interface LeagueSeason {
+    id: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    standings: LeagueStanding[];
+    finalizedAt: string;
 }
 
 export interface League {
