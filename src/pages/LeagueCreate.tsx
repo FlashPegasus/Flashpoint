@@ -44,28 +44,15 @@ const LeagueCreate: React.FC = () => {
         }
 
         setIsSubmitting(true);
-        console.log('[LeagueCreate] Iniciando criação via async/await...');
 
         try {
-            // 1. Criar a liga e aguardar persistência
             const league = await createLeague({ ...formData, organizerId: user.id });
-            console.log('[LeagueCreate] Liga persistida:', league.id);
-
             toast.success(`Liga "${league.name}" criada! 🏆`);
-
-            // 2. Aguardar um curto período para propagação do Firestore (async/await style)
-            await new Promise((resolve) => setTimeout(resolve, 400));
-
-            // 3. Navegar para o dashboard
             navigate(`/league/${league.id}`);
         } catch (err: any) {
-            console.error('[LeagueCreate] Falha na criação:', err);
             toast.error(err.message || 'Erro ao criar liga. Tente novamente.');
-            setIsSubmitting(false); // Reset imediato em caso de erro
         } finally {
-            // Garantia final de reset do estado caso a navegação demore ou falhe
-            const timeoutId = setTimeout(() => setIsSubmitting(false), 2000);
-            return () => clearTimeout(timeoutId);
+            setIsSubmitting(false);
         }
     };
 
