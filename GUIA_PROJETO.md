@@ -13,10 +13,13 @@ O projeto deve sempre priorizar o **Plano Gratuito (Spark)** do Firebase.
 
 ## 🚀 Comandos Essenciais
 
-### Versionamento e Segurança
-- **Criar Ponto de Segurança (Tag)**: `git tag -a v1.X.X -m "Mensagem"`
-- **Rollback (Voltar para Main)**: `git checkout main`
-- **Voltar para Tag específica**: `git checkout v1.0.0-stable`
+### Versionamento e Fluxo de Trabalho
+- **Trabalho Ativo**: Sempre no branch `develop`.
+- **Produção/Estável**: Branch `main`.
+- **Checkpoint de Milestone (Tag)**: `git tag -a v1.X.X -m "Descrição"` (ex: `v1.0.1-faxina-stable`).
+- **Rollback (Viagem no Tempo)**:
+  - Para ver uma versão específica: `git checkout vX.Y.Z`
+  - Para voltar a desenvolver de um ponto anterior: `git checkout -b novo-galho vX.Y.Z`
 
 ### Deploy
 - **Ambiente de Testes (Firebase Hosting)**: `npm run build; firebase deploy --only hosting`

@@ -12,6 +12,9 @@ import MyArea from './pages/MyArea';
 import Discover from './pages/Discover';
 import TournamentPublic from './pages/TournamentPublic';
 import Leagues from './pages/Leagues';
+import LeagueCreate from './pages/LeagueCreate';
+import LeagueDashboard from './pages/LeagueDashboard';
+import JoinLeague from './pages/JoinLeague';
 import Profile from './pages/Profile';
 import JoinTournament from './pages/JoinTournament';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -48,6 +51,9 @@ const App: React.FC = () => {
         {/* Public Routes */}
         <Route path="/discover" element={<Discover />} />
         <Route path="/leagues" element={<Leagues />} />
+        <Route path="/league/create" element={<ProtectedRoute><LeagueCreate /></ProtectedRoute>} />
+        <Route path="/league/:id" element={<ProtectedRoute><LeagueDashboard /></ProtectedRoute>} />
+        <Route path="/join-league/:code" element={<JoinLeague />} />
         <Route path="/tournament/:id/public" element={<TournamentPublic />} />
         <Route path="/join/:id" element={<JoinTournament />} />
         <Route path="/privacidade" element={<PrivacyPolicy />} />

@@ -9,6 +9,7 @@ import { useAuthStore } from '../features/auth/authStore';
 import { tournamentService } from '../features/tournaments/tournamentService';
 import { syncService } from '../features/tournaments/syncService';
 import { Breadcrumbs } from '../components/ui';
+import { useLeagueStore } from '../features/leagues/leagueStore';
 import toast from 'react-hot-toast';
 
 const TournamentDashboard: React.FC = () => {
@@ -16,7 +17,15 @@ const TournamentDashboard: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuthStore();
     const { activeTournament, loadTournament, isLoading, addParticipant, generateRound, regenerateRound, submitResult, withdrawParticipant, completeTournament } = useTournamentStore();
+    const { myLeagues, loadMyLeagues, linkTournament } = useLeagueStore();
     const [activeTab, setActiveTab] = useState<'participants' | 'rounds' | 'standings' | 'settings'>('participants');
+
+    useEffect(() => {
+        if (user?.id && !user.isAnonymous) {
+            loadMyLeagues(user.id);
+        }
+    }, [user, loadMyLeagues]);
+
     const [newPlayerName, setNewPlayerName] = useState('');
     const [linkCopied, setLinkCopied] = useState(false);
     const [isQRModalOpen, setIsQRModalOpen] = useState(false);
@@ -489,6 +498,48 @@ const TournamentDashboard: React.FC = () => {
                                             </p>
                                         </div>
                                     </div>
+
+                                    {/* League Linking Section */}
+                                    {isOrganizer && (
+                                        <div className="mt-4 p-4 glass rounded-2xl border border-white/5">
+                                            <h4 className="font-bold mb-2 flex items-center gap-2"><Trophy size={16} /> Vincular a Liga</h4>
+                                            {activeTournament.leagueId ? (
+                                                <p className="text-sm text-green-400 font-bold" style={{ color: 'var(--color-green)' }}>
+                                                    ✅ Este torneio já está vinculado a uma liga.
+                                                </p>
+                                            ) : myLeagues.length === 0 ? (
+                                                <p className="text-sm text-secondary">Você não organiza nenhuma liga para vincular este torneio.</p>
+                                            ) : (
+                                                <div className="flex flex-col gap-3">
+                                                    <p className="text-sm text-secondary">Escolha uma liga para que os resultados deste torneio contem para o ranking geral dela.</p>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                        {myLeagues.map(l => (
+                                                            <Button
+                                                                key={l.id}
+                                                                variant="secondary"
+                                                                size="sm"
+                                                                className="justify-between"
+                                                                onClick={async () => {
+                                                                    if (id && user?.id) {
+                                                                        try {
+                                                                            await linkTournament(l.id, id, user.id);
+                                                                            toast.success('Torneio vinculado à liga!');
+                                                                            loadTournament(id);
+                                                                        } catch (err: any) {
+                                                                            toast.error(err.message || 'Erro ao vincular torneio.');
+                                                                        }
+                                                                    }
+                                                                }}
+                                                            >
+                                                                {l.name} <Plus size={14} />
+                                                            </Button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <Button variant="danger" className="w-full mt-4" onClick={handleCancelTournament}>
                                         Cancelar e Excluir Torneio
                                     </Button>

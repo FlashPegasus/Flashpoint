@@ -38,6 +38,27 @@ service cloud.firestore {
     }
 
     // ============================================
+    // LEAGUES
+    // ============================================
+    match /leagues/{leagueId} {
+      // Anyone can read (needed for discoverability and invite code lookup)
+      allow read: if true;
+
+      // Authenticated non-guest users can create leagues
+      allow create: if request.auth != null
+                    && request.auth.token.firebase.sign_in_provider != 'anonymous'
+                    && request.resource.data.organizerId == request.auth.uid;
+
+      // Any authenticated user can update (join league via memberIds, or trigger recalc)
+      // In a strict prod environment, we would limit which fields can be edited by non-organizers.
+      allow update: if request.auth != null;
+
+      // Only organizer can delete
+      allow delete: if request.auth != null
+                    && resource.data.organizerId == request.auth.uid;
+    }
+
+    // ============================================
     // DEFAULT: deny everything else
     // ============================================
     match /{document=**} {

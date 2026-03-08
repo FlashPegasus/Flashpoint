@@ -4,6 +4,7 @@ import { ChevronRight, ChevronLeft, Save, HelpCircle } from 'lucide-react';
 import PageShell from '../components/layout';
 import { Button, Card, Input, Select } from '../components/ui';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
+import { useLeagueStore } from '../features/leagues/leagueStore';
 import { useAuthStore } from '../features/auth/authStore';
 import type { TournamentFormat } from '../types';
 
@@ -11,7 +12,14 @@ const TournamentCreate: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuthStore();
     const { createTournament } = useTournamentStore();
+    const { myLeagues, loadMyLeagues, linkTournament } = useLeagueStore();
     const [step, setStep] = useState(1);
+
+    React.useEffect(() => {
+        if (user?.id && !user.isAnonymous) {
+            loadMyLeagues(user.id);
+        }
+    }, [user, loadMyLeagues]);
 
     if (user?.isAnonymous) {
         return (
@@ -32,6 +40,7 @@ const TournamentCreate: React.FC = () => {
         description: '',
         format: 'multiplayer' as TournamentFormat,
         pairingMode: 'standard' as 'standard' | 'fair',
+        leagueId: '',
         minPlayersPerTable: 3,
         maxPlayersPerTable: 4,
         scoring: {
@@ -51,11 +60,19 @@ const TournamentCreate: React.FC = () => {
     const prevStep = () => setStep(step - 1);
 
     const handleCreate = async () => {
-        const tournament = await createTournament({
-            ...formData,
-            organizerId: user?.id || 'anonymous'
-        });
+        const payload = { ...formData, organizerId: user?.id || 'anonymous' };
+        // Don't save the temporary leagueId field inside the tournament directly, it's managed via relationships
+        const { leagueId, ...tournamentData } = payload as any;
+
+        const tournament = await createTournament(tournamentData);
         if (tournament) {
+            if (formData.leagueId && user?.id) {
+                try {
+                    await linkTournament(formData.leagueId, tournament.id, user.id);
+                } catch (err: any) {
+                    console.error('Failed to link tournament to league:', err);
+                }
+            }
             navigate(`/tournament/${tournament.id}`);
         }
     };
@@ -99,6 +116,19 @@ const TournamentCreate: React.FC = () => {
                                     onChange={e => setFormData({ ...formData, location: e.target.value })}
                                 />
                             </div>
+
+                            {myLeagues.length > 0 && (
+                                <Select
+                                    label="Vincular a uma Liga (Opcional)"
+                                    options={[
+                                        { value: '', label: 'Não vincular (Torneio Único)' },
+                                        ...myLeagues.map(l => ({ value: l.id, label: l.name }))
+                                    ]}
+                                    value={formData.leagueId}
+                                    onChange={e => setFormData({ ...formData, leagueId: e.target.value })}
+                                />
+                            )}
+
                             <div className="flex flex-col gap-2">
                                 <label className="text-sm font-bold text-primary ml-1 uppercase tracking-wider text-[10px]">Descrição</label>
                                 <textarea

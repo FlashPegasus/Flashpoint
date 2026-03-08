@@ -11,6 +11,7 @@ Este arquivo serve como um diário de bordo da evolução do projeto. Cada "Fase
   - Migração para arquitetura modular por features (`features/auth` e `features/tournaments`).
   - Simplificação total da camada de persistência (`storage.ts` limpo e `firestoreAdapter` fundido/deletado).
   - Redução de ~51% no volume de arquivos base.
+  - **Tag**: `v1.0.1-faxina-stable` criada e enviada ao GitHub.
 
 ## 2026-03-07: Setup de Segurança e Backups
 - **Objetivo**: Garantir que alterações pesadas não quebrem o projeto.

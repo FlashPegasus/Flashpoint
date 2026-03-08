@@ -106,6 +106,7 @@ export interface Tournament {
 }
 
 export type LeagueScoringType = 'sum' | 'best_x_of_y' | 'weighted';
+export type LeagueVisibility = 'public' | 'private';
 
 export interface LeagueStanding {
     playerId: string;
@@ -123,12 +124,25 @@ export interface League {
     startDate: string;
     endDate: string;
     status: 'active' | 'completed';
+    visibility: LeagueVisibility;
+    inviteCode: string;
+    bannerUrl?: string;
+
+    // Scoring config
     scoringType: LeagueScoringType;
     scoringParams?: {
         bestX?: number;
-        weights?: Record<string, number>; // tournamentId -> weight
+        weights?: Record<string, number>;
     };
+    pointsParticipation?: number;
+    pointsWin?: number;
+    pointsTop4?: number;
+    pointsTop8?: number;
+    streakBonus?: number;
+    bestXof?: number;
+
     tournamentIds: string[];
     memberIds: string[];
     standings: LeagueStanding[];
+    cachedTopRanking?: LeagueStanding[]; // Top 10 for fast homepage reads
 }
