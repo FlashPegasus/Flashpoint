@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { X, ChevronRight, Home } from 'lucide-react';
 
-// Re-exporting from other files
-export { default as Modal } from './Modal';
-
+// ─────────────────────────────────────────────
+// Button
+// ─────────────────────────────────────────────
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'glow';
     size?: 'sm' | 'md' | 'lg';
@@ -51,6 +53,9 @@ export const Button: React.FC<ButtonProps> = ({
     );
 };
 
+// ─────────────────────────────────────────────
+// Card
+// ─────────────────────────────────────────────
 export interface CardProps {
     children: React.ReactNode;
     className?: string;
@@ -68,6 +73,9 @@ export const Card: React.FC<CardProps> = ({ children, className = '', title, onC
     </div>
 );
 
+// ─────────────────────────────────────────────
+// Input
+// ─────────────────────────────────────────────
 export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label?: string }> = ({ label, ...props }) => (
     <div className="flex flex-col gap-2.5 w-full">
         {label && <label className="text-[10px] font-bold text-muted ml-2 uppercase tracking-widest">{label}</label>}
@@ -78,6 +86,9 @@ export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { lab
     </div>
 );
 
+// ─────────────────────────────────────────────
+// Select
+// ─────────────────────────────────────────────
 export const Select: React.FC<React.SelectHTMLAttributes<HTMLSelectElement> & { label?: string; options: { value: string, label: string }[] }> = ({ label, options, ...props }) => (
     <div className="flex flex-col gap-2 w-full text-primary">
         {label && <label className="text-sm font-bold text-primary ml-1 uppercase tracking-wider text-[10px]">{label}</label>}
@@ -92,3 +103,136 @@ export const Select: React.FC<React.SelectHTMLAttributes<HTMLSelectElement> & { 
         </div>
     </div>
 );
+
+// ─────────────────────────────────────────────
+// Modal
+// ─────────────────────────────────────────────
+interface ModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    title: string;
+    children: React.ReactNode;
+    footer?: React.ReactNode;
+}
+
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer }) => {
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+            window.addEventListener('keydown', handleEsc);
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+            window.removeEventListener('keydown', handleEsc);
+        };
+    }, [isOpen, onClose]);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in">
+            <div
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+                onClick={onClose}
+            />
+            <div className="glass-card w-full max-w-lg relative z-10 flex flex-col max-h-[90vh] shadow-2xl border-white/10">
+                <div className="flex justify-between items-center p-6 border-b border-white/5">
+                    <h2 className="text-2xl font-outfit font-bold">{title}</h2>
+                    <button
+                        onClick={onClose}
+                        className="p-2 hover:bg-white/5 rounded-full transition-colors text-secondary hover:text-primary"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="p-6 overflow-y-auto custom-scrollbar">
+                    {children}
+                </div>
+                {footer && (
+                    <div className="p-6 border-t border-white/5 bg-white/2">
+                        {footer}
+                    </div>
+                )}
+            </div>
+            <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border-glass); border-radius: 10px; }
+      `}</style>
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────
+// LoadingScreen
+// ─────────────────────────────────────────────
+interface LoadingScreenProps {
+    message?: string;
+    gifUrl?: string;
+}
+
+export const LoadingScreen: React.FC<LoadingScreenProps> = ({
+    message = 'Carregando...',
+    gifUrl = 'https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHp1eHR6ZDV6ZDV6ZDV6ZDV6ZDV6ZDV6ZDV6ZDV6ZDV6ZDV&ep=v1_gifs_search&rid=giphy.gif&ct=g'
+}) => {
+    return (
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-background z-[9999] animate-fade-in">
+            <div className="relative w-32 h-32 mb-6">
+                <div className="absolute inset-0 bg-accent/20 blur-3xl rounded-full animate-pulse"></div>
+                <div className="relative w-full h-full rounded-2xl overflow-hidden glass border border-white/10 shadow-2xl flex items-center justify-center">
+                    <img
+                        src={gifUrl}
+                        alt="Loading..."
+                        className="w-20 h-20 object-contain mix-blend-screen opacity-80"
+                    />
+                </div>
+            </div>
+            <div className="text-center">
+                <h3 className="text-lg font-bold font-outfit tracking-wider text-primary mb-2">{message}</h3>
+                <div className="flex gap-1 justify-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce [animation-delay:-0.3s]"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce [animation-delay:-0.15s]"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce"></div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────
+// Breadcrumbs
+// ─────────────────────────────────────────────
+interface BreadcrumbItem {
+    label: string;
+    path?: string;
+}
+
+interface BreadcrumbsProps {
+    items: BreadcrumbItem[];
+}
+
+export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items }) => {
+    return (
+        <nav className="flex items-center gap-2 text-xs text-muted mb-6 overflow-x-auto whitespace-nowrap pb-2 lg:pb-0 no-scrollbar">
+            <Link to="/" className="hover:text-primary transition-colors flex items-center gap-1">
+                <Home size={14} />
+                <span>Home</span>
+            </Link>
+            {items.map((item, index) => (
+                <React.Fragment key={index}>
+                    <ChevronRight size={12} className="opacity-40 shrink-0" />
+                    {item.path ? (
+                        <Link to={item.path} className="hover:text-primary transition-colors">
+                            {item.label}
+                        </Link>
+                    ) : (
+                        <span className="text-secondary font-medium">{item.label}</span>
+                    )}
+                </React.Fragment>
+            ))}
+        </nav>
+    );
+};

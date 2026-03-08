@@ -1,12 +1,11 @@
-import React, { useEffect } from 'react';
+﻿import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Calendar, Users, MapPin } from 'lucide-react';
-import PageShell from '../components/layout/PageShell';
+import PageShell from '../components/layout';
 import { Button, Card } from '../components/ui';
-import { useTournamentStore } from '../stores/tournamentStore';
-import { useAuthStore } from '../stores/authStore';
-import Breadcrumbs from '../components/ui/Breadcrumbs';
-import LoadingScreen from '../components/ui/LoadingScreen';
+import { useTournamentStore } from '../features/tournaments/tournamentStore';
+import { useAuthStore } from '../features/auth/authStore';
+import { Breadcrumbs, LoadingScreen } from '../components/ui';
 import toast from 'react-hot-toast';
 
 const TournamentPublic: React.FC = () => {
@@ -31,7 +30,7 @@ const TournamentPublic: React.FC = () => {
         if (id) {
             try {
                 await addParticipant(id, { playerId: user.id, name: user.name });
-                toast.success('Inscrição confirmada!');
+                toast.success('InscriÃ§Ã£o confirmada!');
             } catch (err) {
                 toast.error('Erro ao entrar no torneio.');
             }
@@ -61,16 +60,16 @@ const TournamentPublic: React.FC = () => {
                                 <div className="flex gap-6 flex-wrap text-secondary">
                                     <div className="flex items-center gap-2"><Calendar size={18} /> {activeTournament.date}</div>
                                     <div className="flex items-center gap-2"><MapPin size={18} /> {activeTournament.location}</div>
-                                    <div className="flex items-center gap-2"><Users size={18} /> {activeTournament.participants.length} / {activeTournament.maxParticipants || '∞'} Jogadores</div>
+                                    <div className="flex items-center gap-2"><Users size={18} /> {activeTournament.participants.length} / {activeTournament.maxParticipants || 'âˆž'} Jogadores</div>
                                 </div>
                             </div>
                         </div>
 
-                        <Card title="Descrição">
-                            <p className="text-secondary whitespace-pre-wrap">{activeTournament.description || 'Nenhuma descrição fornecida.'}</p>
+                        <Card title="DescriÃ§Ã£o">
+                            <p className="text-secondary whitespace-pre-wrap">{activeTournament.description || 'Nenhuma descriÃ§Ã£o fornecida.'}</p>
                         </Card>
 
-                        <Card title="Classificação">
+                        <Card title="ClassificaÃ§Ã£o">
                             {activeTournament.participants.length === 0 ? (
                                 <p className="text-muted italic">Nenhum participante ainda. Seja o primeiro a entrar!</p>
                             ) : (
@@ -96,7 +95,7 @@ const TournamentPublic: React.FC = () => {
                             <div className="text-center mb-8">
                                 <p className="text-sm text-secondary mb-2">Status do Torneio</p>
                                 <div className="text-2xl font-bold uppercase tracking-widest text-purple" style={{ color: 'var(--color-purple)' }}>
-                                    {activeTournament.status === 'registration' ? 'Inscrições' : activeTournament.status === 'ongoing' ? 'Em Andamento' : 'Finalizado'}
+                                    {activeTournament.status === 'registration' ? 'InscriÃ§Ãµes' : activeTournament.status === 'ongoing' ? 'Em Andamento' : 'Finalizado'}
                                 </div>
                             </div>
 
@@ -106,26 +105,26 @@ const TournamentPublic: React.FC = () => {
                                         <p className="text-green font-bold flex items-center justify-center gap-2" style={{ color: 'var(--color-green)' }}>
                                             Tudo pronto!
                                         </p>
-                                        <p className="text-[10px] text-green/70 uppercase font-bold mt-1">Você está inscrito</p>
+                                        <p className="text-[10px] text-green/70 uppercase font-bold mt-1">VocÃª estÃ¡ inscrito</p>
                                     </div>
                                     {user?.id === activeTournament.organizerId ? (
                                         <Button variant="glow" onClick={() => navigate(`/tournament/${id}`)}>Ir para Painel do Organizador</Button>
                                     ) : (
-                                        <Button variant="secondary" onClick={() => navigate('/my-area')}>Ir para Minha Área</Button>
+                                        <Button variant="secondary" onClick={() => navigate('/my-area')}>Ir para Minha Ãrea</Button>
                                     )}
                                 </div>
                             ) : (
                                 <Button variant="glow" className="w-full text-lg py-5" onClick={handleJoin} disabled={activeTournament.status !== 'registration'}>
-                                    {activeTournament.status === 'registration' ? 'Entrar no Torneio' : 'Inscrições Encerradas'}
+                                    {activeTournament.status === 'registration' ? 'Entrar no Torneio' : 'InscriÃ§Ãµes Encerradas'}
                                 </Button>
                             )}
 
                             <div className="mt-8 pt-8 border-t border-white/5">
                                 <h4 className="text-sm font-bold uppercase mb-4 text-muted">Regras</h4>
                                 <ul className="text-xs text-secondary flex flex-col gap-2">
-                                    <li>• {activeTournament.allowLateRegistration ? 'Inscrição tardia permitida' : 'Sem inscrição tardia'}</li>
-                                    <li>• {activeTournament.allowWithdrawal ? 'Saída voluntária permitida' : 'Partidas devem ser concluídas'}</li>
-                                    <li>• Fair play e respeito são obrigatórios</li>
+                                    <li>â€¢ {activeTournament.allowLateRegistration ? 'InscriÃ§Ã£o tardia permitida' : 'Sem inscriÃ§Ã£o tardia'}</li>
+                                    <li>â€¢ {activeTournament.allowWithdrawal ? 'SaÃ­da voluntÃ¡ria permitida' : 'Partidas devem ser concluÃ­das'}</li>
+                                    <li>â€¢ Fair play e respeito sÃ£o obrigatÃ³rios</li>
                                 </ul>
                             </div>
                         </Card>
@@ -137,3 +136,4 @@ const TournamentPublic: React.FC = () => {
 };
 
 export default TournamentPublic;
+

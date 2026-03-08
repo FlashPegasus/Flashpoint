@@ -1,6 +1,6 @@
-import React from 'react';
+﻿import React from 'react';
 import { Trophy, Plus, Calendar, Star } from 'lucide-react';
-import PageShell from '../components/layout/PageShell';
+import PageShell from '../components/layout';
 import { Card, Button } from '../components/ui';
 
 const Leagues: React.FC = () => {
@@ -10,7 +10,7 @@ const Leagues: React.FC = () => {
                 <div className="flex justify-between items-center mb-8">
                     <div>
                         <h1 className="text-4xl font-outfit mb-1">Ligas</h1>
-                        <p className="text-secondary">Competição sazonal e sistemas de ranking.</p>
+                        <p className="text-secondary">CompetiÃ§Ã£o sazonal e sistemas de ranking.</p>
                     </div>
                     <Button variant="glow">
                         <Plus size={18} className="mr-2" /> Criar Liga
@@ -48,7 +48,7 @@ const Leagues: React.FC = () => {
                             {[
                                 { title: 'Crie uma Liga', desc: 'Configure um sistema de pontos sazonal e convide jogadores.' },
                                 { title: 'Vincule Eventos', desc: 'Gerencie torneios e sincronize automaticamente os resultados para a liga.' },
-                                { title: 'Suba no Ranking', desc: 'A pontuação balanceada garante que os jogadores mais consistentes cheguem ao topo.' }
+                                { title: 'Suba no Ranking', desc: 'A pontuaÃ§Ã£o balanceada garante que os jogadores mais consistentes cheguem ao topo.' }
                             ].map((step, i) => (
                                 <div key={i} className="flex gap-4">
                                     <div className="w-10 h-10 rounded-full glass border border-purple/20 flex items-center justify-center font-bold text-purple flex-shrink-0" style={{ color: 'var(--color-purple)' }}>

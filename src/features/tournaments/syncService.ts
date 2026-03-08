@@ -1,4 +1,4 @@
-import { rtdb } from '../config/firebase';
+﻿import { rtdb } from '../../lib/firebase';
 import { ref, onValue, set, serverTimestamp } from 'firebase/database';
 
 export const syncService = {
@@ -30,3 +30,4 @@ export const syncService = {
         });
     }
 };
+

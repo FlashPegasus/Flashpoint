@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { Tournament, Participant, TableResult } from '../types';
-import { tournamentService } from '../services/tournamentService';
+import type { Tournament, Participant, TableResult } from '../../types';
+import { tournamentService } from './tournamentService';
 
 interface TournamentState {
     tournaments: Tournament[];

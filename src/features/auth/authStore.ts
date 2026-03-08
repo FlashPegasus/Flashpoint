@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import type { User } from '../types';
-import { authService } from '../services/authService';
+﻿import { create } from 'zustand';
+import type { User } from '../../types';
+import { authService } from './authService';
 
 interface AuthState {
     user: User | null;
@@ -10,12 +10,12 @@ interface AuthState {
     initialize: () => Promise<void>;
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, password: string, name: string) => Promise<void>;
-    loginWithGoogle: () => Promise<import('../types').User | null>;
+    loginWithGoogle: () => Promise<import('../../types').User | null>;
     loginAnonymously: () => Promise<void>;
     linkEmail: (email: string, password: string, name: string) => Promise<void>;
     linkGoogle: () => Promise<void>;
     logout: () => Promise<void>;
-    updateProfile: (updates: Partial<import('../types').User>) => Promise<void>;
+    updateProfile: (updates: Partial<import('../../types').User>) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -24,19 +24,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     error: null,
 
     initialize: async () => {
-        const { auth } = await import('../config/firebase');
+        const { auth } = await import('../../lib/firebase');
         const { onAuthStateChanged } = await import('firebase/auth');
 
         onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 const user = await authService.getCurrentUser();
-                const usingCloud = localStorage.getItem('flashpoint_storage_mode') === 'cloud';
-                if (usingCloud) {
-                    const { firestoreAdapter } = await import('../utils/firestoreAdapter');
-                    const { setStorageAdapter } = await import('../utils/storage');
-                    firestoreAdapter.setUserId(firebaseUser.uid);
-                    setStorageAdapter(firestoreAdapter);
-                }
                 set({ user, isLoading: false });
             } else {
                 set({ user: null, isLoading: false });
@@ -120,3 +113,4 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
     }
 }));
+

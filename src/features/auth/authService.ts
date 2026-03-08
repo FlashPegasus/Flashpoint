@@ -1,6 +1,6 @@
-import type { User } from '../types';
-import { storage } from '../utils/storage';
-import { auth, db } from '../config/firebase';
+﻿import type { User } from '../../types';
+import { storage } from '../../utils/storage';
+import { auth, db } from '../../lib/firebase';
 import {
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
@@ -35,7 +35,7 @@ const syncUserProfile = async (firebaseUser: FirebaseUser): Promise<User> => {
     } else {
         userData = {
             id: firebaseUser.uid,
-            name: firebaseUser.displayName || (firebaseUser.isAnonymous ? 'Convidado' : firebaseUser.email?.split('@')[0]) || 'Usuário',
+            name: firebaseUser.displayName || (firebaseUser.isAnonymous ? 'Convidado' : firebaseUser.email?.split('@')[0]) || 'UsuÃ¡rio',
             email: firebaseUser.email || (firebaseUser.isAnonymous ? 'guest@flashpoint.app' : ''),
             avatar: firebaseUser.photoURL || '',
             role: 'organizer',
@@ -73,7 +73,7 @@ export const authService = {
                 throw new Error('E-mail ou senha incorretos.');
             }
             if (error.code === 'auth/user-not-found') {
-                throw new Error('Usuário não encontrado. Crie uma conta primeiro.');
+                throw new Error('UsuÃ¡rio nÃ£o encontrado. Crie uma conta primeiro.');
             }
             throw new Error(error.message);
         }
@@ -101,7 +101,7 @@ export const authService = {
         } catch (error: any) {
             console.error('Register Error:', error);
             if (error.code === 'auth/email-already-in-use') {
-                throw new Error('Este e-mail já está em uso. Tente fazer login.');
+                throw new Error('Este e-mail jÃ¡ estÃ¡ em uso. Tente fazer login.');
             }
             if (error.code === 'auth/weak-password') {
                 throw new Error('Senha muito fraca. Use pelo menos 6 caracteres.');
@@ -134,7 +134,7 @@ export const authService = {
     linkEmailToGuest: async (email: string, password: string, name: string): Promise<User> => {
         try {
             const currentUser = auth.currentUser;
-            if (!currentUser) throw new Error('Nenhum usuário ativo encontrado.');
+            if (!currentUser) throw new Error('Nenhum usuÃ¡rio ativo encontrado.');
             const credential = EmailAuthProvider.credential(email, password);
             const result = await linkWithCredential(currentUser, credential);
             await updateFirebaseProfile(result.user, { displayName: name });
@@ -146,10 +146,10 @@ export const authService = {
         } catch (error: any) {
             console.error('Link Email Error:', error);
             if (error.code === 'auth/email-already-in-use') {
-                throw new Error('Este e-mail já está vinculado a outra conta.');
+                throw new Error('Este e-mail jÃ¡ estÃ¡ vinculado a outra conta.');
             }
             if (error.code === 'auth/provider-already-linked') {
-                throw new Error('Esta conta já possui um e-mail vinculado.');
+                throw new Error('Esta conta jÃ¡ possui um e-mail vinculado.');
             }
             throw new Error(error.message);
         }
@@ -158,12 +158,12 @@ export const authService = {
     linkGoogleToGuest: async (): Promise<User> => {
         try {
             const currentUser = auth.currentUser;
-            if (!currentUser) throw new Error('Nenhum usuário ativo encontrado.');
+            if (!currentUser) throw new Error('Nenhum usuÃ¡rio ativo encontrado.');
             const provider = new GoogleAuthProvider();
             const result = await linkWithPopup(currentUser, provider);
             const userDocRef = doc(db, 'users', result.user.uid);
             await updateDoc(userDocRef, {
-                name: result.user.displayName || 'Usuário',
+                name: result.user.displayName || 'UsuÃ¡rio',
                 email: result.user.email || '',
                 avatar: result.user.photoURL || ''
             });
@@ -171,10 +171,10 @@ export const authService = {
         } catch (error: any) {
             console.error('Link Google Error:', error);
             if (error.code === 'auth/provider-already-linked') {
-                throw new Error('Esta conta já possui um Google vinculado.');
+                throw new Error('Esta conta jÃ¡ possui um Google vinculado.');
             }
             if (error.code === 'auth/credential-already-in-use') {
-                throw new Error('Esta conta Google já está associada a outro usuário.');
+                throw new Error('Esta conta Google jÃ¡ estÃ¡ associada a outro usuÃ¡rio.');
             }
             throw new Error(error.message);
         }
@@ -187,10 +187,11 @@ export const authService = {
 
     updateProfile: async (updatedUser: Partial<User>): Promise<User> => {
         const currentUser = await authService.getCurrentUser();
-        if (!currentUser) throw new Error('Não autenticado');
+        if (!currentUser) throw new Error('NÃ£o autenticado');
         const newUser = { ...currentUser, ...updatedUser };
         await storage.set(STORAGE_KEY, newUser);
         await setDoc(doc(db, 'users', newUser.id), updatedUser, { merge: true });
         return newUser;
     }
 };
+

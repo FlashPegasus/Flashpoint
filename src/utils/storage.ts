@@ -5,7 +5,7 @@ export interface StorageAdapter {
     clear(): Promise<void>;
 }
 
-export const localStorageAdapter: StorageAdapter = {
+export const storage: StorageAdapter = {
     get: async <T>(key: string, defaultValue: T): Promise<T> => {
         try {
             const item = localStorage.getItem(`flashpoint_${key}`);
@@ -33,21 +33,4 @@ export const localStorageAdapter: StorageAdapter = {
             .filter(key => key.startsWith('flashpoint_'))
             .forEach(key => localStorage.removeItem(key));
     }
-};
-
-/**
- * Dynamic Storage Dispatcher
- * Allows switching between LocalStorage and Firestore
- */
-let activeAdapter: StorageAdapter = localStorageAdapter;
-
-export const setStorageAdapter = (adapter: StorageAdapter) => {
-    activeAdapter = adapter;
-};
-
-export const storage: StorageAdapter = {
-    get: (key, defaultValue) => activeAdapter.get(key, defaultValue),
-    set: (key, value) => activeAdapter.set(key, value),
-    remove: (key) => activeAdapter.remove(key),
-    clear: () => activeAdapter.clear(),
 };

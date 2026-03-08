@@ -1,7 +1,7 @@
-import React from 'react';
+﻿import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Globe, ArrowLeft, Chrome, MonitorSmartphone } from 'lucide-react';
-import PageShell from '../components/layout/PageShell';
+import PageShell from '../components/layout';
 
 const TranslateGuide: React.FC = () => {
     const navigate = useNavigate();

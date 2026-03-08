@@ -1,7 +1,7 @@
-import React from 'react';
+﻿import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trophy, Zap, Shield, BarChart3, Users, PlusCircle } from 'lucide-react';
-import PageShell from '../components/layout/PageShell';
+import PageShell from '../components/layout';
 import { Button, Card } from '../components/ui';
 
 const Home: React.FC = () => {
@@ -19,7 +19,7 @@ const Home: React.FC = () => {
                             Gerencie Torneios de TCG como um <span className="text-mana-purple">Profissional</span>
                         </h1>
                         <p className="text-xl text-secondary mb-12 max-w-2xl mx-auto leading-relaxed">
-                            De noites locais de jogo até ligas de alto nível. FlashPoint é a maneira mais rápida e inteligente de organizar eventos de TCG 1v1 e multiplayer.
+                            De noites locais de jogo atÃ© ligas de alto nÃ­vel. FlashPoint Ã© a maneira mais rÃ¡pida e inteligente de organizar eventos de TCG 1v1 e multiplayer.
                         </p>
                         <div className="flex gap-6 flex-wrap justify-center">
                             <Button size="lg" variant="glow" onClick={() => navigate('/tournament/create')}>
@@ -37,17 +37,17 @@ const Home: React.FC = () => {
             <section className="section py-32 bg-white/[0.01]">
                 <div className="container">
                     <div className="text-center mb-24">
-                        <h2 className="mb-6">Tudo que você precisa</h2>
+                        <h2 className="mb-6">Tudo que vocÃª precisa</h2>
                         <p className="text-secondary max-w-2xl mx-auto">Recursos poderosos desenvolvidos especificamente para a comunidade moderna de TCG.</p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
                         {[
                             { icon: <Users size={28} />, title: 'Suporte Multiplayer', desc: 'Suporte nativo para Commander e outros formatos multiplayer com agrupamento inteligente de mesas.' },
-                            { icon: <Trophy size={28} />, title: 'Pronto para Ligas', desc: 'Conecte múltiplos torneios em uma liga de temporada com classificação automática.' },
-                            { icon: <Zap size={28} />, title: 'Pareamentos Rápidos', desc: 'Pareamentos Swiss e multiplayer instantâneos que respeitam pontos e confrontos anteriores.' },
-                            { icon: <Shield size={28} />, title: 'Robusto e Confiável', desc: 'Gerencia inscrições tardias, desistências e correções de pontuação com facilidade em qualquer etapa.' },
-                            { icon: <BarChart3 size={28} />, title: 'Análises Detalhadas', desc: 'Acompanhe tendências do metagame, taxas de vitória e crescimento dos torneios ao longo do tempo.' },
-                            { icon: <PlusCircle size={28} />, title: 'PWA Nativo', desc: 'Instale no celular como um app nativo. Funciona offline e é extremamente rápido.' }
+                            { icon: <Trophy size={28} />, title: 'Pronto para Ligas', desc: 'Conecte mÃºltiplos torneios em uma liga de temporada com classificaÃ§Ã£o automÃ¡tica.' },
+                            { icon: <Zap size={28} />, title: 'Pareamentos RÃ¡pidos', desc: 'Pareamentos Swiss e multiplayer instantÃ¢neos que respeitam pontos e confrontos anteriores.' },
+                            { icon: <Shield size={28} />, title: 'Robusto e ConfiÃ¡vel', desc: 'Gerencia inscriÃ§Ãµes tardias, desistÃªncias e correÃ§Ãµes de pontuaÃ§Ã£o com facilidade em qualquer etapa.' },
+                            { icon: <BarChart3 size={28} />, title: 'AnÃ¡lises Detalhadas', desc: 'Acompanhe tendÃªncias do metagame, taxas de vitÃ³ria e crescimento dos torneios ao longo do tempo.' },
+                            { icon: <PlusCircle size={28} />, title: 'PWA Nativo', desc: 'Instale no celular como um app nativo. Funciona offline e Ã© extremamente rÃ¡pido.' }
                         ].map((feature, i) => (
                             <Card key={i} className="hover-lift p-10">
                                 <div className="mb-6 text-mana-purple">{feature.icon}</div>

@@ -1,10 +1,9 @@
-import type { Tournament, Participant, Round, Table, TableResult } from '../types';
-import { storage } from '../utils/storage';
+﻿import type { Tournament, Participant, Round, Table, TableResult } from '../../types';
+import { storage } from '../../utils/storage';
 import { syncService } from './syncService';
 import { v4 as uuidv4 } from 'uuid';
-import { generateSwissPairings } from '../engine/swiss';
-import { generateMultiplayerTables } from '../engine/multiplayer';
-import { db } from '../config/firebase';
+import { generateSwissPairings, generateMultiplayerTables } from './pairingEngine';
+import { db } from '../../lib/firebase';
 import { doc, getDoc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 
 const STORAGE_KEY = 'tournaments';
@@ -76,14 +75,14 @@ export const tournamentService = {
         if (!tournament) {
             tournament = await tournamentService.getTournamentById(tournamentId);
         }
-        if (!tournament) throw new Error('Torneio não encontrado.');
+        if (!tournament) throw new Error('Torneio nÃ£o encontrado.');
         if (tournament.status !== 'registration' && tournament.status !== 'draft') {
-            throw new Error('Este torneio não está aceitando inscrições.');
+            throw new Error('Este torneio nÃ£o estÃ¡ aceitando inscriÃ§Ãµes.');
         }
         const alreadyJoined = tournament.participants.some(p => p.playerId === userId);
-        if (alreadyJoined) throw new Error('Você já está inscrito neste torneio.');
+        if (alreadyJoined) throw new Error('VocÃª jÃ¡ estÃ¡ inscrito neste torneio.');
         if (tournament.maxParticipants && tournament.participants.length >= tournament.maxParticipants) {
-            throw new Error('O torneio está cheio. Nenhuma vaga disponível.');
+            throw new Error('O torneio estÃ¡ cheio. Nenhuma vaga disponÃ­vel.');
         }
         const newParticipant: Participant = {
             playerId: userId,
@@ -104,7 +103,7 @@ export const tournamentService = {
             });
         } catch (err: any) {
             console.error('Could not update Firestore public tournament on join:', err);
-            throw new Error('Falha ao entrar no torneio: permissão negada ou evento não existe mais.');
+            throw new Error('Falha ao entrar no torneio: permissÃ£o negada ou evento nÃ£o existe mais.');
         }
         // Also persist to organizer's local/user storage if they're on the same device
         await tournamentService.saveTournament(tournament);
@@ -202,7 +201,7 @@ export const tournamentService = {
                 });
             } catch (err) {
                 console.error('Failed to update public DB on withdraw:', err);
-                throw new Error('Erro ao atualizar desistência no servidor.');
+                throw new Error('Erro ao atualizar desistÃªncia no servidor.');
             }
 
             await tournamentService.saveTournament(tournament);
@@ -221,7 +220,7 @@ export const tournamentService = {
             });
         } catch (err) {
             console.error('Failed to update public DB on remove:', err);
-            throw new Error('Erro ao atualizar exclusão no servidor.');
+            throw new Error('Erro ao atualizar exclusÃ£o no servidor.');
         }
 
         await tournamentService.saveTournament(tournament);
@@ -496,3 +495,4 @@ export const tournamentService = {
         }
     }
 };
+

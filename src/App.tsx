@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuthStore } from './stores/authStore';
+import { useAuthStore } from './features/auth/authStore';
 import { Toaster } from 'react-hot-toast';
 
 // Pages
@@ -16,7 +16,7 @@ import Profile from './pages/Profile';
 import JoinTournament from './pages/JoinTournament';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TranslateGuide from './pages/TranslateGuide';
-import BottomNav from './components/layout/BottomNav';
+import { BottomNav } from './components/layout';
 
 
 

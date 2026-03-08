@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, Save, HelpCircle } from 'lucide-react';
-import PageShell from '../components/layout/PageShell';
+import PageShell from '../components/layout';
 import { Button, Card, Input, Select } from '../components/ui';
-import { useTournamentStore } from '../stores/tournamentStore';
-import { useAuthStore } from '../stores/authStore';
+import { useTournamentStore } from '../features/tournaments/tournamentStore';
+import { useAuthStore } from '../features/auth/authStore';
 import type { TournamentFormat } from '../types';
 
 const TournamentCreate: React.FC = () => {
@@ -17,8 +17,8 @@ const TournamentCreate: React.FC = () => {
         return (
             <PageShell>
                 <div className="container section text-center pt-20">
-                    <h2 className="text-2xl font-bold mb-4">Contas de Convidado não podem criar torneios</h2>
-                    <p className="text-secondary mb-8">Para organizar eventos e evitar span, você precisa vincular um e-mail ou Google na sua conta.</p>
+                    <h2 className="text-2xl font-bold mb-4">Contas de Convidado nÃ£o podem criar torneios</h2>
+                    <p className="text-secondary mb-8">Para organizar eventos e evitar span, vocÃª precisa vincular um e-mail ou Google na sua conta.</p>
                     <Button onClick={() => navigate('/profile')} variant="glow">Proteger Conta Local</Button>
                 </div>
             </PageShell>
@@ -144,18 +144,18 @@ const TournamentCreate: React.FC = () => {
                                 <Select
                                     label="Tempo Limitado (Rodadas)?"
                                     options={[
-                                        { value: 'true', label: 'Sim (Com Cronômetro)' },
-                                        { value: 'false', label: 'Não (Tempo Livre)' }
+                                        { value: 'true', label: 'Sim (Com CronÃ´metro)' },
+                                        { value: 'false', label: 'NÃ£o (Tempo Livre)' }
                                     ]}
                                     value={formData.hasTimer.toString()}
                                     onChange={e => setFormData({ ...formData, hasTimer: e.target.value === 'true' })}
                                 />
                                 {formData.format === 'multiplayer' && (
                                     <Select
-                                        label="Permitir Byes (Vitória Automática)?"
+                                        label="Permitir Byes (VitÃ³ria AutomÃ¡tica)?"
                                         options={[
                                             { value: 'true', label: 'Sim (Recomendado)' },
-                                            { value: 'false', label: 'Não (Redistribuir Mesas)' }
+                                            { value: 'false', label: 'NÃ£o (Redistribuir Mesas)' }
                                         ]}
                                         value={formData.allowByes.toString()}
                                         onChange={e => setFormData({ ...formData, allowByes: e.target.value === 'true' })}
@@ -166,7 +166,7 @@ const TournamentCreate: React.FC = () => {
                             {formData.format === 'multiplayer' && (
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="flex flex-col gap-2">
-                                        <label className="text-[10px] font-bold text-primary ml-1 uppercase tracking-wider">Mín. Jogadores por Mesa</label>
+                                        <label className="text-[10px] font-bold text-primary ml-1 uppercase tracking-wider">MÃ­n. Jogadores por Mesa</label>
                                         <div className="flex items-center justify-between glass p-2 rounded-xl border border-white/5">
                                             <button type="button"
                                                 className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-lg transition-colors"
@@ -180,7 +180,7 @@ const TournamentCreate: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="flex flex-col gap-2">
-                                        <label className="text-[10px] font-bold text-primary ml-1 uppercase tracking-wider">Máx. Jogadores por Mesa</label>
+                                        <label className="text-[10px] font-bold text-primary ml-1 uppercase tracking-wider">MÃ¡x. Jogadores por Mesa</label>
                                         <div className="flex items-center justify-between glass p-2 rounded-xl border border-white/5">
                                             <button type="button"
                                                 className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-lg transition-colors"
@@ -210,7 +210,7 @@ const TournamentCreate: React.FC = () => {
                                     <div className="flex flex-wrap gap-2 mt-3">
                                         {[1, 2, 3, 4].map(pos => (
                                             <div key={pos} className="px-3 py-1 glass rounded-lg text-[10px] font-bold">
-                                                {pos}º: {formData.scoring.positions?.[4]?.[pos] || 0} pts
+                                                {pos}Âº: {formData.scoring.positions?.[4]?.[pos] || 0} pts
                                             </div>
                                         ))}
                                     </div>
@@ -236,7 +236,7 @@ const TournamentCreate: React.FC = () => {
                                 <div className="flex justify-between items-start mb-4">
                                     <div>
                                         <h3 className="text-2xl">{formData.name}</h3>
-                                        <p className="text-secondary">{formData.date} • {formData.location}</p>
+                                        <p className="text-secondary">{formData.date} â€¢ {formData.location}</p>
                                     </div>
                                     <div className="px-3 py-1 glass rounded-full text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--color-purple)' }}>
                                         {formData.format}
@@ -271,3 +271,4 @@ const TournamentCreate: React.FC = () => {
 };
 
 export default TournamentCreate;
+

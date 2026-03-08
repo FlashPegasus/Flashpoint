@@ -1,12 +1,12 @@
-import React from 'react';
+﻿import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trophy, Plus, Users, Calendar, ArrowRight, Trash2, LogOut, Flag, Shield as ShieldIcon, Zap, Search, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
-import PageShell from '../components/layout/PageShell';
+import PageShell from '../components/layout';
 import { Button } from '../components/ui';
-import { useAuthStore } from '../stores/authStore';
-import { useTournamentStore } from '../stores/tournamentStore';
-import { tournamentService } from '../services/tournamentService';
+import { useAuthStore } from '../features/auth/authStore';
+import { useTournamentStore } from '../features/tournaments/tournamentStore';
+import { tournamentService } from '../features/tournaments/tournamentService';
 
 const MyArea: React.FC = () => {
     const { user } = useAuthStore();
@@ -38,7 +38,7 @@ const MyArea: React.FC = () => {
         try {
             const newIsPublic = !user.isPublic;
             await updateProfile({ isPublic: newIsPublic });
-            toast.success(`Perfil agora é ${newIsPublic ? 'Público' : 'Privado'}`);
+            toast.success(`Perfil agora Ã© ${newIsPublic ? 'PÃºblico' : 'Privado'}`);
         } catch (err) {
             toast.error('Erro ao atualizar privacidade.');
         }
@@ -47,10 +47,10 @@ const MyArea: React.FC = () => {
     const handleDeleteTournament = async (e: React.MouseEvent, id: string) => {
         e.preventDefault();
         e.stopPropagation();
-        if (window.confirm('Tem certeza que deseja excluir este torneio? Esta ação não pode ser desfeita.')) {
+        if (window.confirm('Tem certeza que deseja excluir este torneio? Esta aÃ§Ã£o nÃ£o pode ser desfeita.')) {
             try {
                 await tournamentService.deleteTournament(id);
-                toast.success('Torneio excluído com sucesso!');
+                toast.success('Torneio excluÃ­do com sucesso!');
                 loadTournaments();
             } catch (err) {
                 toast.error('Erro ao excluir torneio.');
@@ -61,7 +61,7 @@ const MyArea: React.FC = () => {
     const handleLeaveTournament = async (e: React.MouseEvent, id: string) => {
         e.preventDefault();
         e.stopPropagation();
-        if (window.confirm('Tem certeza que deseja cancelar sua inscrição neste torneio aberto?')) {
+        if (window.confirm('Tem certeza que deseja cancelar sua inscriÃ§Ã£o neste torneio aberto?')) {
             await tournamentService.removeParticipant(id, user!.id);
             loadTournaments();
         }
@@ -70,7 +70,7 @@ const MyArea: React.FC = () => {
     const handleDropTournament = async (e: React.MouseEvent, id: string) => {
         e.preventDefault();
         e.stopPropagation();
-        if (window.confirm('Tem certeza que deseja desistir deste torneio? Seu progresso atual será mantido no histórico.')) {
+        if (window.confirm('Tem certeza que deseja desistir deste torneio? Seu progresso atual serÃ¡ mantido no histÃ³rico.')) {
             await tournamentService.withdrawParticipant(id, user!.id);
             loadTournaments();
         }
@@ -81,7 +81,7 @@ const MyArea: React.FC = () => {
             <div className="container py-8 animate-fade-in">
                 <div className="flex justify-between items-center mb-8">
                     <div>
-                        <h1 className="text-4xl font-outfit mb-1">Minha Área</h1>
+                        <h1 className="text-4xl font-outfit mb-1">Minha Ãrea</h1>
                         <div className="flex items-center gap-3">
                             <p className="text-secondary text-sm">Bem-vindo(a) de volta, {user?.name}!</p>
                             <button
@@ -90,10 +90,10 @@ const MyArea: React.FC = () => {
                                     ? 'bg-green/10 text-green border-green/20'
                                     : 'bg-white/5 text-muted border-white/10'
                                     }`}
-                                title={user?.isPublic ? 'Perfil visível para outros' : 'Perfil oculto para outros'}
+                                title={user?.isPublic ? 'Perfil visÃ­vel para outros' : 'Perfil oculto para outros'}
                             >
                                 {user?.isPublic ? <Eye size={12} /> : <EyeOff size={12} />}
-                                {user?.isPublic ? 'PERFIL PÚBLICO' : 'PERFIL PRIVADO'}
+                                {user?.isPublic ? 'PERFIL PÃšBLICO' : 'PERFIL PRIVADO'}
                             </button>
                         </div>
                     </div>
@@ -107,7 +107,7 @@ const MyArea: React.FC = () => {
                     {[
                         { label: 'Organizados', value: organizedCount, icon: <Trophy size={16} /> },
                         { label: 'Participando', value: participatingTournaments.length, icon: <Users size={16} /> },
-                        { label: 'Tx. de Vitória', value: stats?.winRate || '0%', icon: <ArrowRight size={16} /> }
+                        { label: 'Tx. de VitÃ³ria', value: stats?.winRate || '0%', icon: <ArrowRight size={16} /> }
                     ].map((stat, i) => (
                         <div key={i} className="glass p-4 rounded-2xl border-white/5">
                             <div className="text-xs text-muted flex items-center gap-1 mb-1">
@@ -131,9 +131,9 @@ const MyArea: React.FC = () => {
                                         <Zap size={28} className="text-purple" style={{ color: 'var(--color-purple)' }} />
                                     </div>
                                     <h3 className="text-xl font-bold mb-2">Crie seu primeiro evento</h3>
-                                    <p className="text-secondary text-sm mb-6 max-w-xs mx-auto">Comece agora a organizar seu torneio. É rápido, fácil e totalmente automatizado.</p>
+                                    <p className="text-secondary text-sm mb-6 max-w-xs mx-auto">Comece agora a organizar seu torneio. Ã‰ rÃ¡pido, fÃ¡cil e totalmente automatizado.</p>
                                     <Button variant="primary" size="sm" onClick={() => navigate('/tournament/create')}>
-                                        Começar Agora
+                                        ComeÃ§ar Agora
                                     </Button>
                                 </div>
                             ) : (
@@ -144,12 +144,12 @@ const MyArea: React.FC = () => {
                                                 <div>
                                                     <h3 className="text-lg font-bold group-hover:text-purple transition-colors">{t.name}</h3>
                                                     <p className="text-xs text-secondary mt-1 flex items-center gap-1">
-                                                        <Calendar size={12} /> {t.date} • {t.participants.length} Jogadores
+                                                        <Calendar size={12} /> {t.date} â€¢ {t.participants.length} Jogadores
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center gap-3">
                                                     <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-full ${t.status === 'registration' ? 'bg-purple/10 text-purple' : 'bg-green/10 text-green'}`}>
-                                                        {t.status === 'registration' ? 'Aberto' : t.status === 'ongoing' ? 'Em Andamento' : 'Concluído'}
+                                                        {t.status === 'registration' ? 'Aberto' : t.status === 'ongoing' ? 'Em Andamento' : 'ConcluÃ­do'}
                                                     </span>
                                                     <button
                                                         onClick={(e) => handleDeleteTournament(e, t.id)}
@@ -179,7 +179,7 @@ const MyArea: React.FC = () => {
                                         <Search size={28} className="text-blue" style={{ color: 'var(--color-blue)' }} />
                                     </div>
                                     <h3 className="text-xl font-bold mb-2">Busque por batalhas</h3>
-                                    <p className="text-secondary text-sm mb-6 max-w-xs mx-auto">Explore torneios abertos e inscreva-se para começar a ganhar pontos e subir no ranking.</p>
+                                    <p className="text-secondary text-sm mb-6 max-w-xs mx-auto">Explore torneios abertos e inscreva-se para comeÃ§ar a ganhar pontos e subir no ranking.</p>
                                     <Button variant="secondary" size="sm" onClick={() => navigate('/discover')}>
                                         Explorar Torneios
                                     </Button>
@@ -191,7 +191,7 @@ const MyArea: React.FC = () => {
                                             <div className="flex justify-between items-start">
                                                 <div>
                                                     <h3 className="text-lg font-bold group-hover:text-blue transition-colors">{t.name}</h3>
-                                                    <p className="text-xs text-secondary mt-1">{t.format} • {t.location}</p>
+                                                    <p className="text-xs text-secondary mt-1">{t.format} â€¢ {t.location}</p>
                                                 </div>
                                                 <div className="text-right flex items-center gap-4">
                                                     <div className="flex gap-2">
@@ -215,7 +215,7 @@ const MyArea: React.FC = () => {
                                                         )}
                                                     </div>
                                                     <div>
-                                                        <p className="text-xs text-muted">Sua Posição</p>
+                                                        <p className="text-xs text-muted">Sua PosiÃ§Ã£o</p>
                                                         <p className="text-lg font-bold font-outfit text-center">#{t.participants.find(p => p.playerId === user?.id)?.rank || '-'}</p>
                                                     </div>
                                                 </div>
@@ -233,3 +233,4 @@ const MyArea: React.FC = () => {
 };
 
 export default MyArea;
+
