@@ -84,7 +84,7 @@ export const leagueService = {
         );
 
         await setDoc(doc(db, LEAGUES_COLLECTION, league.id), sanitizedLeague);
-        await leagueService._notifyUpdate(league.id);
+        leagueService._notifyUpdate(league.id); // fire-and-forget: não bloqueia a criação
         return league;
     },
 
