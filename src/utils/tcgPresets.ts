@@ -21,7 +21,7 @@ export const TCG_PRESETS: ScoringPreset[] = [
     {
         id: 'commander',
         name: 'Commander (Multiplayer)',
-        icon: '👑',
+        icon: 'commander',
         description: 'Focado em mesas de 4 jogadores com pontuação decrescente.',
         leaguePoints: {
             participation: 2,
@@ -39,7 +39,7 @@ export const TCG_PRESETS: ScoringPreset[] = [
     {
         id: 'modern',
         name: 'Modern / Standard (1v1)',
-        icon: '⚔️',
+        icon: 'modern',
         description: 'Formato competitivo clássico 1-contra-1.',
         leaguePoints: {
             participation: 1,
@@ -57,7 +57,7 @@ export const TCG_PRESETS: ScoringPreset[] = [
     {
         id: 'casual',
         name: 'Casual / For Fun',
-        icon: '🎲',
+        icon: 'casual',
         description: 'Pontuação equilibrada para priorizar a participação.',
         leaguePoints: {
             participation: 5,

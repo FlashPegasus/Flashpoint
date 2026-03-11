@@ -2,7 +2,15 @@
 
 Este arquivo serve como um diário de bordo da evolução do projeto. Cada "Fase" concluída deve ser registrada aqui para manter a continuidade do desenvolvimento.
 
-## 2026-03-09: Fase 29 - Player Experience (Public View v1.2.1)
+## 2026-03-10: Fase 29.1 - Side Mission: Ícones Dinâmicos
+- **Objetivo**: Suporte a ícones externos, emojis e palavras-chave sem custo de Firestore.
+- **Implementações**:
+  - Novo componente `DynamicIcon`.
+  - Mapeamento de keywords para SVGs premium (Commander, Modern, etc).
+  - Suporte a URLs externas (img src) para ícones de TCG.
+  - Refatoração dos Presets de Torneio e `TournamentCreate.tsx`.
+
+## 2026-03-10: Fase 29 - Player Experience (Public View v1.2.1)
 - **Objetivo**: Criação de uma página pública otimizada para os jogadores e overhaul visual premium.
 - **Implementações**:
   - Lançamento da rota `/tournament/:id/public`.

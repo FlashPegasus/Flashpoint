@@ -101,6 +101,7 @@ export interface Tournament {
     requiresCheckIn?: boolean;
     maxParticipants?: number;
     isPrivate?: boolean;
+    bannerUrl?: string;
     currentRoundEndTime?: string;
     currentRound?: number;
     currentRoundData?: Round;

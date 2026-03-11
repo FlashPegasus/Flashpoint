@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, Save, HelpCircle } from 'lucide-react';
 import PageShell from '../components/layout';
-import { Button, Card, Input, Select } from '../components/ui';
+import { Button, Card, Input, Select, DynamicIcon } from '../components/ui';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { useLeagueStore } from '../features/leagues/leagueStore';
 import { useAuthStore } from '../features/auth/authStore';
@@ -176,7 +176,9 @@ const TournamentCreate: React.FC = () => {
                                         onClick={() => applyPreset(preset)}
                                         className="glass p-3 rounded-2xl border border-white/5 hover:border-purple/40 text-left transition-all active:scale-95 group"
                                     >
-                                        <div className="text-xl mb-1">{preset.icon}</div>
+                                        <div className="mb-1 text-purple">
+                                            <DynamicIcon icon={preset.icon} size={24} />
+                                        </div>
                                         <h3 className="font-bold text-[11px] group-hover:text-purple transition-colors">{preset.name}</h3>
                                     </button>
                                 ))}

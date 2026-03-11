@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { X, ChevronRight, Home } from 'lucide-react';
+export * from './DynamicIcon';
 
 // ─────────────────────────────────────────────
 // Button
