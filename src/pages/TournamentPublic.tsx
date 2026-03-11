@@ -1,21 +1,29 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Calendar, Users, MapPin } from 'lucide-react';
+import { Calendar, Users, MapPin, Trophy, Info, Search, Sword } from 'lucide-react';
 import PageShell from '../components/layout';
-import { Button, Card } from '../components/ui';
+import { Button, Card, Breadcrumbs, LoadingScreen, Modal, Input } from '../components/ui';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { useAuthStore } from '../features/auth/authStore';
-import { Breadcrumbs, LoadingScreen, Modal, Input } from '../components/ui';
+import { MatchCard } from '../features/tournaments/components/MatchCard';
+import { IconPairingTable, IconLeagueLeader, IconShareInvite } from '../assets/icons';
+import { getInviteLink, copyToClipboard } from '../utils/inviteHelper';
 import toast from 'react-hot-toast';
 
+/**
+ * Public Tournament Page (Phase 29)
+ * Optimized for Player Experience with live pairings and search.
+ */
 const TournamentPublic: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { user } = useAuthStore();
     const { activeTournament, loadTournament, addParticipant } = useTournamentStore();
 
-    const [isJoining, setIsJoining] = React.useState(false);
-    const [joinData, setJoinData] = React.useState({
+    const [activeTab, setActiveTab] = useState<'info' | 'rounds' | 'standings'>('info');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isJoining, setIsJoining] = useState(false);
+    const [joinData, setJoinData] = useState({
         commanderName: '',
         decklistUrl: ''
     });
@@ -23,6 +31,21 @@ const TournamentPublic: React.FC = () => {
     useEffect(() => {
         if (id) loadTournament(id);
     }, [id, loadTournament]);
+
+    const filteredTables = useMemo(() => {
+        // cast to any for now until types are updated
+        const currentRoundData = (activeTournament as any)?.currentRoundData;
+        if (!currentRoundData?.tables) return [];
+        if (!searchTerm) return currentRoundData.tables;
+
+        const term = searchTerm.toLowerCase();
+        return currentRoundData.tables.filter((table: any) => {
+            return table.playerIds.some((pid: string) => {
+                const p = activeTournament?.participants.find(part => part.playerId === pid);
+                return p?.name.toLowerCase().includes(term);
+            });
+        });
+    }, [activeTournament, searchTerm]);
 
     if (!activeTournament) return <LoadingScreen message="Carregando torneio..." />;
 
@@ -61,137 +84,297 @@ const TournamentPublic: React.FC = () => {
                 />
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Main Info */}
-                    <div className="lg:col-span-2 flex flex-col gap-8">
-                        <div className="glass p-8 rounded-3xl relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-purple/10 blur-[100px] -mr-32 -mt-32"></div>
-                            <div className="relative z-10">
-                                <div className="px-3 py-1 glass w-max rounded-full text-xs font-bold uppercase tracking-widest text-purple mb-4" style={{ color: 'var(--color-purple)' }}>
-                                    {activeTournament.format === 'multiplayer' ? 'Multijogador' : '1 vs 1'}
+                    {/* Header & Content Area */}
+                    <div className="lg:col-span-2 flex flex-col gap-6">
+                        {/* Hero Section - Phase 29 Visual Overhaul */}
+                        <div className="mesh-gradient p-10 md:p-14 rounded-[2.5rem] relative overflow-hidden shadow-2xl border border-white/5 animate-fade-in">
+                            <div className="absolute inset-0 bg-bg-dark/40 backdrop-blur-[2px]"></div>
+                            <div className="relative z-10 flex flex-col gap-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="px-3 py-1 glass rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-purple">
+                                        {activeTournament.format === 'multiplayer' ? 'MULTIJOGADOR' : activeTournament.format === '1v1' ? '1 VS 1' : 'TORNEIO TCG'}
+                                    </div>
+                                    {activeTournament.status === 'ongoing' && (
+                                        <div className="px-3 py-1 bg-green/20 border border-green/30 rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-green animate-pulse flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-green" /> AO VIVO
+                                        </div>
+                                    )}
                                 </div>
-                                <h1 className="text-5xl font-outfit mb-4">{activeTournament.name}</h1>
-                                <div className="flex gap-6 flex-wrap text-secondary">
-                                    <div className="flex items-center gap-2"><Calendar size={18} /> {activeTournament.date}</div>
-                                    <div className="flex items-center gap-2"><MapPin size={18} /> {activeTournament.location}</div>
-                                    <div className="flex items-center gap-2"><Users size={18} /> {activeTournament.participants.length} / {activeTournament.maxParticipants || '∞'} Jogadores</div>
+                                <h1 className="text-4xl md:text-6xl font-outfit font-black text-white leading-tight tracking-tight drop-shadow-2xl">
+                                    {activeTournament.name}
+                                </h1>
+                                <div className="flex gap-6 flex-wrap text-secondary text-sm font-bold">
+                                    <div className="flex items-center gap-2.5 bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
+                                        <Calendar size={18} className="text-purple" /> {new Date(activeTournament.date).toLocaleDateString()}
+                                    </div>
+                                    <div className="flex items-center gap-2.5 bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
+                                        <MapPin size={18} className="text-purple" /> {activeTournament.location || 'Online'}
+                                    </div>
+                                    <div className="flex items-center gap-2.5 bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
+                                        <Users size={18} className="text-purple" /> {activeTournament.participants.length} / {activeTournament.maxParticipants || '∞'} Jogadores
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <Card title="Descrição">
-                            <p className="text-secondary whitespace-pre-wrap">{activeTournament.description || 'Nenhuma descrição fornecida.'}</p>
-                        </Card>
+                        {/* Tabs Navigation - Premium Artifact Style */}
+                        <div className="flex glass p-2 rounded-[1.5rem] gap-2 w-full lg:w-max backdrop-blur-2xl border border-white/5 shadow-xl">
+                            {[
+                                { id: 'info', label: 'Informações', icon: Info },
+                                { id: 'rounds', label: 'Rodadas', icon: IconPairingTable },
+                                { id: 'standings', label: 'Classificação', icon: Trophy }
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                                    className={`flex-1 lg:flex-none px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-500 flex items-center justify-center gap-3 font-outfit ${activeTab === tab.id ? 'bg-purple text-white shadow-glow-purple border border-purple/30' : 'text-muted hover:text-primary hover:bg-white/5'}`}
+                                >
+                                    <tab.icon size={14} className={activeTab === tab.id ? 'animate-float' : ''} />
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
 
-                        <Card title="Classificação">
-                            {activeTournament.participants.length === 0 ? (
-                                <p className="text-muted italic">Nenhum participante ainda. Seja o primeiro a entrar!</p>
-                            ) : (
-                                <div className="flex flex-col gap-2">
-                                    {activeTournament.participants.slice(0, 10).map((p, i) => (
-                                        <div key={p.playerId} className="flex justify-between items-center p-3 glass rounded-xl">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-xs font-bold w-4">{i + 1}</span>
-                                                <span className="font-medium">{p.name}</span>
+                        {/* Tab Contents */}
+                        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            {activeTab === 'info' && (
+                                <Card title="Descrição do Evento" className="bg-white/1 border-white/5">
+                                    <p className="text-secondary whitespace-pre-wrap leading-relaxed text-sm lg:text-base">
+                                        {activeTournament.description || 'Nenhuma descrição detalhada fornecida pelo organizador.'}
+                                    </p>
+                                    <div className="mt-8 pt-8 border-t border-white/5">
+                                        <h4 className="text-xs font-bold uppercase mb-4 text-muted tracking-widest">Regras e Formato</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="p-4 glass rounded-2xl flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-green/10 flex items-center justify-center text-green">⬢</div>
+                                                <div>
+                                                    <p className="text-[10px] text-muted font-bold uppercase">Entrada Tardia</p>
+                                                    <p className="text-xs font-medium">{activeTournament.allowLateRegistration ? 'Permitida' : 'Somente no início'}</p>
+                                                </div>
                                             </div>
-                                            <span className="font-bold">{p.totalPoints} pts</span>
+                                            <div className="p-4 glass rounded-2xl flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-blue/10 flex items-center justify-center text-blue">⬢</div>
+                                                <div>
+                                                    <p className="text-[10px] text-muted font-bold uppercase">Desistência (Drop)</p>
+                                                    <p className="text-xs font-medium">{activeTournament.allowWithdrawal ? 'Permitida' : 'Apenas após rodada'}</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                    ))}
-                                    {activeTournament.participants.length > 10 && <p className="text-center text-xs text-muted py-2">E mais {activeTournament.participants.length - 10} jogadores...</p>}
+                                    </div>
+                                </Card>
+                            )}
+
+                            {activeTab === 'rounds' && (
+                                <div className="flex flex-col gap-4">
+                                    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-2">
+                                        <div>
+                                            <h3 className="text-xl font-outfit">Rodada Atual: {(activeTournament as any).currentRound || 1}</h3>
+                                            <p className="text-xs text-muted">Acompanhe os emparceiramentos e mesas em tempo real.</p>
+                                        </div>
+                                        <div className="relative w-full lg:w-64 group">
+                                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-purple transition-colors" />
+                                            <input
+                                                type="text"
+                                                placeholder="Sua mesa (Procure seu nome)"
+                                                className="w-full glass pl-10 pr-4 py-2.5 text-xs rounded-xl focus:outline-none focus:ring-1 focus:ring-purple/50 transition-all border-white/5 bg-white/2"
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {!(activeTournament as any).currentRoundData ? (
+                                        <div className="glass p-12 rounded-3xl text-center border-dashed border-white/10">
+                                            <Sword size={48} className="mx-auto text-muted mb-4 opacity-20" />
+                                            <h4 className="text-lg font-bold">Aguardando Início</h4>
+                                            <p className="text-sm text-muted">O organizador ainda não iniciou a primeira rodada.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {filteredTables.map((table: any, idx: number) => (
+                                                <MatchCard
+                                                    key={idx}
+                                                    idx={idx}
+                                                    table={table}
+                                                    participants={activeTournament.participants}
+                                                    isOrganizer={false}
+                                                    status={table.results ? 'completed' : 'pending'}
+                                                    onEnterResult={() => { }}
+                                                    roundNumber={(activeTournament as any).currentRound || 1}
+                                                />
+                                            ))}
+                                            {filteredTables.length === 0 && searchTerm && (
+                                                <div className="col-span-full py-12 text-center text-muted text-sm">
+                                                    Nenhum jogador encontrado com "{searchTerm}"
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             )}
-                        </Card>
+
+                            {activeTab === 'standings' && (
+                                <Card title="Classificação Geral" className="bg-white/1 border-white/5">
+                                    {activeTournament.participants.length === 0 ? (
+                                        <p className="text-muted italic text-center py-8">Nenhum participante ainda.</p>
+                                    ) : (
+                                        <div className="flex flex-col gap-2">
+                                            {[...activeTournament.participants]
+                                                .sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0))
+                                                .map((p, i) => (
+                                                    <div
+                                                        key={p.playerId}
+                                                        className={`flex justify-between items-center p-4 rounded-2xl transition-all ${i === 0 ? 'bg-purple/10 border border-purple/20' : 'glass border-white/5'}`}
+                                                    >
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-8 h-8 rounded-lg bg-black/20 flex items-center justify-center font-bold text-sm">
+                                                                {i === 0 ? <IconLeagueLeader size={18} className="text-gold" style={{ color: 'var(--color-gold)' }} /> : i + 1}
+                                                            </div>
+                                                            <div>
+                                                                <span className={`font-bold ${i === 0 ? 'text-purple' : 'text-primary'}`} style={i === 0 ? { color: 'var(--color-purple)' } : {}}>{p.name}</span>
+                                                                <div className="flex gap-2 items-center mt-1">
+                                                                    <span className="text-[10px] text-muted uppercase font-bold tracking-widest">{p.commanderName || 'Deck Privado'}</span>
+                                                                    {(p as any).status === 'dropped' && <span className="text-[8px] bg-red/20 text-red px-1 rounded uppercase font-bold">Dropped</span>}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="text-xl font-outfit font-black block">{p.totalPoints}</span>
+                                                            <span className="text-[10px] text-muted uppercase font-bold">pontos</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    )}
+                                </Card>
+                            )}
+                        </div>
                     </div>
 
                     {/* Sidebar Actions */}
                     <div className="flex flex-col gap-6">
-                        <Card className="sticky top-24">
+                        {/* Sidebar Actions - Phase 29 Visual Overhaul */}
+                        <Card className="sticky top-24 border border-white/10 bg-bg-card/40 backdrop-blur-xl shadow-2xl p-8 rounded-[2rem] hover-glow-purple transition-all duration-500">
                             <div className="text-center mb-8">
-                                <p className="text-sm text-secondary mb-2">Status do Torneio</p>
-                                <div className="text-2xl font-bold uppercase tracking-widest text-purple" style={{ color: 'var(--color-purple)' }}>
-                                    {activeTournament.status === 'registration' ? 'Inscrições' : activeTournament.status === 'ongoing' ? 'Em Andamento' : 'Finalizado'}
+                                <p className="text-[10px] font-black text-muted uppercase tracking-[0.25em] mb-4">Status do Evento</p>
+                                <div className="text-2xl font-black uppercase tracking-tight text-purple flex items-center justify-center gap-3 font-outfit">
+                                    {activeTournament.status === 'ongoing' ? (
+                                        <>
+                                            <span className="w-2.5 h-2.5 rounded-full bg-green animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+                                            <span className="text-mana-purple">Ao Vivo</span>
+                                        </>
+                                    ) : (
+                                        <span className="text-secondary opacity-60">
+                                            {activeTournament.status === 'registration' ? 'Inscrições' : 'Finalizado'}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
+                            {activeTournament.status === 'ongoing' && (
+                                <div className="p-4 bg-purple/5 border border-purple/10 rounded-2xl mb-6 text-center">
+                                    <p className="text-[11px] text-secondary font-bold leading-relaxed uppercase tracking-wide">Acompanhe sua mesa na aba **Rodadas**!</p>
+                                </div>
+                            )}
+
                             {isJoined ? (
                                 <div className="flex flex-col gap-4">
-                                    <div className="p-4 bg-green/10 rounded-2xl border border-green/20 text-center">
-                                        <p className="text-green font-bold flex items-center justify-center gap-2" style={{ color: 'var(--color-green)' }}>
-                                            Tudo pronto!
+                                    <div className="p-6 bg-green/5 rounded-3xl border border-green/10 text-center">
+                                        <p className="text-green font-bold flex items-center justify-center gap-2 text-sm" style={{ color: 'var(--color-green)' }}>
+                                            Inscrição Garantida ✅
                                         </p>
-                                        <p className="text-[10px] text-green/70 uppercase font-bold mt-1">Você está inscrito</p>
+                                        {activeTournament.status === 'registration' && (
+                                            <p className="text-[10px] text-muted uppercase font-bold mt-2">Aguarde o início.</p>
+                                        )}
                                     </div>
+
                                     <div className="flex flex-col gap-2">
-                                        {joinedParticipant.commanderName && (
-                                            <div className="px-4 py-3 glass rounded-xl text-xs border border-purple/20">
-                                                <span className="text-muted block uppercase text-[10px] mb-1">Seu Comandante</span>
-                                                <span className="font-bold text-purple" style={{ color: 'var(--color-purple)' }}>⚔️ {joinedParticipant.commanderName}</span>
-                                            </div>
-                                        )}
-                                        {joinedParticipant.decklistUrl && (
-                                            <a
-                                                href={joinedParticipant.decklistUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="px-4 py-3 glass rounded-xl text-xs border border-blue/20 hover:bg-blue/5 transition-colors block"
-                                            >
-                                                <span className="text-muted block uppercase text-[10px] mb-1">Sua Decklist</span>
-                                                <span className="font-bold text-blue underline">Ver Link Externo</span>
-                                            </a>
+                                        {user?.id === activeTournament.organizerId ? (
+                                            <Button variant="glow" onClick={() => navigate(`/tournament/${id}`)}>Acessar Painel</Button>
+                                        ) : (
+                                            <Button variant="secondary" onClick={() => navigate('/my-area')}>Minha Área</Button>
                                         )}
                                     </div>
-                                    {user?.id === activeTournament.organizerId ? (
-                                        <Button variant="glow" onClick={() => navigate(`/tournament/${id}`)}>Ir para Painel do Organizador</Button>
-                                    ) : (
-                                        <Button variant="secondary" onClick={() => navigate('/my-area')}>Ir para Minha Área</Button>
-                                    )}
                                 </div>
                             ) : (
                                 <Button
                                     variant="glow"
-                                    className="w-full text-lg py-5"
+                                    className="w-full text-lg py-5 shadow-2xl shadow-purple/40"
                                     onClick={() => activeTournament.format === 'multiplayer' ? setIsJoining(true) : handleJoin()}
                                     disabled={activeTournament.status !== 'registration'}
                                 >
-                                    {activeTournament.status === 'registration' ? 'Entrar no Torneio' : 'Inscrições Encerradas'}
+                                    {activeTournament.status === 'registration' ? 'Quero Participar' : 'Encerrado'}
                                 </Button>
                             )}
 
-                            <div className="mt-8 pt-8 border-t border-white/5">
-                                <h4 className="text-sm font-bold uppercase mb-4 text-muted">Regras</h4>
-                                <ul className="text-xs text-secondary flex flex-col gap-2">
-                                    <li>⬢ {activeTournament.allowLateRegistration ? 'Inscrição tardia permitida' : 'Sem inscrição tardia'}</li>
-                                    <li>⬢ {activeTournament.allowWithdrawal ? 'Saída voluntária permitida' : 'Partidas devem ser concluídas'}</li>
-                                    <li>⬢ Fair play e respeito são obrigatórios</li>
-                                </ul>
-                            </div>
+                            {activeTournament.status === 'registration' && (
+                                <div className="mt-8 pt-8 border-t border-white/5 flex flex-col gap-4">
+                                    {activeTournament.requiresCheckIn && (
+                                        <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl mb-2">
+                                            <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wider mb-1">Atenção</p>
+                                            <p className="text-xs text-secondary leading-relaxed">Este torneio exige **Check-in**. Sua vaga só será confirmada quando você realizar o check-in no dia do evento.</p>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center px-1">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black text-muted uppercase tracking-widest">Convidar Amigos</span>
+                                            <p className="text-[9px] text-muted italic">Inscrições abertas!</p>
+                                        </div>
+                                        <button
+                                            onClick={() => copyToClipboard(getInviteLink('tournament', activeTournament.id || ''), 'Link copiado!')}
+                                            className="p-2 glass rounded-lg text-purple hover:bg-purple/10 transition-all hover:scale-110"
+                                        >
+                                            <IconShareInvite size={18} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTournament.status === 'ongoing' && activeTournament.allowLateRegistration && (
+                                <div className="mt-8 pt-8 border-t border-white/5 flex justify-between items-center px-1">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-muted uppercase tracking-widest">Entrada Tardia</span>
+                                        <p className="text-[9px] text-green-500 font-bold uppercase">Ainda dá tempo!</p>
+                                    </div>
+                                    <button
+                                        onClick={() => copyToClipboard(getInviteLink('tournament', activeTournament.id || ''), 'Link copiado!')}
+                                        className="p-2 glass rounded-lg text-purple hover:bg-purple/10 transition-all hover:scale-110"
+                                    >
+                                        <IconShareInvite size={18} />
+                                    </button>
+                                </div>
+                            )}
                         </Card>
                     </div>
                 </div>
             </div>
 
+            {/* Modal de Inscrição */}
             <Modal
                 isOpen={isJoining}
                 onClose={() => setIsJoining(false)}
-                title="Detalhes da Inscrição"
+                title="🔥 Confirmar Entrada"
                 footer={
-                    <div className="flex gap-4 justify-end">
-                        <Button variant="secondary" onClick={() => setIsJoining(false)}>Cancelar</Button>
-                        <Button variant="glow" onClick={handleJoin}>Confirmar Inscrição</Button>
+                    <div className="flex gap-4 justify-end w-full">
+                        <Button variant="secondary" onClick={() => setIsJoining(false)} className="flex-1">Pensei Melhor</Button>
+                        <Button variant="glow" onClick={handleJoin} className="flex-1">Confirmar!</Button>
                     </div>
                 }
             >
                 <div className="flex flex-col gap-6">
-                    <p className="text-secondary text-sm">Opcional: Informe o seu Comandante ou Decklist para que os outros jogadores possam conhecer seu deck.</p>
-                    <div className="flex flex-col gap-4">
+                    <div className="glass p-4 rounded-2xl bg-purple/5 border-purple/10">
+                        <p className="text-secondary text-sm leading-relaxed">Você está prestes a entrar em **{activeTournament.name}**. Boa sorte!</p>
+                    </div>
+                    <div className="flex flex-col gap-5">
                         <Input
-                            label="Nome do Comandante (Opcional)"
-                            placeholder="Ex: Kenrith, the Returned King"
+                            label="Comandante (Opcional)"
+                            placeholder="Ex: Atraxa, Praetors' Voice"
                             value={joinData.commanderName}
                             onChange={e => setJoinData(prev => ({ ...prev, commanderName: e.target.value }))}
                         />
                         <Input
                             label="Link da Decklist (Opcional)"
-                            placeholder="Moxfield, Archidekt, etc."
+                            placeholder="Moxfield, LigaMagic, etc."
                             value={joinData.decklistUrl}
                             onChange={e => setJoinData(prev => ({ ...prev, decklistUrl: e.target.value }))}
                         />
@@ -203,4 +386,3 @@ const TournamentPublic: React.FC = () => {
 };
 
 export default TournamentPublic;
-

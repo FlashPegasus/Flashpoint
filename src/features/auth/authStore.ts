@@ -1,13 +1,15 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import type { User } from '../../types';
 import { authService } from './authService';
 
 interface AuthState {
     user: User | null;
     isLoading: boolean;
+    uiMode: 'player' | 'organizer';
     error: string | null;
 
     initialize: () => Promise<void>;
+    setUiMode: (mode: 'player' | 'organizer') => void;
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, password: string, name: string) => Promise<void>;
     loginWithGoogle: () => Promise<import('../../types').User | null>;
@@ -20,6 +22,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set) => ({
     user: null,
+    uiMode: (localStorage.getItem('uiMode') as 'player' | 'organizer') || 'player',
     isLoading: true,
     error: null,
 
@@ -35,6 +38,11 @@ export const useAuthStore = create<AuthState>((set) => ({
                 set({ user: null, isLoading: false });
             }
         });
+    },
+
+    setUiMode: (mode: 'player' | 'organizer') => {
+        localStorage.setItem('uiMode', mode);
+        set({ uiMode: mode });
     },
 
     login: async (email: string, password: string) => {

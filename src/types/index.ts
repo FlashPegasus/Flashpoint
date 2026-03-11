@@ -98,9 +98,12 @@ export interface Tournament {
     // Policies
     allowLateRegistration: boolean;
     allowWithdrawal: boolean;
+    requiresCheckIn?: boolean;
     maxParticipants?: number;
     isPrivate?: boolean;
     currentRoundEndTime?: string;
+    currentRound?: number;
+    currentRoundData?: Round;
     participants: Participant[];
     rounds: Round[];
     leagueId?: string;

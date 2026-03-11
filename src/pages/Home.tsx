@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Trophy, Zap, Shield, BarChart3, Users, PlusCircle } from 'lucide-react';
 import PageShell from '../components/layout';
 import { Button, Card } from '../components/ui';
+import { useAuthStore } from '../features/auth/authStore';
 
 const Home: React.FC = () => {
     const navigate = useNavigate();
+    const { uiMode } = useAuthStore();
+
     return (
         <PageShell>
             {/* Hero Section */}
@@ -22,12 +25,25 @@ const Home: React.FC = () => {
                             De noites locais de jogo até ligas de alto nível. FlashPoint é a maneira mais rápida e inteligente de organizar eventos de TCG 1v1 e multiplayer.
                         </p>
                         <div className="flex gap-6 flex-wrap justify-center">
-                            <Button size="lg" variant="glow" onClick={() => navigate('/tournament/create')}>
-                                Criar Torneio
-                            </Button>
-                            <Button size="lg" variant="secondary" onClick={() => navigate('/discover')}>
-                                Ver Eventos
-                            </Button>
+                            {uiMode === 'organizer' ? (
+                                <>
+                                    <Button size="lg" variant="glow" onClick={() => navigate('/tournament/create')}>
+                                        Criar Torneio
+                                    </Button>
+                                    <Button size="lg" variant="secondary" onClick={() => navigate('/my-area')}>
+                                        Gerenciar Eventos
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    <Button size="lg" variant="glow" onClick={() => navigate('/discover')}>
+                                        Explorar Torneios
+                                    </Button>
+                                    <Button size="lg" variant="secondary" onClick={() => navigate('/profile')}>
+                                        Minha Área
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>

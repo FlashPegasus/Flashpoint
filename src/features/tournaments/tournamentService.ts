@@ -162,7 +162,7 @@ export const tournamentService = {
             description: data.description || '',
             format: data.format || '1v1',
             pairingMode: data.pairingMode || 'standard',
-            status: 'registration',
+            status: 'draft',
             organizerId: data.organizerId || 'mock-id',
             minPlayersPerTable: data.minPlayersPerTable || 2,
             maxPlayersPerTable: data.maxPlayersPerTable || 2,
@@ -261,7 +261,12 @@ export const tournamentService = {
         let tables: Table[] = [];
 
         // Filter only active participants for the new round
-        const activeParticipants = tournament.participants.filter(p => p.status === 'active');
+        const activeParticipants = tournament.participants.filter(p => {
+            if (p.status !== 'active') return false;
+            // Enforce check-in for Round 1 if required
+            if (tournament.requiresCheckIn && roundNumber === 1 && !p.checkedIn) return false;
+            return true;
+        });
 
         if (tournament.format === '1v1') {
             tables = generateSwissPairings(activeParticipants, tournament.rounds, {
@@ -300,6 +305,8 @@ export const tournamentService = {
 
         tournament.rounds.push(newRound);
         tournament.status = 'ongoing';
+        tournament.currentRound = roundNumber;
+        tournament.currentRoundData = newRound;
         await tournamentService.saveTournament(tournament);
         return newRound;
     },
@@ -413,6 +420,9 @@ export const tournamentService = {
         // Always recalculate standings for real-time updates and to avoid double counting
         tournamentService.recalculateStandings(tournament);
 
+        // Sync convenience fields
+        tournament.currentRoundData = round;
+
         await tournamentService.saveTournament(tournament);
     },
 
@@ -421,6 +431,14 @@ export const tournamentService = {
         if (!tournament) throw new Error('Tournament not found');
 
         tournament.status = 'completed';
+        await tournamentService.saveTournament(tournament);
+    },
+
+    publishTournament: async (tournamentId: string): Promise<void> => {
+        const tournament = await tournamentService.getTournamentById(tournamentId);
+        if (!tournament) throw new Error('Tournament not found');
+
+        tournament.status = 'registration';
         await tournamentService.saveTournament(tournament);
     },
 

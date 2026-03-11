@@ -2,6 +2,24 @@
 
 Este arquivo serve como um diário de bordo da evolução do projeto. Cada "Fase" concluída deve ser registrada aqui para manter a continuidade do desenvolvimento.
 
+## 2026-03-09: Fase 29 - Player Experience (Public View v1.2.1)
+- **Objetivo**: Criação de uma página pública otimizada para os jogadores e overhaul visual premium.
+- **Implementações**:
+  - Lançamento da rota `/tournament/:id/public`.
+  - Visual "Neo-Modern TCG" com mesh gradients, glassmorphism e animações.
+  - Componente `MatchCard` otimizado para visualização de mesas em tempo real.
+  - Sistema de busca de mesas e visualização de ranking pública.
+  - Fluxo de inscrição simplificado (Join Modal).
+
+## 2026-03-09: Fase 28 - Refatoração & Check-in (Dashboard v1.2.0)
+- **Objetivo**: Divisão do Dashboard de Ligas e implementação de sistema de check-in.
+- **Implementações**:
+  - UI Split: Extração de `LeagueMembersTab.tsx` e `LeagueSeasonsTab.tsx`.
+  - Sistema de Check-In para participantes de torneios.
+  - Customização visual básica de ligas (branding).
+  - Unificação de lógica de convites (`inviteHelper.ts`).
+  - **Tag**: `v1.2.0`
+
 ## 2026-03-08: Fase 27 - Gestão Autônoma (Seasons & Members v1.0.3)
 - **Objetivo**: Implementação completa de controle de membros (Ban/Unban) e temporadas de ranking (Archive/Reset).
 - **Implementações**:

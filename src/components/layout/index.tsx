@@ -1,15 +1,18 @@
-﻿import React from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Trophy, Users, LayoutDashboard, LogOut, Search, Menu, X, Sun, Moon, User, Bell } from 'lucide-react';
+import React from 'react';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Trophy, Users, LayoutDashboard, LogOut, Search, Menu, X, Sun, Moon, User, Bell, Plus, ChevronDown } from 'lucide-react';
 import { useAuthStore } from '../../features/auth/authStore';
+import { IconCreatePlus } from '../../assets/icons';
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——————————————————————————————————————————————————————————————————————————
 // Navbar
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——————————————————————————————————————————————————————————————————————————
 export const Navbar: React.FC = () => {
-    const { user, logout } = useAuthStore();
+    const { user, logout, uiMode, setUiMode } = useAuthStore();
     const navigate = useNavigate();
+    const location = useLocation();
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+    const [isCreateOpen, setIsCreateOpen] = React.useState(false);
     const [theme, setTheme] = React.useState<'light' | 'dark'>(
         (localStorage.getItem('theme') as 'light' | 'dark') || 'dark'
     );
@@ -22,80 +25,148 @@ export const Navbar: React.FC = () => {
     }, [theme]);
 
     const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    const toggleUiMode = () => setUiMode(uiMode === 'player' ? 'organizer' : 'player');
     const handleLogout = () => { logout(); navigate('/'); };
     const isGuest = user?.email === 'guest@flashpoint.app';
 
+    const closeAll = () => {
+        setIsMenuOpen(false);
+        setIsCreateOpen(false);
+        setIsNotifOpen(false);
+    };
+
     return (
         <nav className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-6xl">
-            <div className="glass px-6 py-3.5 flex items-center justify-between shadow-2xl rounded-2xl border-white/10 bg-black/60 backdrop-blur-xl">
-                <Link to="/" className="flex items-center gap-3 group">
-                    <div className="p-2 glass rounded-xl group-hover:shadow-glow transition-all" style={{ backgroundColor: 'var(--color-purple)' }}>
-                        <Trophy size={20} color="white" />
-                    </div>
-                    <span className="text-xl font-bold font-outfit tracking-tight">FlashPoint</span>
-                    <span className="text-sm" title="Português - Brasil">🇧🇷</span>
-                </Link>
+            <div className="glass px-4 md:px-6 py-3.5 flex items-center justify-between shadow-2xl rounded-2xl border-white/10 bg-black/60 backdrop-blur-xl">
+                <div className="flex items-center gap-6">
+                    <Link to="/" className="flex items-center gap-3 group">
+                        <div className="p-2 glass rounded-xl group-hover:shadow-glow transition-all" style={{ backgroundColor: 'var(--color-purple)' }}>
+                            <Trophy size={20} color="white" />
+                        </div>
+                        <span className="hidden sm:inline text-xl font-bold font-outfit tracking-tight">FlashPoint</span>
+                    </Link>
+
+                    {/* Desktop Mode Toggle */}
+                    {user && (
+                        <div className="hidden lg:flex items-center bg-white/5 rounded-full p-1 border border-white/10 shadow-inner">
+                            <button
+                                onClick={() => setUiMode('player')}
+                                className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${uiMode === 'player' ? 'bg-purple text-white shadow-glow' : 'text-secondary hover:text-primary'}`}
+                                style={uiMode === 'player' ? { backgroundColor: 'var(--color-purple)' } : {}}
+                            >
+                                Jogador
+                            </button>
+                            <button
+                                onClick={() => setUiMode('organizer')}
+                                className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${uiMode === 'organizer' ? 'bg-purple text-white shadow-glow' : 'text-secondary hover:text-primary'}`}
+                                style={uiMode === 'organizer' ? { backgroundColor: 'var(--color-purple)' } : {}}
+                            >
+                                Organizador
+                            </button>
+                        </div>
+                    )}
+                </div>
 
                 {/* Desktop Menu */}
-                <div className="hidden md:flex items-center gap-8">
+                <div className="hidden md:flex items-center gap-6">
                     <div className="flex items-center gap-6">
-                        <Link to="/discover" className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
-                            <Search size={14} /><span>Descobrir</span>
-                        </Link>
-                        <Link to="/leagues" className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
-                            <Users size={14} /><span>Ligas</span>
-                        </Link>
-                        {user && (
-                            <Link to="/my-area" className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
-                                <LayoutDashboard size={14} /><span>Minha Área</span>
-                            </Link>
+                        {uiMode === 'player' ? (
+                            <>
+                                <Link to="/discover" className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors ${location.pathname === '/discover' ? 'text-primary' : 'text-secondary hover:text-primary'}`}>
+                                    <Search size={14} /><span>Descobrir</span>
+                                </Link>
+                                <Link to="/leagues" className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors ${location.pathname === '/leagues' ? 'text-primary' : 'text-secondary hover:text-primary'}`}>
+                                    <Users size={14} /><span>Ligas</span>
+                                </Link>
+                            </>
+                        ) : (
+                            <>
+                                <Link to="/my-area" className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors ${location.pathname === '/my-area' ? 'text-primary' : 'text-secondary hover:text-primary'}`}>
+                                    <LayoutDashboard size={14} /><span>Meus Eventos</span>
+                                </Link>
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setIsCreateOpen(!isCreateOpen)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-purple/20 text-purple border border-purple/30 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-purple hover:text-white transition-all shadow-glow-sm"
+                                        style={{ color: isCreateOpen ? 'white' : 'var(--color-purple)', backgroundColor: isCreateOpen ? 'var(--color-purple)' : 'rgba(var(--color-purple-rgb), 0.1)' }}
+                                    >
+                                        <Plus size={14} /> <span>Criar</span> <ChevronDown size={12} className={`transition-transform ${isCreateOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {isCreateOpen && (
+                                        <div className="absolute top-full right-0 mt-3 w-48 glass-card p-2 shadow-2xl border border-white/10 z-[60] animate-fade-in-up">
+                                            <button
+                                                onClick={() => { navigate('/tournament/create'); setIsCreateOpen(false); }}
+                                                className="w-full flex items-center gap-3 p-3 text-xs font-bold text-left hover:bg-white/5 rounded-lg transition-colors group"
+                                            >
+                                                <div className="p-1.5 bg-blue/10 text-blue rounded-md group-hover:bg-blue group-hover:text-white transition-all">
+                                                    <Trophy size={14} />
+                                                </div>
+                                                Novo Torneio
+                                            </button>
+                                            <button
+                                                onClick={() => { navigate('/league/create'); setIsCreateOpen(false); }}
+                                                className="w-full flex items-center gap-3 p-3 text-xs font-bold text-left hover:bg-white/5 rounded-lg transition-colors group"
+                                            >
+                                                <div className="p-1.5 bg-green/10 text-green rounded-md group-hover:bg-green group-hover:text-white transition-all">
+                                                    <Users size={14} />
+                                                </div>
+                                                Nova Liga
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
                         )}
                     </div>
-                    <div className="h-4 w-px bg-white/10"></div>
-                    <div className="flex items-center gap-4">
-                        <Link to="/en" title="English / Translate" className="flex items-center hover:scale-110 transition-transform">
-                            <img src="https://flagcdn.com/w40/gb.png" alt="English" className="h-4 rounded-sm" />
-                        </Link>
-                        <div className="relative">
-                            <button
-                                onClick={() => setIsNotifOpen(!isNotifOpen)}
-                                className="p-2 text-secondary hover:text-primary transition-all relative"
-                            >
-                                <Bell size={18} />
-                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-black"></span>
-                            </button>
-                            {isNotifOpen && (
-                                <div className="absolute top-full right-0 mt-2 w-64 glass-card p-4 shadow-2xl border border-white/10 z-[60] animate-fade-in">
-                                    <p className="text-xs font-bold uppercase tracking-widest text-muted mb-3">Notificações</p>
-                                    <div className="text-center py-8 opacity-40">
-                                        <Bell size={24} className="mx-auto mb-2" />
-                                        <p className="text-[10px]">Nenhuma notificação por enquanto.</p>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        <button onClick={toggleTheme} className="p-2 text-secondary hover:text-primary transition-all">
+                    <div className="h-4 w-px bg-white/10 mx-2"></div>
+                    <div className="flex items-center gap-3">
+                        <button onClick={toggleTheme} className="p-2 text-secondary hover:text-primary transition-all rounded-lg hover:bg-white/5">
                             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
                         </button>
+
                         {user ? (
-                            <div className="flex items-center gap-4">
-                                <Link to="/profile" className="flex items-center gap-2 glass pl-1 pr-3 py-1 rounded-full hover:shadow-glow transition-all border-white/10">
-                                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] overflow-hidden" style={{ backgroundColor: 'var(--color-purple)' }}>
-                                        {user.avatar
-                                            ? <img src={user.avatar} className="w-full h-full object-cover" alt="" />
-                                            : user.name.charAt(0).toUpperCase()
-                                        }
-                                    </div>
-                                    <span className="text-[10px] font-bold uppercase tracking-wider">
-                                        {isGuest ? '🧑‍🤝‍🧑 Convidado' : user.name}
-                                    </span>
-                                </Link>
-                                <button onClick={handleLogout} className="text-muted hover:text-red transition-colors">
-                                    <LogOut size={16} />
-                                </button>
-                            </div>
+                            <>
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setIsNotifOpen(!isNotifOpen)}
+                                        className="p-2 text-secondary hover:text-primary transition-all relative rounded-lg hover:bg-white/5"
+                                    >
+                                        <Bell size={18} />
+                                        <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full border border-black animate-pulse"></span>
+                                    </button>
+                                    {isNotifOpen && (
+                                        <div className="absolute top-full right-0 mt-3 w-72 glass-card p-4 shadow-2xl border border-white/10 z-[60] animate-fade-in-up">
+                                            <div className="flex justify-between items-center mb-4">
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Notificações</p>
+                                                <button className="text-[9px] text-purple hover:underline">Limpar tudo</button>
+                                            </div>
+                                            <div className="text-center py-8 opacity-40">
+                                                <Bell size={24} className="mx-auto mb-2" />
+                                                <p className="text-[10px]">Tudo em ordem por aqui!</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-4 bg-white/5 pl-1 pr-1 py-1 rounded-full border border-white/10">
+                                    <Link to="/profile" className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full hover:bg-white/5 transition-all">
+                                        <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] overflow-hidden shadow-lg border border-white/20" style={{ backgroundColor: 'var(--color-purple)' }}>
+                                            {user.avatar
+                                                ? <img src={user.avatar} className="w-full h-full object-cover" alt="" />
+                                                : user.name.charAt(0).toUpperCase()
+                                            }
+                                        </div>
+                                        <span className="text-[9px] font-bold uppercase tracking-wider max-w-[80px] truncate">
+                                            {isGuest ? 'Convidado' : user.name}
+                                        </span>
+                                    </Link>
+                                    <button onClick={handleLogout} className="p-2 text-muted hover:text-red transition-colors">
+                                        <LogOut size={14} />
+                                    </button>
+                                </div>
+                            </>
                         ) : (
-                            <Link to="/login" className="px-6 py-2.5 bg-purple text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:shadow-glow transition-all" style={{ backgroundColor: 'var(--color-purple)' }}>
+                            <Link to="/login" className="px-6 py-2.5 bg-purple text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:shadow-glow transition-all shadow-glow-sm" style={{ backgroundColor: 'var(--color-purple)' }}>
                                 Entrar
                             </Link>
                         )}
@@ -103,41 +174,56 @@ export const Navbar: React.FC = () => {
                 </div>
 
                 {/* Mobile Toggle */}
-                <button className="md:hidden p-2 text-secondary" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-                    {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                </button>
+                <div className="flex md:hidden items-center gap-2">
+                    {user && (
+                        <button
+                            onClick={toggleUiMode}
+                            className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border border-white/10 transition-all ${uiMode === 'organizer' ? 'bg-purple/20 text-purple border-purple/30' : 'bg-white/5 text-secondary'}`}
+                        >
+                            {uiMode === 'organizer' ? 'Org' : 'Player'}
+                        </button>
+                    )}
+                    <button className="p-2 text-secondary bg-white/5 rounded-lg border border-white/10" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                        {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                    </button>
+                </div>
             </div>
 
             {/* Mobile Menu */}
             {isMenuOpen && (
-                <div className="md:hidden mt-2 glass-card p-6 animate-fade-in">
+                <div className="md:hidden mt-2 glass-card p-6 animate-fade-in shadow-2xl border border-white/10">
                     <div className="flex flex-col gap-6">
-                        <Link to="/discover" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-wider">Descobrir</Link>
-                        <Link to="/leagues" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-wider">Ligas</Link>
-                        {user && <Link to="/my-area" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-wider">Minha Área</Link>}
-                        <div className="h-px bg-white/10"></div>
-                        <Link to="/en" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-                            <img src="https://flagcdn.com/w40/gb.png" alt="English" className="h-4 rounded-sm" />
-                            <span>English / Traduzir</span>
+                        <Link to="/discover" onClick={closeAll} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
+                            <Search size={18} /> <span>Descobrir Eventos</span>
                         </Link>
-                        {user ? (
-                            <div className="flex flex-col gap-4">
-                                <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-wider">Perfil</Link>
-                                <button
-                                    onClick={() => {
-                                        setIsNotifOpen(!isNotifOpen);
-                                        // On mobile we might just show a toast or a simpler inline list
-                                        alert("Nenhuma notificação por enquanto.");
-                                    }}
-                                    className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-secondary"
-                                >
-                                    <Bell size={16} /> Notificações
-                                </button>
-                                <button onClick={handleLogout} className="text-left text-sm font-bold uppercase tracking-wider text-red">Sair</button>
-                            </div>
-                        ) : (
-                            <Link to="/login" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-wider">Entrar</Link>
+                        <Link to="/leagues" onClick={closeAll} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
+                            <Users size={18} /> <span>Ver Ligas</span>
+                        </Link>
+                        {user && (
+                            <Link to="/my-area" onClick={closeAll} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
+                                <LayoutDashboard size={18} /> <span>Minha Área</span>
+                            </Link>
                         )}
+                        <div className="h-px bg-white/10"></div>
+                        <div className="flex flex-col gap-4">
+                            <button onClick={toggleTheme} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary">
+                                {theme === 'dark' ? <><Sun size={18} /> <span>Modo Claro</span></> : <><Moon size={18} /> <span>Modo Escuro</span></>}
+                            </button>
+                            {user ? (
+                                <>
+                                    <Link to="/profile" onClick={closeAll} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary">
+                                        <User size={18} /> <span>Meu Perfil</span>
+                                    </Link>
+                                    <button onClick={handleLogout} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-red">
+                                        <LogOut size={18} /> <span>Sair</span>
+                                    </button>
+                                </>
+                            ) : (
+                                <Link to="/login" onClick={closeAll} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-purple">
+                                    <LogOut size={18} className="rotate-180" /> <span>Fazer Login</span>
+                                </Link>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
@@ -150,37 +236,133 @@ export const Navbar: React.FC = () => {
 // ——————————————————————————————————————————————————————————————————————————
 export const BottomNav: React.FC = () => {
     const { user } = useAuthStore();
+    const navigate = useNavigate();
+    const [isCreateOpen, setIsCreateOpen] = React.useState(false);
+
     if (!user) return null;
 
     return (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-2">
-            <div className="glass shadow-2xl rounded-2xl border-white/10 flex items-center justify-around py-3 px-6 bg-black/80 backdrop-blur-xl">
-                {[
-                    { to: '/discover', icon: <Search size={20} />, label: 'Explorar' },
-                    { to: '/leagues', icon: <Trophy size={20} />, label: 'Ligas' },
-                    { to: '/my-area', icon: <LayoutDashboard size={20} />, label: 'Área' },
-                    { to: '/profile', icon: <User size={20} />, label: 'Perfil' },
-                ].map(({ to, icon, label }) => (
+        <>
+            {/* Create Overlay Mobile */}
+            {isCreateOpen && (
+                <div className="md:hidden fixed inset-0 z-[60] animate-fade-in bg-black/60 backdrop-blur-sm" onClick={() => setIsCreateOpen(false)}>
+                    <div className="absolute bottom-32 left-1/2 -translate-x-1/2 flex flex-col gap-4 w-[calc(100%-4rem)] animate-fade-in-up" onClick={e => e.stopPropagation()}>
+                        <button
+                            onClick={() => { navigate('/tournament/create'); setIsCreateOpen(false); }}
+                            className="bg-black/80 glass border border-white/10 p-5 rounded-2xl flex items-center justify-between shadow-2xl active:scale-95 transition-transform"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-blue/20 text-blue rounded-xl">
+                                    <Trophy size={20} />
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-sm font-bold uppercase tracking-wider">Novo Torneio</p>
+                                    <p className="text-[10px] text-muted">Gestão completa de mesas</p>
+                                </div>
+                            </div>
+                            <Plus size={18} className="text-muted" />
+                        </button>
+
+                        <button
+                            onClick={() => { navigate('/league/create'); setIsCreateOpen(false); }}
+                            className="bg-black/80 glass border border-white/10 p-5 rounded-2xl flex items-center justify-between shadow-2xl active:scale-95 transition-transform"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-green/20 text-green rounded-xl">
+                                    <Users size={20} />
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-sm font-bold uppercase tracking-wider">Nova Liga</p>
+                                    <p className="text-[10px] text-muted">Rankings e temporadas</p>
+                                </div>
+                            </div>
+                            <Plus size={18} className="text-muted" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-2">
+                <div className="glass shadow-2xl rounded-2xl border-white/10 flex items-center justify-around py-3 px-2 bg-black/80 backdrop-blur-xl relative">
                     <NavLink
-                        key={to}
-                        to={to}
+                        to="/discover"
                         className={({ isActive }) =>
-                            `flex flex-col items-center gap-1 transition-all ${isActive ? 'text-purple' : 'text-secondary hover:text-primary'}`
+                            `flex flex-col items-center gap-1 transition-all flex-1 ${isActive ? 'text-purple' : 'text-secondary hover:text-primary'}`
                         }
                         style={({ isActive }) => isActive ? { color: 'var(--color-purple)' } : {}}
                     >
-                        {icon}
-                        <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
+                        {({ isActive }) => (
+                            <>
+                                <Search size={22} strokeWidth={isActive ? 2.5 : 2} />
+                                <span className="text-[9px] font-bold uppercase tracking-wider">Descobrir</span>
+                            </>
+                        )}
                     </NavLink>
-                ))}
-            </div>
-        </nav>
+
+                    <NavLink
+                        to="/leagues"
+                        className={({ isActive }) =>
+                            `flex flex-col items-center gap-1 transition-all flex-1 ${isActive ? 'text-purple' : 'text-secondary hover:text-primary'}`
+                        }
+                        style={({ isActive }) => isActive ? { color: 'var(--color-purple)' } : {}}
+                    >
+                        {({ isActive }) => (
+                            <>
+                                <Trophy size={22} strokeWidth={isActive ? 2.5 : 2} />
+                                <span className="text-[9px] font-bold uppercase tracking-wider">Ligas</span>
+                            </>
+                        )}
+                    </NavLink>
+
+                    {/* Central FAB */}
+                    <div className="flex-1 flex justify-center -translate-y-6">
+                        <button
+                            onClick={() => setIsCreateOpen(!isCreateOpen)}
+                            className={`w-14 h-14 rounded-full flex items-center justify-center shadow-glow shadow-purple/30 transition-all border-4 border-black group active:scale-90 ${isCreateOpen ? 'rotate-45' : ''}`}
+                            style={{ backgroundColor: 'var(--color-purple)' }}
+                        >
+                            <IconCreatePlus size={28} color="white" />
+                        </button>
+                    </div>
+
+                    <NavLink
+                        to="/my-area"
+                        className={({ isActive }) =>
+                            `flex flex-col items-center gap-1 transition-all flex-1 ${isActive ? 'text-purple' : 'text-secondary hover:text-primary'}`
+                        }
+                        style={({ isActive }) => isActive ? { color: 'var(--color-purple)' } : {}}
+                    >
+                        {({ isActive }) => (
+                            <>
+                                <LayoutDashboard size={22} strokeWidth={isActive ? 2.5 : 2} />
+                                <span className="text-[9px] font-bold uppercase tracking-wider">Gestão</span>
+                            </>
+                        )}
+                    </NavLink>
+
+                    <NavLink
+                        to="/profile"
+                        className={({ isActive }) =>
+                            `flex flex-col items-center gap-1 transition-all flex-1 ${isActive ? 'text-purple' : 'text-secondary hover:text-primary'}`
+                        }
+                        style={({ isActive }) => isActive ? { color: 'var(--color-purple)' } : {}}
+                    >
+                        {({ isActive }) => (
+                            <>
+                                <User size={22} strokeWidth={isActive ? 2.5 : 2} />
+                                <span className="text-[9px] font-bold uppercase tracking-wider">Perfil</span>
+                            </>
+                        )}
+                    </NavLink>
+                </div>
+            </nav>
+        </>
     );
 };
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——————————————————————————————————————————————————————————————————————————
 // PageShell
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——————————————————————————————————————————————————————————————————————————
 interface PageShellProps {
     children: React.ReactNode;
     title?: string;
@@ -209,4 +391,3 @@ const PageShell: React.FC<PageShellProps> = ({ children }) => {
 };
 
 export default PageShell;
-

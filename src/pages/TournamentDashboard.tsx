@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Play, CheckCircle2, Trophy, Plus, UserMinus, ChevronRight, Edit3, Copy, Check, Clock, RefreshCw } from 'lucide-react';
+import { Play, CheckCircle2, Trophy, Plus, UserMinus, ChevronRight, Copy, Check, Clock, RefreshCw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import PageShell from '../components/layout';
 import { Button, Card, Input, Modal, LoadingScreen } from '../components/ui';
@@ -11,6 +11,8 @@ import { syncService } from '../features/tournaments/syncService';
 import { Breadcrumbs } from '../components/ui';
 import { useLeagueStore } from '../features/leagues/leagueStore';
 import { getInviteLink, copyToClipboard } from '../utils/inviteHelper';
+import { MatchCard } from '../features/tournaments/components/MatchCard';
+import { IconStartTournament, IconSubmitResults } from '../assets/icons';
 import toast from 'react-hot-toast';
 
 const TournamentDashboard: React.FC = () => {
@@ -20,7 +22,7 @@ const TournamentDashboard: React.FC = () => {
     const {
         activeTournament, loadTournament, isLoading, addParticipant,
         generateRound, regenerateRound, submitResult, withdrawParticipant,
-        completeTournament, toggleCheckIn
+        completeTournament, publishTournament, toggleCheckIn
     } = useTournamentStore();
     const { myLeagues, loadMyLeagues, linkTournament } = useLeagueStore();
     const [activeTab, setActiveTab] = useState<'participants' | 'rounds' | 'standings' | 'settings'>('participants');
@@ -200,9 +202,14 @@ const TournamentDashboard: React.FC = () => {
                         </div>
                     </div>
                     <div className="flex gap-2">
+                        {isOrganizer && activeTournament.status === 'draft' && (
+                            <Button variant="glow" onClick={() => id && publishTournament(id)}>
+                                <CheckCircle2 size={18} className="mr-2" /> Publicar Torneio
+                            </Button>
+                        )}
                         {isOrganizer && activeTournament.status === 'registration' && (
                             <Button variant="glow" onClick={() => id && generateRound(id)}>
-                                <Play size={18} className="mr-2" /> Iniciar 1ª Rodada
+                                <IconStartTournament size={18} className="mr-2" /> Iniciar 1ª Rodada
                             </Button>
                         )}
                         {isOrganizer && activeTournament.status === 'ongoing' && activeTournament.rounds.every(r => r.status === 'completed') && (
@@ -338,26 +345,26 @@ const TournamentDashboard: React.FC = () => {
                                     </Card>
                                 )}
 
-                                {isOrganizer && (
-                                    <Card title="  Convite Automático">
-                                        <div className="flex flex-col items-center gap-6">
-                                            <button
-                                                onClick={() => setIsQRModalOpen(true)}
-                                                className="p-3 bg-white rounded-2xl hover:scale-105 transition-transform cursor-zoom-in"
-                                                title="Clique para ampliar"
-                                            >
-                                                <QRCodeSVG value={inviteUrl} size={140} />
-                                                <p className="text-[10px] text-zinc-500 mt-2 font-bold uppercase text-center">Clique para ampliar</p>
-                                            </button>
-                                            <div className="w-full">
-                                                <Button variant="secondary" size="sm" onClick={handleCopyLink} className="w-full">
-                                                    {linkCopied ? <Check size={16} className="mr-2" /> : <Copy size={16} className="mr-2" />}
-                                                    {linkCopied ? 'Link Copiado!' : 'Copiar Link Convite'}
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                )}
+                        {isOrganizer && (activeTournament.status === 'registration' || (activeTournament.status === 'ongoing' && activeTournament.allowLateRegistration)) && (
+                            <Card title="  Convite Automático">
+                                <div className="flex flex-col items-center gap-6">
+                                    <button
+                                        onClick={() => setIsQRModalOpen(true)}
+                                        className="p-3 bg-white rounded-2xl hover:scale-105 transition-transform cursor-zoom-in"
+                                        title="Clique para ampliar"
+                                    >
+                                        <QRCodeSVG value={inviteUrl} size={140} />
+                                        <p className="text-[10px] text-zinc-500 mt-2 font-bold uppercase text-center">Clique para ampliar</p>
+                                    </button>
+                                    <div className="w-full">
+                                        <Button variant="secondary" size="sm" onClick={handleCopyLink} className="w-full">
+                                            {linkCopied ? <Check size={16} className="mr-2" /> : <Copy size={16} className="mr-2" />}
+                                            {linkCopied ? 'Link Copiado!' : 'Copiar Link Convite'}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </Card>
+                        )}
                             </div>
                         </div>
                     )}
@@ -385,38 +392,16 @@ const TournamentDashboard: React.FC = () => {
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                             {round.tables.map((table, idx) => (
-                                                <Card key={table.id} className="relative overflow-hidden group">
-                                                    <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/5">
-                                                        <span className="text-xs font-bold text-muted uppercase tracking-tighter">Mesa {idx + 1}</span>
-                                                        {table.status === 'completed' && <CheckCircle2 size={16} className="text-green" style={{ color: 'var(--color-green)' }} />}
-                                                    </div>
-                                                    <div className="flex flex-col gap-3">
-                                                        {table.playerIds.map(pid => {
-                                                            const player = activeTournament.participants.find(p => p.playerId === pid);
-                                                            const res = table.results.find(r => r.playerId === pid);
-                                                            return (
-                                                                <div key={pid} className="flex justify-between items-center gap-2">
-                                                                    <span className="text-sm truncate font-medium">{player?.name || 'Desconhecido'}</span>
-                                                                    {table.status === 'completed' && (
-                                                                        <span className="px-2 py-0.5 glass rounded text-[10px] font-bold text-gold" style={{ color: 'var(--color-gold)' }}>
-                                                                            {res?.position}º ⬢ {res?.points} pts
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                    {isOrganizer && activeTournament.status !== 'completed' && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className={`mt-4 w-full border border-white/10 hover:border-purple/50 ${table.status === 'completed' ? 'bg-green/5 opacity-70' : 'bg-white/5'}`}
-                                                            onClick={() => handleOpenResultModal(round.number, table)}
-                                                        >
-                                                            <Edit3 size={14} className="mr-2" /> {table.status === 'completed' ? 'Editar Resultados' : 'Lançar Resultados'}
-                                                        </Button>
-                                                    )}
-                                                </Card>
+                                                <MatchCard
+                                                    key={table.id}
+                                                    idx={idx}
+                                                    table={table}
+                                                    participants={activeTournament.participants}
+                                                    isOrganizer={isOrganizer && activeTournament.status !== 'completed'}
+                                                    status={table.status === 'completed' ? 'completed' : 'pending'}
+                                                    onEnterResult={() => handleOpenResultModal(round.number, table)}
+                                                    roundNumber={round.number}
+                                                />
                                             ))}
                                         </div>
                                     </div>
@@ -524,7 +509,7 @@ const TournamentDashboard: React.FC = () => {
                                         <div className="p-4 glass rounded-xl">
                                             <span className="text-xs text-muted">Status</span>
                                             <p className="font-bold uppercase text-purple" style={{ color: 'var(--color-purple)' }}>
-                                                {activeTournament.status === 'registration' ? 'Aberto' : activeTournament.status === 'ongoing' ? 'Em Andamento' : 'Concluído'}
+                                                {activeTournament.status === 'draft' ? 'Rascunho' : activeTournament.status === 'registration' ? 'Aberto' : activeTournament.status === 'ongoing' ? 'Em Andamento' : 'Concluído'}
                                             </p>
                                         </div>
                                     </div>
@@ -588,7 +573,9 @@ const TournamentDashboard: React.FC = () => {
                 footer={
                     <div className="flex gap-4 justify-end">
                         <Button variant="secondary" onClick={() => setSelectedTable(null)}>Cancelar</Button>
-                        <Button variant="glow" onClick={handleSubmitTableResults}>Confirmar Pontos</Button>
+                        <Button variant="glow" onClick={handleSubmitTableResults}>
+                            <IconSubmitResults size={18} className="mr-2" /> Confirmar Pontos
+                        </Button>
                     </div>
                 }
             >

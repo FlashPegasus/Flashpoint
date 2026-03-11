@@ -43,7 +43,8 @@ const TournamentCreate: React.FC = () => {
         hasTimer: true,
         allowByes: true,
         allowLateRegistration: true,
-        allowWithdrawal: true
+        allowWithdrawal: true,
+        requiresCheckIn: false
     });
 
     if (user?.isAnonymous) {
@@ -216,6 +217,18 @@ const TournamentCreate: React.FC = () => {
                                         value={formData.hasTimer.toString()}
                                         onChange={e => setFormData({ ...formData, hasTimer: e.target.value === 'true' })}
                                     />
+                                    <Select
+                                        label="Exigir Check-in Presencial?"
+                                        options={[
+                                            { value: 'false', label: 'Não (Inscrição Direta)' },
+                                            { value: 'true', label: 'Sim (Evitar Ausências)' }
+                                        ]}
+                                        value={formData.requiresCheckIn.toString()}
+                                        onChange={e => setFormData({ ...formData, requiresCheckIn: e.target.value === 'true' })}
+                                    />
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-4">
                                     {formData.format === 'multiplayer' && (
                                         <Select
                                             label="Permitir Byes (Vitória Automática)?"
@@ -318,16 +331,26 @@ const TournamentCreate: React.FC = () => {
                                         <span className="text-muted">Inscrição Tardia</span>
                                         <span>{formData.allowLateRegistration ? 'Permitida' : 'Proibida'}</span>
                                     </div>
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-muted">Check-in</span>
+                                        <span>{formData.requiresCheckIn ? 'Obrigatório' : 'Opcional'}</span>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="flex justify-between">
-                                <Button variant="ghost" type="button" onClick={prevStep}>
-                                    <ChevronLeft size={18} className="mr-1" /> Voltar
-                                </Button>
-                                <Button type="button" onClick={handleCreate} variant="glow" className="px-10">
-                                    <Save size={18} className="mr-2" /> Criar Torneio
-                                </Button>
+                                <div className="p-4 glass rounded-xl border-purple/30 bg-purple/5" style={{ borderLeft: '4px solid var(--color-purple)' }}>
+                                    <p className="text-xs text-secondary">
+                                        <strong>Nota:</strong> Seu torneio será criado como <strong>Rascunho</strong>. Você poderá revisá-lo e publicá-lo no painel de controle para que ele apareça na busca pública.
+                                    </p>
+                                </div>
+
+                                <div className="flex justify-between">
+                                    <Button variant="ghost" type="button" onClick={prevStep}>
+                                        <ChevronLeft size={18} className="mr-1" /> Voltar
+                                    </Button>
+                                    <Button type="button" onClick={handleCreate} variant="glow" className="px-10">
+                                        <Save size={18} className="mr-2" /> Criar Torneio
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </Card>
