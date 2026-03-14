@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Play, CheckCircle2, Trophy, Plus, UserMinus, ChevronRight, Copy, Check, Clock, RefreshCw, Globe, Settings, Users, Swords, BarChart3 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import PageShell from '../components/layout';
-import { Button, Card, Input, Modal, LoadingScreen } from '../components/ui';
+import { Button, Input, Modal, LoadingScreen } from '../components/ui';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { useAuthStore } from '../features/auth/authStore';
 import { tournamentService } from '../features/tournaments/tournamentService';
@@ -349,7 +349,7 @@ const TournamentDashboard: React.FC = () => {
                                     </div>
                                 ) : (
                                     <div className="flex flex-col gap-1.5">
-                                        {activeTournament.participants.map((p, i) => (
+                                        {activeTournament.participants.map((p, _i) => (
                                             <div key={p.playerId}
                                                  className="flex justify-between items-center p-3 rounded-xl
                                                             bg-white/[0.03] border border-white/[0.05]
@@ -369,7 +369,7 @@ const TournamentDashboard: React.FC = () => {
                                                                 {p.name}
                                                             </span>
                                                             {p.checkedIn && (
-                                                                <CheckCircle2 size={12} className="text-[var(--fp-emerald)]" title="Presença Confirmada" />
+                                                                <CheckCircle2 size={12} className="text-[var(--fp-emerald)]" />
                                                             )}
                                                             {p.status === 'withdrawn' && (
                                                                 <span className="text-[10px] font-bold uppercase text-white/30 px-2 py-0.5 bg-white/5 rounded-full">

@@ -1,8 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Calendar, Users as UsersIcon, Trophy, LayoutGrid, Zap } from 'lucide-react';
+import { Search, Filter, Calendar, Users as UsersIcon, Trophy, LayoutGrid } from 'lucide-react';
 import PageShell from '../components/layout';
-import { Input, Button } from '../components/ui';
 import { LoadingScreen } from '../components/ui';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { useLeagueStore } from '../features/leagues/leagueStore';

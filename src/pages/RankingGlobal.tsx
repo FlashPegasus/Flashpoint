@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Trophy, Search, User, Star, ArrowUp, ArrowDown, Activity } from 'lucide-react';
+import { Trophy, Search, Star, ArrowUp, ArrowDown, Activity } from 'lucide-react';
 import PageShell from '../components/layout';
-import { Card, Input, Button } from '../components/ui';
+import { Input } from '../components/ui';
 import { LoadingScreen } from '../components/ui';
 import { tournamentService } from '../features/tournaments/tournamentService';
 
@@ -189,7 +189,7 @@ const RankingGlobal: React.FC = () => {
                                     <p>Nenhum duelista encontrado</p>
                                 </div>
                             ) : (
-                                rest.map((player, idx) => (
+                                rest.map((player, _idx) => (
                                     <div 
                                         key={player.id} 
                                         className="grid grid-cols-[60px_1fr_100px_100px_60px] gap-4 p-4 items-center hover:bg-white/[0.03] transition-colors border-b border-white/[0.02]"
