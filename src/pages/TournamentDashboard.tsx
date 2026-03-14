@@ -14,7 +14,6 @@ import { getInviteLink, copyToClipboard } from '../utils/inviteHelper';
 import { MatchCard } from '../features/tournaments/components/MatchCard';
 import { IconStartTournament, IconSubmitResults } from '../assets/icons';
 import toast from 'react-hot-toast';
-
 const TournamentDashboard: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -187,14 +186,16 @@ const TournamentDashboard: React.FC = () => {
                 {/* Header */}
                 <div className="flex justify-between items-end mb-8 flex-wrap gap-4">
                     <div>
-                        <div className="flex items-center gap-2 mb-2 text-sm font-bold uppercase tracking-wider text-purple" style={{ color: 'var(--color-purple)' }}>
+                        <div className="flex items-center gap-2 mb-2 text-sm font-bold uppercase tracking-wider text-accent-primary">
                             <Trophy size={14} /> Torneio {activeTournament.format === 'multiplayer' ? 'Multijogador' : '1 vs 1'}
                         </div>
-                        <h1 className="text-4xl font-outfit">{activeTournament.name}</h1>
+                        <h1 className="text-4xl md:text-5xl font-outfit font-bold tracking-tight text-accent-secondary drop-shadow-glow">
+                            {activeTournament.name}
+                        </h1>
                         <div className="flex items-center gap-4 mt-1">
                             <p className="text-secondary">{activeTournament.date} ⬢ {activeTournament.location}</p>
                             {timeLeft && (
-                                <div className="flex items-center gap-2 px-3 py-1 glass rounded-full border-purple/30 text-purple font-mono font-bold animate-pulse">
+                                <div className="flex items-center gap-2 px-3 py-1 glass rounded-full border-accent-glow text-accent-primary font-mono font-bold animate-pulse">
                                     <Clock size={14} />
                                     <span>{timeLeft}</span>
                                 </div>
@@ -246,8 +247,7 @@ const TournamentDashboard: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Tabs Navigation */}
-                <div className="flex gap-1 p-1 glass rounded-2xl mb-8 w-max">
+                <div className="flex gap-1 p-1 glass rounded-2xl mb-12 w-max mx-auto md:mx-0">
                     {[
                         { id: 'participants', label: 'Participantes' },
                         { id: 'rounds', label: 'Rodadas' },
@@ -257,8 +257,8 @@ const TournamentDashboard: React.FC = () => {
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
-                            className={`px-6 py-2 rounded-xl font-bold transition-all ${activeTab === tab.id ? 'bg-purple text-white shadow-lg' : 'text-secondary hover:text-primary'}`}
-                            style={activeTab === tab.id ? { backgroundColor: 'var(--color-purple)' } : {}}
+                            className={`px-4 md:px-8 py-2.5 rounded-xl font-bold transition-all text-[11px] md:text-xs uppercase tracking-widest ${activeTab === tab.id ? 'bg-accent-primary text-white shadow-glow' : 'text-secondary hover:text-primary hover:bg-white/5'}`}
+                            style={activeTab === tab.id ? { backgroundColor: 'var(--accent-primary)' } : {}}
                         >
                             {tab.label}
                         </button>
@@ -268,55 +268,55 @@ const TournamentDashboard: React.FC = () => {
                 {/* Tab Content */}
                 <div className="animate-fade-in">
                     {activeTab === 'participants' && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="md:col-span-2 flex flex-col gap-4">
-                                <Card title={`Participantes (${activeTournament.participants.length})`}>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="lg:col-span-2 flex flex-col gap-4">
+                                <Card variant="premium" title={`Participantes (${activeTournament.participants.length})`}>
                                     <div className="flex flex-col gap-2">
                                         {activeTournament.participants.length === 0 ? (
                                             <p className="text-center py-8 text-muted">Nenhum jogador inscrito ainda.</p>
                                         ) : (
                                             <div className="flex flex-col gap-1">
                                                 {activeTournament.participants.map(p => (
-                                                    <div key={p.playerId} className="flex justify-between items-center p-3 glass rounded-xl">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-glass flex items-center justify-center font-bold text-xs">
+                                                    <div key={p.playerId} className="flex justify-between items-center p-4 glass rounded-2xl hover:bg-white/5 hover:border-purple/30 transition-all group/row">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-10 h-10 rounded-xl bg-glass border border-white/10 flex items-center justify-center font-bold text-sm shadow-inner overflow-hidden group-hover/row:shadow-glow-sm transition-all">
                                                                 {p.avatar
-                                                                    ? <img src={p.avatar} className="w-full h-full rounded-full object-cover" alt="" />
+                                                                    ? <img src={p.avatar} className="w-full h-full object-cover" alt="" />
                                                                     : p.name.charAt(0)
                                                                 }
                                                             </div>
                                                             <div>
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className={p.status === 'withdrawn' ? 'text-muted line-through' : ''}>{p.name}</span>
+                                                                    <span className={`font-bold font-outfit text-base ${p.status === 'withdrawn' ? 'text-muted line-through opacity-50' : 'text-primary'}`}>{p.name}</span>
                                                                     {p.checkedIn && (
-                                                                        <span title="Presença Confirmada">
+                                                                        <span title="Presença Confirmada" className="p-1 bg-green/10 rounded-full">
                                                                             <CheckCircle2 size={12} className="text-green" style={{ color: 'var(--color-green)' }} />
                                                                         </span>
                                                                     )}
-                                                                    {p.status === 'withdrawn' && <span className="ml-2 text-[10px] uppercase font-bold text-white/40 glass px-2 py-0.5 rounded-full">Retirado</span>}
+                                                                    {p.status === 'withdrawn' && <span className="ml-2 text-[9px] uppercase font-black text-white/40 glass px-2 py-0.5 rounded-md border border-white/5">Retirado</span>}
                                                                 </div>
-                                                                <div className="flex items-center gap-2 mt-0.5">
+                                                                <div className="flex items-center gap-3 mt-1">
                                                                     {p.commanderName && (
-                                                                        <span className="text-[10px] text-purple font-bold uppercase tracking-tight" style={{ color: 'var(--color-purple)' }}>
+                                                                        <span className="text-[10px] text-accent-secondary font-black uppercase tracking-widest">
                                                                             ⚔️ {p.commanderName}
                                                                         </span>
                                                                     )}
                                                                     {p.decklistUrl && (
-                                                                        <a href={p.decklistUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue underline font-bold uppercase tracking-tight">
-                                                                            Lista
+                                                                        <a href={p.decklistUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue underline font-bold uppercase tracking-tight opacity-60 hover:opacity-100 transition-opacity">
+                                                                            Decklist
                                                                         </a>
                                                                     )}
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-3">
                                                             {p.commanderImageUrl && (
-                                                                <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/10 group-hover:scale-150 transition-transform origin-right z-10">
-                                                                    <img src={p.commanderImageUrl} className="w-full h-full object-cover" alt="" />
+                                                                <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 group-hover/row:scale-150 transition-all origin-right z-20 shadow-2xl">
+                                                                    <img src={p.commanderImageUrl} className="w-full h-full object-cover px-0" alt="" />
                                                                 </div>
                                                             )}
                                                             {isOrganizer && p.status === 'active' && (
-                                                                <button onClick={() => id && withdrawParticipant(id, p.playerId)} className="text-muted hover:text-red transition-colors">
+                                                                <button onClick={() => id && withdrawParticipant(id, p.playerId)} className="p-2 text-muted hover:text-red hover:bg-red/10 rounded-xl transition-all" title="Retirar Jogador">
                                                                     <UserMinus size={18} />
                                                                 </button>
                                                             )}
@@ -346,20 +346,20 @@ const TournamentDashboard: React.FC = () => {
                                 )}
 
                         {isOrganizer && (activeTournament.status === 'registration' || (activeTournament.status === 'ongoing' && activeTournament.allowLateRegistration)) && (
-                            <Card title="  Convite Automático">
+                            <Card variant="premium" title="Link de Convite">
                                 <div className="flex flex-col items-center gap-6">
                                     <button
                                         onClick={() => setIsQRModalOpen(true)}
-                                        className="p-3 bg-white rounded-2xl hover:scale-105 transition-transform cursor-zoom-in"
+                                        className="p-4 bg-white rounded-3xl hover:scale-105 transition-transform cursor-zoom-in shadow-2xl"
                                         title="Clique para ampliar"
                                     >
-                                        <QRCodeSVG value={inviteUrl} size={140} />
-                                        <p className="text-[10px] text-zinc-500 mt-2 font-bold uppercase text-center">Clique para ampliar</p>
+                                        <QRCodeSVG value={inviteUrl} size={150} />
+                                        <p className="text-[9px] text-zinc-400 mt-3 font-bold uppercase text-center tracking-tighter">Clique para ver maior</p>
                                     </button>
                                     <div className="w-full">
-                                        <Button variant="secondary" size="sm" onClick={handleCopyLink} className="w-full">
+                                        <Button variant="glow" size="sm" onClick={handleCopyLink} className="w-full">
                                             {linkCopied ? <Check size={16} className="mr-2" /> : <Copy size={16} className="mr-2" />}
-                                            {linkCopied ? 'Link Copiado!' : 'Copiar Link Convite'}
+                                            {linkCopied ? 'Copiado!' : 'Copiar Link'}
                                         </Button>
                                     </div>
                                 </div>
@@ -370,14 +370,14 @@ const TournamentDashboard: React.FC = () => {
                     )}
 
                     {activeTab === 'rounds' && (
-                        <div className="flex flex-col gap-8">
+                        <div className="flex flex-col gap-10">
                             {activeTournament.rounds.length === 0 ? (
-                                <Card className="text-center py-12">
-                                    <Play size={48} className="mx-auto mb-4 text-muted opacity-20" />
-                                    <h3 className="text-xl mb-2">Torneio não começou</h3>
-                                    <p className="text-secondary mb-6">Adicione participantes e inicie a primeira rodada para começar.</p>
+                                <Card variant="premium" className="text-center py-20">
+                                    <Play size={64} className="mx-auto mb-6 text-accent-primary/20 animate-pulse" />
+                                    <h3 className="text-2xl font-outfit font-bold mb-3 tracking-tight">O Torneio ainda não começou</h3>
+                                    <p className="text-secondary mb-8 max-w-sm mx-auto">Prepare o grid de batalha! Adicione participantes e inicie a primeira rodada para abrir as mesas.</p>
                                     {isOrganizer && (
-                                        <Button onClick={() => id && generateRound(id)}>Gerar 1ª Rodada</Button>
+                                        <Button variant="glow" onClick={() => id && generateRound(id)}>Gerar 1ª Rodada</Button>
                                     )}
                                 </Card>
                             ) : (
@@ -385,7 +385,7 @@ const TournamentDashboard: React.FC = () => {
                                     <div key={round.number} className="flex flex-col gap-4">
                                         <div className="flex justify-between items-center px-2">
                                             <h3 className="text-2xl font-outfit">Rodada {round.number}</h3>
-                                            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase ${round.status === 'completed' ? 'bg-green/10 text-green' : 'bg-purple/10 text-purple'}`} style={{ color: round.status === 'completed' ? 'var(--color-green)' : 'var(--color-purple)' }}>
+                                            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase ${round.status === 'completed' ? 'bg-green/10 text-green' : 'bg-accent-bg-glass text-accent-primary border border-accent-glow'}`} style={round.status === 'completed' ? { color: 'var(--color-green)' } : {}}>
                                                 {round.status === 'completed' && <CheckCircle2 size={14} />}
                                                 {round.status === 'completed' ? 'Concluída' : 'Pendente'}
                                             </div>
@@ -460,31 +460,35 @@ const TournamentDashboard: React.FC = () => {
                                     })}
                                 </div>
                             )}
-                            <Card title={activeTournament.status === 'completed' ? "Classificação Final" : "Classificação Atual"}>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left border-collapse">
+                            <Card variant="premium" title={activeTournament.status === 'completed' ? "🏆 Hall da Fama" : "Classificação em Tempo Real"}>
+                                <div className="overflow-x-auto custom-scrollbar">
+                                    <table className="w-full text-left border-collapse min-w-[600px]">
                                         <thead>
-                                            <tr className="text-muted text-xs uppercase font-bold border-b border-white/5">
-                                                <th className="pb-4 px-2">Posição</th>
-                                                <th className="pb-4 px-2">Jogador</th>
-                                                <th className="pb-4 px-2">Pontos</th>
-                                                <th className="pb-4 px-2">BH</th>
-                                                <th className="pb-4 px-2 text-right">Status</th>
+                                            <tr className="text-muted text-[10px] uppercase font-bold border-b border-white/5 tracking-widest">
+                                                <th className="pb-6 px-4">Pos.</th>
+                                                <th className="pb-6 px-4">Jogador</th>
+                                                <th className="pb-6 px-4 text-accent-primary">Pontos</th>
+                                                <th className="pb-6 px-4">BH</th>
+                                                <th className="pb-6 px-4 text-right">Status</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody className="divide-y divide-white/[0.03]">
                                             {activeTournament.participants.map((p, idx) => (
-                                                <tr key={p.playerId} className="border-b border-white/5 hover:bg-white/2 transition-colors">
-                                                    <td className="py-4 px-2 text-sm font-bold">
-                                                        {idx + 1 === 1 && <Trophy size={14} className="inline mr-2 text-gold" style={{ color: 'var(--color-gold)' }} />}
-                                                        #{idx + 1}
+                                                <tr key={p.playerId} className="group hover:bg-white/[0.02] transition-colors">
+                                                    <td className="py-5 px-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className={`text-sm font-bold font-mono ${idx === 0 ? 'text-gold' : 'text-secondary opacity-50'}`}>
+                                                                {(idx + 1).toString().padStart(2, '0')}
+                                                            </span>
+                                                            {idx === 0 && <Trophy size={14} className="text-gold animate-bounce" style={{ color: 'var(--color-gold)' }} />}
+                                                        </div>
                                                     </td>
-                                                    <td className="py-4 px-2 font-medium">{p.name}</td>
-                                                    <td className="py-4 px-2 font-bold text-primary">{p.totalPoints}</td>
-                                                    <td className="py-4 px-2 text-secondary text-sm">{p.buchholz || 0}</td>
-                                                    <td className="py-4 px-2 text-right">
-                                                        <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${p.status === 'active' ? 'bg-green/10 text-green' : 'bg-red/10 text-red'}`} style={{ color: p.status === 'active' ? 'var(--color-green)' : 'var(--color-red)' }}>
-                                                            {p.status === 'active' ? 'Ativo' : 'Retirado'}
+                                                    <td className="py-5 px-4 font-outfit font-bold text-primary group-hover:text-accent-primary transition-colors">{p.name}</td>
+                                                    <td className="py-5 px-4 font-bold text-lg text-accent-secondary">{p.totalPoints}</td>
+                                                    <td className="py-5 px-4 text-secondary/60 font-mono text-sm">{p.buchholz || 0}</td>
+                                                    <td className="py-5 px-4 text-right">
+                                                        <span className={`text-[9px] uppercase font-black tracking-tighter px-2.5 py-1 rounded-md border ${p.status === 'active' ? 'bg-green/10 border-green/20 text-green' : 'bg-red/10 border-red/20 text-red'}`} style={{ color: p.status === 'active' ? 'var(--color-green)' : 'var(--color-red)' }}>
+                                                            {p.status === 'active' ? 'Combate' : 'Dropado'}
                                                         </span>
                                                     </td>
                                                 </tr>
@@ -497,10 +501,18 @@ const TournamentDashboard: React.FC = () => {
                     )}
 
                     {activeTab === 'settings' && (
-                        <div className="max-w-xl">
-                            <Card title="Configurações do Torneio">
-                                <div className="flex flex-col gap-6">
-                                    <p className="text-secondary text-sm">Gerenciamento administrativo do seu evento.</p>
+                        <div className="max-w-2xl mx-auto lg:mx-0">
+                            <Card variant="premium" title="Configurações Avançadas">
+                                <div className="flex flex-col gap-8">
+                                    <div className="flex items-start gap-4 p-4 glass rounded-2xl border-white/5 bg-white/2">
+                                        <div className="p-3 glass rounded-xl text-accent-primary">
+                                            <Clock size={20} />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-sm">Controle de Segurança</h4>
+                                            <p className="text-secondary text-xs mt-1">Gerenciamento administrativo completo do seu evento em tempo real.</p>
+                                        </div>
+                                    </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="p-4 glass rounded-xl">
                                             <span className="text-xs text-muted">Formato</span>
@@ -508,7 +520,7 @@ const TournamentDashboard: React.FC = () => {
                                         </div>
                                         <div className="p-4 glass rounded-xl">
                                             <span className="text-xs text-muted">Status</span>
-                                            <p className="font-bold uppercase text-purple" style={{ color: 'var(--color-purple)' }}>
+                                            <p className="font-bold uppercase text-accent-primary">
                                                 {activeTournament.status === 'draft' ? 'Rascunho' : activeTournament.status === 'registration' ? 'Aberto' : activeTournament.status === 'ongoing' ? 'Em Andamento' : 'Concluído'}
                                             </p>
                                         </div>
@@ -589,7 +601,7 @@ const TournamentDashboard: React.FC = () => {
                                     <span className="font-bold text-primary">{player?.name}</span>
                                     <div className="flex items-center gap-3">
                                         <select
-                                            className="bg-bg-dark border border-white/10 rounded-lg px-3 py-2 outline-none focus:border-purple/50 transition-all font-bold text-gold"
+                                            className="bg-bg-dark border border-white/10 rounded-lg px-3 py-2 outline-none focus:border-accent-primary transition-all font-bold text-gold"
                                             style={{ color: 'var(--color-gold)' }}
                                             value={tempResults[pid] || 1}
                                             onChange={(e) => setTempResults(prev => ({ ...prev, [pid]: parseInt(e.target.value) }))}

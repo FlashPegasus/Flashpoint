@@ -1,16 +1,62 @@
 @import "tailwindcss";
 
+:root {
+  /* Default Branding (Aggro Red) */
+  --accent-primary: #ef4444;
+  --accent-secondary: #f87171;
+  --accent-glow: rgba(239, 68, 68, 0.4);
+  --accent-glow-strong: rgba(239, 68, 68, 0.7);
+  --accent-bg-glass: rgba(239, 68, 68, 0.05);
+}
+
+/* Theme Overrides - High Specificity */
+[class*="theme-red"], .theme-red {
+  --accent-primary: #ef4444;
+  --accent-secondary: #f87171;
+  --accent-glow: rgba(239, 68, 68, 0.4);
+  --accent-glow-strong: rgba(239, 68, 68, 0.7);
+  --accent-bg-glass: rgba(239, 68, 68, 0.05);
+}
+
+[class*="theme-blue"], .theme-blue {
+  --accent-primary: #3b82f6;
+  --accent-secondary: #60a5fa;
+  --accent-glow: rgba(59, 130, 246, 0.4);
+  --accent-glow-strong: rgba(59, 130, 246, 0.7);
+  --accent-bg-glass: rgba(59, 130, 246, 0.05);
+}
+
+[class*="theme-gold"], .theme-gold {
+  --accent-primary: #f59e0b;
+  --accent-secondary: #fbbf24;
+  --accent-glow: rgba(245, 158, 11, 0.4);
+  --accent-glow-strong: rgba(245, 158, 11, 0.7);
+  --accent-bg-glass: rgba(245, 158, 11, 0.05);
+}
+
 @theme {
-  /* Mana Palette - Refined */
-  --color-blue: #0ea5e9;
-  --color-red: #ef4444;
+  --font-outfit: "Outfit", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  /* Map Tailwind colors to dynamic variables */
+  --color-purple: var(--accent-primary);
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-accent-glow: var(--accent-glow);
+  --color-accent-glow-strong: var(--accent-glow-strong);
+  --color-accent-bg: var(--accent-bg-glass);
+  
+  --color-mana-purple: #9d8cf0;
+  --color-gold: #fbbf24;
+  --color-blue: #3b82f6;
   --color-green: #22c55e;
-  --color-gold: #f59e0b;
-  --color-purple: #8b5cf6;
-  --color-mana-glow: rgba(139, 92, 246, 0.4);
+  --color-red: #ef4444;
+  --color-background: #020617;
+  --color-primary: #ffffff;
+  --color-secondary: #94a3b8;
+  --color-muted: #475569;
 
   /* Design System Tokens - Premium */
-  --bg-dark: #020408;
   --bg-card: rgba(15, 23, 42, 0.9);
   --bg-glass: rgba(255, 255, 255, 0.05);
   --border-glass: rgba(255, 255, 255, 0.12);
@@ -96,6 +142,29 @@ body::before {
   }
 }
 
+/* Premium Background Assets (Global) */
+.bg-premium-mesh {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 50% at 20% 10%, rgba(139, 92, 246, 0.13) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 80% 85%, rgba(6, 182, 212, 0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 35% at 50% 50%, rgba(16, 185, 129, 0.04) 0%, transparent 70%);
+}
+
+.bg-premium-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(139, 92, 246, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
 @layer utilities {
   .glass {
     background: var(--bg-glass);
@@ -112,13 +181,32 @@ body::before {
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   }
 
+  .glass-premium {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.1),
+      0 12px 40px 0 rgba(0, 0, 0, 0.5);
+    border-radius: var(--radius-2xl);
+  }
+
   .hover-glow-purple:hover {
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
-    border-color: rgba(139, 92, 246, 0.5);
+    box-shadow: 0 0 20px var(--accent-glow);
+    border-color: var(--accent-glow-strong);
   }
 
   .text-glow {
     text-shadow: 0 0 10px currentColor;
+  }
+
+  .drop-shadow-glow {
+    filter: drop-shadow(0 0 10px var(--accent-glow));
+  }
+
+  .shadow-glow {
+    box-shadow: 0 0 20px var(--accent-glow);
   }
 
   .animate-float {

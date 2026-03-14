@@ -3,35 +3,39 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Trophy, Plus, Users, Calendar, ArrowRight, Trash2, LogOut, Flag, Shield as ShieldIcon, Zap, Search, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageShell from '../components/layout';
-import { Button } from '../components/ui';
 import { useAuthStore } from '../features/auth/authStore';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { tournamentService } from '../features/tournaments/tournamentService';
 
+/* ── helpers ── */
+const statusCfg: Record<string, { label: string; cls: string }> = {
+    draft:        { label: 'Rascunho',      cls: 'bg-white/5 text-white/40 border border-white/10' },
+    registration: { label: 'Aberto',        cls: 'bg-accent-bg-glass text-accent-secondary border border-accent-glow/30' },
+    ongoing:      { label: 'Em Andamento',  cls: 'bg-[rgba(16,185,129,0.15)] text-[#34d399] border border-[rgba(52,211,153,0.3)]' },
+    completed:    { label: 'Concluído',     cls: 'bg-[rgba(245,158,11,0.13)] text-[#fbbf24] border border-[rgba(251,191,36,0.3)]' },
+};
+
+const dicebear = (seed: string, size = 36) =>
+    `https://api.dicebear.com/7.x/rings/svg?seed=${encodeURIComponent(seed)}&size=${size}`;
+
 const MyArea: React.FC = () => {
-    const { user } = useAuthStore();
+    const { user, updateProfile } = useAuthStore();
     const { tournaments, loadTournaments } = useTournamentStore();
-    const { updateProfile } = useAuthStore();
     const [stats, setStats] = React.useState<any>(null);
     const navigate = useNavigate();
 
     React.useEffect(() => {
         loadTournaments();
-        if (user) {
-            tournamentService.getUserStats(user.id).then(setStats);
-        }
+        if (user) tournamentService.getUserStats(user.id).then(setStats);
     }, [loadTournaments, user]);
 
-    const myTournaments = tournaments.filter(t => t.organizerId === user?.id);
-
-    // Refined filter for the stats bubble: Completed + >= 4 real players
-    const organizedCount = tournaments.filter(t =>
+    const myTournaments            = tournaments.filter(t => t.organizerId === user?.id);
+    const participatingTournaments = tournaments.filter(t => t.participants.some(p => p.playerId === user?.id));
+    const organizedCount           = tournaments.filter(t =>
         t.organizerId === user?.id &&
         t.status === 'completed' &&
         t.participants.filter(p => !p.isAnonymous).length >= 4
     ).length;
-
-    const participatingTournaments = tournaments.filter(t => t.participants.some(p => p.playerId === user?.id));
 
     const handleTogglePublic = async () => {
         if (!user) return;
@@ -39,124 +43,215 @@ const MyArea: React.FC = () => {
             const newIsPublic = !user.isPublic;
             await updateProfile({ isPublic: newIsPublic });
             toast.success(`Perfil agora é ${newIsPublic ? 'Público' : 'Privado'}`);
-        } catch (err) {
-            toast.error('Erro ao atualizar privacidade.');
-        }
+        } catch { toast.error('Erro ao atualizar privacidade.'); }
     };
 
     const handleDeleteTournament = async (e: React.MouseEvent, id: string) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (window.confirm('Tem certeza que deseja excluir este torneio? Esta ação não pode ser desfeita.')) {
-            try {
-                await tournamentService.deleteTournament(id);
-                toast.success('Torneio excluído com sucesso!');
-                loadTournaments();
-            } catch (err) {
-                toast.error('Erro ao excluir torneio.');
-            }
-        }
+        e.preventDefault(); e.stopPropagation();
+        if (!window.confirm('Excluir este torneio? Esta ação não pode ser desfeita.')) return;
+        try {
+            await tournamentService.deleteTournament(id);
+            toast.success('Torneio excluído!');
+            loadTournaments();
+        } catch { toast.error('Erro ao excluir torneio.'); }
     };
 
     const handleLeaveTournament = async (e: React.MouseEvent, id: string) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (window.confirm('Tem certeza que deseja cancelar sua inscrição neste torneio aberto?')) {
-            await tournamentService.removeParticipant(id, user!.id);
-            loadTournaments();
-        }
+        e.preventDefault(); e.stopPropagation();
+        if (!window.confirm('Cancelar inscrição neste torneio?')) return;
+        await tournamentService.removeParticipant(id, user!.id);
+        loadTournaments();
     };
 
     const handleDropTournament = async (e: React.MouseEvent, id: string) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (window.confirm('Tem certeza que deseja desistir deste torneio? Seu progresso atual será mantido no histórico.')) {
-            await tournamentService.withdrawParticipant(id, user!.id);
-            loadTournaments();
-        }
+        e.preventDefault(); e.stopPropagation();
+        if (!window.confirm('Desistir deste torneio? Seu progresso será mantido no histórico.')) return;
+        await tournamentService.withdrawParticipant(id, user!.id);
+        loadTournaments();
     };
+
+    /* ── stat cards config ── */
+    const statCards = [
+        {
+            label: 'Organizados',
+            value: organizedCount,
+            icon: <Trophy size={15} />,
+            color: 'var(--accent-primary-transparent)',
+            colorHi: 'var(--accent-primary)',
+        },
+        {
+            label: 'Participando',
+            value: participatingTournaments.length,
+            icon: <Users size={15} />,
+            color: 'var(--accent-secondary-transparent)',
+            colorHi: 'var(--accent-secondary)',
+        },
+        {
+            label: 'Tx. de Vitória',
+            value: stats?.winRate ?? '0%',
+            icon: <ArrowRight size={15} />,
+            color: 'rgba(16,185,129,0.15)',
+            colorHi: '#34d399',
+        },
+    ];
 
     return (
         <PageShell>
-            <div className="container py-8 animate-fade-in">
-                <div className="flex justify-between items-center mb-8">
-                    <div>
-                        <h1 className="text-4xl font-outfit mb-1">Minha Área</h1>
-                        <div className="flex items-center gap-3">
-                            <p className="text-secondary text-sm">Bem-vindo(a) de volta, {user?.name}!</p>
-                            <button
-                                onClick={handleTogglePublic}
-                                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold transition-all border ${user?.isPublic
-                                    ? 'bg-green/10 text-green border-green/20'
-                                    : 'bg-white/5 text-muted border-white/10'
-                                    }`}
-                                title={user?.isPublic ? 'Perfil visível para outros' : 'Perfil oculto para outros'}
-                            >
-                                {user?.isPublic ? <Eye size={12} /> : <EyeOff size={12} />}
-                                {user?.isPublic ? 'PERFIL PÚBLICO' : 'PERFIL PRIVADO'}
-                            </button>
+            <div className="container py-8 pb-28 animate-fade-in">
+
+                {/* ══════════════════════════════════════
+                    HEADER
+                ══════════════════════════════════════ */}
+                <div className="relative overflow-hidden rounded-2xl mb-8
+                                bg-[rgba(12,11,24,0.82)] border border-[rgba(255,255,255,0.08)]
+                                backdrop-blur-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] p-6 md:p-8">
+
+                    {/* glow de fundo */}
+                    <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{
+                        background: 'radial-gradient(ellipse at 0% 50%, var(--accent-primary-transparent) 0%, transparent 60%), radial-gradient(ellipse at 100% 50%, var(--accent-secondary-transparent) 0%, transparent 60%)'
+                    }} />
+
+                    <div className="relative flex flex-wrap items-center justify-between gap-4">
+                        {/* Avatar + título */}
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-accent-glow
+                                            shadow-glow flex-shrink-0">
+                                {user?.avatar
+                                    ? <img src={user.avatar} className="w-full h-full object-cover" alt="" />
+                                    : <img src={dicebear(user?.id || 'default', 56)} className="w-full h-full" alt="" />
+                                }
+                            </div>
+                            <div>
+                                <h1 className="font-[var(--fp-font-display,_'Cinzel_Decorative',serif)]
+                                               text-2xl md:text-3xl text-white leading-tight mb-1">
+                                    Minha Área
+                                </h1>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="text-[rgba(148,163,184,1)] text-sm">
+                                        Bem-vindo(a) de volta, <span className="text-white font-medium">{user?.name}</span>!
+                                    </p>
+                                    <button
+                                        onClick={handleTogglePublic}
+                                        className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold
+                                                    uppercase tracking-wider border transition-all
+                                                    ${user?.isPublic
+                                                        ? 'bg-accent-bg-glass text-accent-primary border-accent-glow/30'
+                                                        : 'bg-white/5 text-[rgba(100,116,139,1)] border-white/10'
+                                                    }`}
+                                        title={user?.isPublic ? 'Perfil visível para outros' : 'Perfil oculto'}
+                                    >
+                                        {user?.isPublic ? <Eye size={10} /> : <EyeOff size={10} />}
+                                        {user?.isPublic ? 'Perfil Público' : 'Perfil Privado'}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
+
+                        {/* CTA */}
+                        <button
+                            onClick={() => navigate('/tournament/create')}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white
+                                       bg-accent-primary
+                                       shadow-glow
+                                       hover:opacity-90 hover:-translate-y-0.5 transition-all">
+                            <Plus size={16} /> Novo Torneio
+                        </button>
                     </div>
-                    <Button variant="glow" onClick={() => navigate('/tournament/create')}>
-                        <Plus size={18} className="mr-2" /> Novo Torneio
-                    </Button>
                 </div>
 
-                {/* Stats Strip */}
+                {/* ══════════════════════════════════════
+                    STAT CARDS
+                ══════════════════════════════════════ */}
                 <div className="grid grid-cols-3 gap-4 mb-10">
-                    {[
-                        { label: 'Organizados', value: organizedCount, icon: <Trophy size={16} /> },
-                        { label: 'Participando', value: participatingTournaments.length, icon: <Users size={16} /> },
-                        { label: 'Tx. de Vitória', value: stats?.winRate || '0%', icon: <ArrowRight size={16} /> }
-                    ].map((stat, i) => (
-                        <div key={i} className="glass p-4 rounded-2xl border-white/5">
-                            <div className="text-xs text-muted flex items-center gap-1 mb-1">
-                                {stat.icon} {stat.label}
+                    {statCards.map((s, i) => (
+                        <div key={i}
+                             className="relative overflow-hidden rounded-2xl p-5
+                                        bg-[rgba(12,11,24,0.7)] border border-[rgba(255,255,255,0.07)]
+                                        backdrop-blur-[16px] transition-all hover:-translate-y-0.5
+                                        hover:border-[rgba(255,255,255,0.12)] group">
+                            {/* glow de canto */}
+                            <div className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"
+                                 style={{ background: `radial-gradient(circle at 100% 0%, ${s.color} 0%, transparent 70%)` }} />
+
+                            <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider mb-3"
+                                 style={{ color: s.colorHi, opacity: 0.75 }}>
+                                {s.icon} {s.label}
                             </div>
-                            <div className="text-2xl font-bold font-outfit">{stat.value}</div>
+                            <div className="text-3xl font-bold" style={{ color: s.colorHi }}>
+                                {s.value}
+                            </div>
                         </div>
                     ))}
                 </div>
 
+                {/* ══════════════════════════════════════
+                    GRID: ORGANIZANDO + PARTICIPANDO
+                ══════════════════════════════════════ */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Managing Section */}
+
+                    {/* ── Organizando ── */}
                     <div>
-                        <h2 className="text-2xl font-outfit mb-4 flex items-center gap-2">
-                            <ShieldIcon size={20} className="text-purple" style={{ color: 'var(--color-purple)' }} /> Organizando
+                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-white">
+                            <span className="w-7 h-7 rounded-lg flex items-center justify-center
+                                             bg-accent-bg-glass border border-accent-glow/25">
+                                <ShieldIcon size={14} className="text-accent-secondary" />
+                            </span>
+                            Organizando
                         </h2>
-                        <div className="flex flex-col gap-4">
+
+                        <div className="flex flex-col gap-3">
                             {myTournaments.length === 0 ? (
-                                <div className="glass-card p-10 text-center border-dashed border-2 border-white/5 group hover:border-purple/30 transition-all">
-                                    <div className="w-16 h-16 bg-purple/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                                        <Zap size={28} className="text-purple" style={{ color: 'var(--color-purple)' }} />
+                                /* Empty state */
+                                <div className="relative overflow-hidden rounded-2xl p-10 text-center
+                                                bg-[rgba(12,11,24,0.7)] border border-dashed border-accent-glow/20
+                                                hover:border-accent-glow/45 transition-all group">
+                                    <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"
+                                         style={{ background: 'radial-gradient(ellipse at 50% 0%, var(--accent-primary-transparent) 0%, transparent 60%)' }} />
+                                    <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center
+                                                    bg-accent-bg-glass border border-accent-glow/20
+                                                    group-hover:scale-110 transition-transform">
+                                        <Zap size={24} className="text-accent-secondary" />
                                     </div>
-                                    <h3 className="text-xl font-bold mb-2">Crie seu primeiro evento</h3>
-                                    <p className="text-secondary text-sm mb-6 max-w-xs mx-auto">Comece agora a organizar seu torneio. 🚀 Rápido, fácil e totalmente automatizado.</p>
-                                    <Button variant="primary" size="sm" onClick={() => navigate('/tournament/create')}>
+                                    <h3 className="text-base font-bold mb-2 text-white">Crie seu primeiro evento</h3>
+                                    <p className="text-[rgba(148,163,184,1)] text-sm mb-6 max-w-xs mx-auto leading-relaxed">
+                                        Comece agora a organizar seu torneio. Rápido, fácil e totalmente automatizado.
+                                    </p>
+                                    <button
+                                        onClick={() => navigate('/tournament/create')}
+                                        className="px-5 py-2 rounded-xl text-sm font-bold text-white
+                                                   bg-accent-primary
+                                                   shadow-glow
+                                                   hover:opacity-90 transition-opacity">
                                         Começar Agora
-                                    </Button>
+                                    </button>
                                 </div>
                             ) : (
                                 myTournaments.map(t => (
                                     <Link key={t.id} to={`/tournament/${t.id}`}>
-                                        <div className="glass-card p-5 hover:border-purple/50 transition-all group">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <h3 className="text-lg font-bold group-hover:text-purple transition-colors">{t.name}</h3>
-                                                    <p className="text-xs text-secondary mt-1 flex items-center gap-1">
-                                                        <Calendar size={12} /> {t.date} ⬢ {t.participants.length} Jogadores
+                                        <div className="fp-card p-5 hover:border-accent-glow/50 group
+                                                        hover:shadow-glow transition-all">
+                                            <div className="flex justify-between items-start gap-3">
+                                                <div className="min-w-0">
+                                                    <h3 className="font-semibold text-white group-hover:text-accent-secondary
+                                                                   transition-colors truncate">
+                                                        {t.name}
+                                                    </h3>
+                                                    <p className="text-xs text-[rgba(100,116,139,1)] mt-1 flex items-center gap-1">
+                                                        <Calendar size={11} />
+                                                        {t.date} · {t.participants.length} jogadores
                                                     </p>
                                                 </div>
-                                                <div className="flex items-center gap-3">
-                                                    <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-full ${t.status === 'registration' ? 'bg-purple/10 text-purple' : 'bg-green/10 text-green'}`}>
-                                                        {t.status === 'registration' ? 'Aberto' : t.status === 'ongoing' ? 'Em Andamento' : 'Concluído'}
+                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full
+                                                                      ${statusCfg[t.status]?.cls ?? statusCfg.draft.cls}`}>
+                                                        {statusCfg[t.status]?.label ?? t.status}
                                                     </span>
                                                     <button
-                                                        onClick={(e) => handleDeleteTournament(e, t.id)}
-                                                        className="text-muted hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
-                                                        title="Excluir Torneio"
-                                                    >
-                                                        <Trash2 size={16} />
+                                                        onClick={e => handleDeleteTournament(e, t.id)}
+                                                        className="text-[rgba(100,116,139,1)] hover:text-accent-primary
+                                                                   p-1 opacity-0 group-hover:opacity-100 transition-all"
+                                                        title="Excluir">
+                                                        <Trash2 size={14} />
                                                     </button>
                                                 </div>
                                             </div>
@@ -167,70 +262,113 @@ const MyArea: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Participating Section */}
+                    {/* ── Participando ── */}
                     <div>
-                        <h2 className="text-2xl font-outfit mb-4 flex items-center gap-2">
-                            <Trophy size={20} className="text-blue" style={{ color: 'var(--color-blue)' }} /> Participando
+                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-white">
+                            <span className="w-7 h-7 rounded-lg flex items-center justify-center
+                                             bg-accent-bg-glass border border-accent-glow/25">
+                                <Trophy size={14} className="text-accent-primary" />
+                            </span>
+                            Participando
                         </h2>
-                        <div className="flex flex-col gap-4">
+
+                        <div className="flex flex-col gap-3">
                             {participatingTournaments.length === 0 ? (
-                                <div className="glass-card p-10 text-center border-dashed border-2 border-white/5 group hover:border-blue/30 transition-all">
-                                    <div className="w-16 h-16 bg-blue/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                                        <Search size={28} className="text-blue" style={{ color: 'var(--color-blue)' }} />
+                                /* Empty state */
+                                <div className="relative overflow-hidden rounded-2xl p-10 text-center
+                                                bg-[rgba(12,11,24,0.7)] border border-dashed border-accent-glow/20
+                                                hover:border-accent-glow/45 transition-all group">
+                                    <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"
+                                         style={{ background: 'radial-gradient(ellipse at 50% 0%, var(--accent-primary-transparent) 0%, transparent 60%)' }} />
+                                    <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center
+                                                    bg-accent-bg-glass border border-accent-glow/20
+                                                    group-hover:scale-110 transition-transform">
+                                        <Search size={24} className="text-accent-primary" />
                                     </div>
-                                    <h3 className="text-xl font-bold mb-2">Busque por batalhas</h3>
-                                    <p className="text-secondary text-sm mb-6 max-w-xs mx-auto">Explore torneios abertos e inscreva-se para começar a ganhar pontos e subir no ranking.</p>
-                                    <Button variant="secondary" size="sm" onClick={() => navigate('/discover')}>
+                                    <h3 className="text-base font-bold mb-2 text-white">Busque por batalhas</h3>
+                                    <p className="text-[rgba(148,163,184,1)] text-sm mb-6 max-w-xs mx-auto leading-relaxed">
+                                        Explore torneios abertos e inscreva-se para ganhar pontos e subir no ranking.
+                                    </p>
+                                    <button
+                                        onClick={() => navigate('/discover')}
+                                        className="px-5 py-2 rounded-xl text-sm font-bold
+                                                   bg-accent-bg-glass border border-accent-glow/30
+                                                   text-accent-primary hover:bg-accent-bg-glass/80 transition-colors">
                                         Explorar Torneios
-                                    </Button>
+                                    </button>
                                 </div>
                             ) : (
-                                participatingTournaments.map(t => (
-                                    <Link key={t.id} to={`/tournament/${t.id}/public`}>
-                                        <div className="glass-card p-5 hover:border-blue/50 transition-all group relative">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <h3 className="text-lg font-bold group-hover:text-blue transition-colors">{t.name}</h3>
-                                                    <p className="text-xs text-secondary mt-1">{t.format} ⬢ {t.location}</p>
-                                                </div>
-                                                <div className="text-right flex items-center gap-4">
-                                                    <div className="flex gap-2">
-                                                        {t.status === 'registration' && (
-                                                            <button
-                                                                onClick={(e) => handleLeaveTournament(e, t.id)}
-                                                                className="text-muted hover:text-red-400 p-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all"
-                                                                title="Sair do Torneio"
-                                                            >
-                                                                <LogOut size={16} />
-                                                            </button>
-                                                        )}
-                                                        {t.status === 'ongoing' && t.participants.find(p => p.playerId === user?.id)?.status === 'active' && (
-                                                            <button
-                                                                onClick={(e) => handleDropTournament(e, t.id)}
-                                                                className="text-muted hover:text-yellow-400 p-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all"
-                                                                title="Desistir"
-                                                            >
-                                                                <Flag size={16} />
-                                                            </button>
-                                                        )}
+                                participatingTournaments.map(t => {
+                                    const myPart = t.participants.find(p => p.playerId === user?.id);
+                                    return (
+                                        <Link key={t.id} to={`/tournament/${t.id}/public`}>
+                                            <div className="fp-card p-5 hover:border-accent-glow/50 group
+                                                            hover:shadow-glow transition-all">
+                                                <div className="flex justify-between items-start gap-3">
+                                                    <div className="min-w-0">
+                                                        <h3 className="font-semibold text-white group-hover:text-accent-primary
+                                                                       transition-colors truncate">
+                                                            {t.name}
+                                                        </h3>
+                                                        <p className="text-xs text-[rgba(100,116,139,1)] mt-1">
+                                                            {t.format} · {t.location}
+                                                        </p>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-xs text-muted">Sua Posição</p>
-                                                        <p className="text-lg font-bold font-outfit text-center">#{t.participants.find(p => p.playerId === user?.id)?.rank || '-'}</p>
+                                                    <div className="flex items-center gap-3 flex-shrink-0">
+                                                        {/* ações */}
+                                                        <div className="flex gap-1">
+                                                            {t.status === 'registration' && (
+                                                                <button
+                                                                    onClick={e => handleLeaveTournament(e, t.id)}
+                                                                    className="text-[rgba(100,116,139,1)] hover:text-accent-primary
+                                                                               p-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all"
+                                                                    title="Sair do torneio">
+                                                                    <LogOut size={14} />
+                                                                </button>
+                                                            )}
+                                                            {t.status === 'ongoing' && myPart?.status === 'active' && (
+                                                                <button
+                                                                    onClick={e => handleDropTournament(e, t.id)}
+                                                                    className="text-[rgba(100,116,139,1)] hover:text-accent-secondary
+                                                                               p-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all"
+                                                                    title="Desistir">
+                                                                    <Flag size={14} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        {/* posição */}
+                                                        <div className="text-center">
+                                                            <p className="text-[10px] text-[rgba(100,116,139,1)] uppercase tracking-wider">
+                                                                Posição
+                                                            </p>
+                                                            <p className="text-lg font-bold text-white leading-tight">
+                                                                #{myPart?.rank ?? '—'}
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </Link>
-                                ))
+                                        </Link>
+                                    );
+                                })
                             )}
                         </div>
                     </div>
                 </div>
+
+                {/* ── ESPAÇO PUBLICITÁRIO ── */}
+                <div className="mt-12 mx-auto max-w-2xl">
+                    <div className="rounded-2xl border border-dashed border-[rgba(255,255,255,0.07)]
+                                    bg-[rgba(255,255,255,0.02)] py-6 text-center">
+                        <p className="text-[10px] font-bold uppercase tracking-[3px] text-[rgba(100,116,139,0.5)]">
+                            Espaço Publicitário
+                        </p>
+                    </div>
+                </div>
+
             </div>
         </PageShell>
     );
 };
 
 export default MyArea;
-

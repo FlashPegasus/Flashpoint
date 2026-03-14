@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Trophy, Users, LayoutDashboard, LogOut, Search, Menu, X, Sun, Moon, User, Bell, Plus, ChevronDown } from 'lucide-react';
+import { Trophy, Users, LayoutDashboard, LogOut, Search, Menu, X, User, Bell, Plus, ChevronDown } from 'lucide-react';
 import { useAuthStore } from '../../features/auth/authStore';
 import { IconCreatePlus } from '../../assets/icons';
+import AdPlaceholder from '../ui/AdPlaceholder';
+import { DesignLab } from './DesignLab';
 
 // ——————————————————————————————————————————————————————————————————————————
 // Navbar
@@ -13,18 +15,7 @@ export const Navbar: React.FC = () => {
     const location = useLocation();
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
     const [isCreateOpen, setIsCreateOpen] = React.useState(false);
-    const [theme, setTheme] = React.useState<'light' | 'dark'>(
-        (localStorage.getItem('theme') as 'light' | 'dark') || 'dark'
-    );
-
     const [isNotifOpen, setIsNotifOpen] = React.useState(false);
-
-    React.useEffect(() => {
-        document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('theme', theme);
-    }, [theme]);
-
-    const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
     const toggleUiMode = () => setUiMode(uiMode === 'player' ? 'organizer' : 'player');
     const handleLogout = () => { logout(); navigate('/'); };
     const isGuest = user?.email === 'guest@flashpoint.app';
@@ -37,29 +28,25 @@ export const Navbar: React.FC = () => {
 
     return (
         <nav className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-6xl">
-            <div className="glass px-4 md:px-6 py-3.5 flex items-center justify-between shadow-2xl rounded-2xl border-white/10 bg-black/60 backdrop-blur-xl">
-                <div className="flex items-center gap-6">
-                    <Link to="/" className="flex items-center gap-3 group">
-                        <div className="p-2 glass rounded-xl group-hover:shadow-glow transition-all" style={{ backgroundColor: 'var(--color-purple)' }}>
-                            <Trophy size={20} color="white" />
-                        </div>
-                        <span className="hidden sm:inline text-xl font-bold font-outfit tracking-tight">FlashPoint</span>
-                    </Link>
-
-                    {/* Desktop Mode Toggle */}
+            <div className="relative flex items-center justify-between h-16 md:h-20">
+                {/* Background Glass Bar - Split or Shaped */}
+                <div className="absolute inset-0 glass shadow-2xl rounded-2xl border-white/10 bg-black/60 backdrop-blur-xl -z-10" />
+                
+                {/* 1. LEFT SECTION: Mode Toggle */}
+                <div className="flex-1 flex items-center pl-4 md:pl-8">
                     {user && (
                         <div className="hidden lg:flex items-center bg-white/5 rounded-full p-1 border border-white/10 shadow-inner">
                             <button
                                 onClick={() => setUiMode('player')}
                                 className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${uiMode === 'player' ? 'bg-purple text-white shadow-glow' : 'text-secondary hover:text-primary'}`}
-                                style={uiMode === 'player' ? { backgroundColor: 'var(--color-purple)' } : {}}
+                                style={uiMode === 'player' ? { backgroundColor: 'var(--accent-primary)' } : {}}
                             >
                                 Jogador
                             </button>
                             <button
                                 onClick={() => setUiMode('organizer')}
                                 className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${uiMode === 'organizer' ? 'bg-purple text-white shadow-glow' : 'text-secondary hover:text-primary'}`}
-                                style={uiMode === 'organizer' ? { backgroundColor: 'var(--color-purple)' } : {}}
+                                style={uiMode === 'organizer' ? { backgroundColor: 'var(--accent-primary)' } : {}}
                             >
                                 Organizador
                             </button>
@@ -67,15 +54,33 @@ export const Navbar: React.FC = () => {
                     )}
                 </div>
 
-                {/* Desktop Menu */}
-                <div className="hidden md:flex items-center gap-6">
-                    <div className="flex items-center gap-6">
+                {/* 2. CENTER SECTION: The Bulge & Logo */}
+                <div className="relative flex-shrink-0 flex items-center justify-center">
+                    {/* The Bulge Shape */}
+                    <div className="absolute -top-6 w-32 md:w-48 h-28 md:h-36 bg-black/80 backdrop-blur-2xl border border-white/10 rounded-[50%] shadow-[0_15px_50px_rgba(0,0,0,0.8)] flex items-center justify-center -z-10">
+                        {/* Inner glow */}
+                        <div className="absolute inset-2 rounded-[50%] border-t border-white/20 blur-sm pointer-events-none" />
+                        <div className="absolute inset-0 rounded-[50%] bg-gradient-to-b from-transparent to-red-600/10 pointer-events-none" />
+                    </div>
+
+                    <Link to="/" className="relative z-10 block transform -translate-y-2 hover:scale-110 transition-transform duration-500" aria-label="FlashPoint Home">
+                        <img
+                            src="https://i.postimg.cc/054yqDWK/Image-1-(1).png"
+                            alt="FlashPoint Logo"
+                            className="h-16 md:h-24 w-auto object-contain drop-shadow-[0_0_20px_rgba(239,68,68,0.4)]"
+                        />
+                    </Link>
+                </div>
+
+                {/* 3. RIGHT SECTION: Navigation & User */}
+                <div className="flex-1 flex items-center justify-end pr-4 md:pr-8 gap-4 md:gap-8">
+                    <div className="hidden md:flex items-center gap-6">
                         {uiMode === 'player' ? (
                             <>
-                                <Link to="/discover" className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors ${location.pathname === '/discover' ? 'text-primary' : 'text-secondary hover:text-primary'}`}>
+                                <Link to="/discover" className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${location.pathname === '/discover' ? 'text-primary' : 'text-secondary hover:text-primary'}`}>
                                     <Search size={14} /><span>Descobrir</span>
                                 </Link>
-                                <Link to="/leagues" className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors ${location.pathname === '/leagues' ? 'text-primary' : 'text-secondary hover:text-primary'}`}>
+                                <Link to="/leagues" className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${location.pathname === '/leagues' ? 'text-primary' : 'text-secondary hover:text-primary'}`}>
                                     <Users size={14} /><span>Ligas</span>
                                 </Link>
                             </>
@@ -87,8 +92,8 @@ export const Navbar: React.FC = () => {
                                 <div className="relative">
                                     <button
                                         onClick={() => setIsCreateOpen(!isCreateOpen)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-purple/20 text-purple border border-purple/30 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-purple hover:text-white transition-all shadow-glow-sm"
-                                        style={{ color: isCreateOpen ? 'white' : 'var(--color-purple)', backgroundColor: isCreateOpen ? 'var(--color-purple)' : 'rgba(var(--color-purple-rgb), 0.1)' }}
+                                        className="flex items-center gap-2 px-4 py-2 bg-accent-glow text-accent-primary border border-accent-glow-strong rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-accent-primary hover:text-white transition-all shadow-glow-sm"
+                                        style={{ color: isCreateOpen ? 'white' : 'var(--accent-primary)', backgroundColor: isCreateOpen ? 'var(--accent-primary)' : 'var(--accent-bg-glass)' }}
                                     >
                                         <Plus size={14} /> <span>Criar</span> <ChevronDown size={12} className={`transition-transform ${isCreateOpen ? 'rotate-180' : ''}`} />
                                     </button>
@@ -121,9 +126,7 @@ export const Navbar: React.FC = () => {
                     </div>
                     <div className="h-4 w-px bg-white/10 mx-2"></div>
                     <div className="flex items-center gap-3">
-                        <button onClick={toggleTheme} className="p-2 text-secondary hover:text-primary transition-all rounded-lg hover:bg-white/5">
-                            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-                        </button>
+                        {/* Legacy theme toggle removed per user request */}
 
                         {user ? (
                             <>
@@ -166,7 +169,7 @@ export const Navbar: React.FC = () => {
                                 </div>
                             </>
                         ) : (
-                            <Link to="/login" className="px-6 py-2.5 bg-purple text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:shadow-glow transition-all shadow-glow-sm" style={{ backgroundColor: 'var(--color-purple)' }}>
+                            <Link to="/login" className="px-6 py-2.5 bg-accent-primary text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:shadow-glow transition-all shadow-glow-sm" style={{ backgroundColor: 'var(--accent-primary)' }}>
                                 Entrar
                             </Link>
                         )}
@@ -206,9 +209,7 @@ export const Navbar: React.FC = () => {
                         )}
                         <div className="h-px bg-white/10"></div>
                         <div className="flex flex-col gap-4">
-                            <button onClick={toggleTheme} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary">
-                                {theme === 'dark' ? <><Sun size={18} /> <span>Modo Claro</span></> : <><Moon size={18} /> <span>Modo Escuro</span></>}
-                            </button>
+                            {/* Legacy theme toggle removed */}
                             {user ? (
                                 <>
                                     <Link to="/profile" onClick={closeAll} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary">
@@ -366,14 +367,31 @@ export const BottomNav: React.FC = () => {
 interface PageShellProps {
     children: React.ReactNode;
     title?: string;
+    showAd?: boolean;
+    showBackground?: boolean;
 }
 
-const PageShell: React.FC<PageShellProps> = ({ children }) => {
+const PageShell: React.FC<PageShellProps> = ({ children, showAd = true, showBackground = false }) => {
     return (
         <div className="flex flex-col min-h-screen">
             <Navbar />
-            <main className="flex-grow pt-24 animate-fade-in">
+            <DesignLab />
+            
+            {showBackground && (
+                <>
+                    <div className="bg-premium-mesh" aria-hidden="true" />
+                    <div className="bg-premium-grid" aria-hidden="true" />
+                </>
+            )}
+
+            <main className="flex-grow pt-24 animate-fade-in relative z-10">
                 {children}
+
+                {showAd && (
+                    <div className="container mt-8">
+                        <AdPlaceholder className="ad-shell-banner" />
+                    </div>
+                )}
             </main>
             <footer className="py-16 mt-auto border-t border-white/5 bg-white/[0.02]">
                 <div className="container text-center text-muted">

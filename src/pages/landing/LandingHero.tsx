@@ -1,6 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AdPlaceholder from '../../components/ui/AdPlaceholder';
 
 // ── Feature card data ──────────────────────────────────────────────────────
 const CARDS = [
@@ -45,7 +44,6 @@ const LandingHero: React.FC = () => {
     const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [activeIdx, setActiveIdx] = useState<number | null>(null);
     const [isShuffling, setIsShuffling] = useState(false);
-    const [deckCount, setDeckCount] = useState(40);
     const [isDrawing, setIsDrawing] = useState(false);
     const deckTopRef = useRef<HTMLDivElement>(null);
 
@@ -139,7 +137,6 @@ const LandingHero: React.FC = () => {
         if (top) top.classList.add('lp-drawing');
 
         setTimeout(() => {
-            setDeckCount(prev => Math.max(0, prev - 1));
             if (top) top.classList.remove('lp-drawing');
             setIsDrawing(false);
             navigate('/login');
@@ -148,10 +145,6 @@ const LandingHero: React.FC = () => {
 
     return (
         <>
-            {/* Static background layers */}
-            <div className="landing-bg-mesh" aria-hidden="true" />
-            <div className="landing-grid-lines" aria-hidden="true" />
-
             {/* ── HERO TEXT ── */}
             <section className="lp-hero">
                 <h1 style={{ animation: 'lp-fadeDown 0.7s 0.07s ease both' }}>
@@ -187,16 +180,20 @@ const LandingHero: React.FC = () => {
                             aria-label={`Feature card ${idx + 1}`}
                         >
                             <div className="lp-card-inner">
-                                <div className="lp-card-rank">{card.rank}</div>
+                                <div className="lp-edge-glow"></div>
+                                <div className="lp-corner lp-corner-tl"></div>
+                                <div className="lp-corner lp-corner-tr"></div>
+                                <div className="lp-corner lp-corner-bl"></div>
+                                <div className="lp-corner lp-corner-br"></div>
                                 <div className="lp-card-icon-wrap">{card.icon}</div>
                                 <div className="lp-card-title">{card.title}</div>
+                                <div className="lp-card-divider"></div>
                                 <div className="lp-card-body">{card.body}</div>
                                 <div className="lp-card-tags">
                                     {card.tags.map(t => (
                                         <span key={t} className="lp-ctag">{t}</span>
                                     ))}
                                 </div>
-                                <div className="lp-card-suit">{card.suit}</div>
                             </div>
                         </div>
                     ))}
@@ -216,7 +213,6 @@ const LandingHero: React.FC = () => {
                         tabIndex={0}
                         aria-label="Entrar no jogo"
                     >
-                        <div className="lp-deck-count">{deckCount}</div>
                         <div className="lp-deck-symbol">
                             <span>⚡</span>
                             <small>Entrar</small>
@@ -224,9 +220,6 @@ const LandingHero: React.FC = () => {
                     </div>
                     <div className="lp-deck-label">Comprar carta</div>
                 </div>
- 
-                <AdPlaceholder className="lp-hero-ad" />
- 
             </div>
         </>
     );

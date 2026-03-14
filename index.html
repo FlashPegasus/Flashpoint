@@ -27,6 +27,15 @@
   <meta property="twitter:image" content="https://flashpoint-anti.web.app/banner-og.png" />
 
   <title>FlashPoint - Gestão de Torneios</title>
+  
+  <script>
+    (function() {
+      const theme = localStorage.getItem('flashpoint-theme');
+      if (theme) {
+        document.documentElement.classList.add(theme);
+      }
+    })();
+  </script>
 
   <!-- Google Fonts: Cinzel Decorative (landing hero) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">

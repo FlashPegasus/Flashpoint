@@ -74,7 +74,7 @@ const TournamentPublic: React.FC = () => {
     };
 
     return (
-        <PageShell>
+        <PageShell showBackground>
             <div className="container py-8 animate-fade-in">
                 <Breadcrumbs
                     items={[

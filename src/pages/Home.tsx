@@ -7,7 +7,7 @@ import './landing/landing.css';
 
 const Home: React.FC = () => {
     return (
-        <PageShell>
+        <PageShell showBackground>
             <div className="landing-page">
                 {/* Fixed background particles */}
                 <LandingParticles />

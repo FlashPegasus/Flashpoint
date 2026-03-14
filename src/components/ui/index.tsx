@@ -23,11 +23,11 @@ export const Button: React.FC<ButtonProps> = ({
     const baseStyles = 'inline-flex items-center justify-center rounded-2xl font-bold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-95';
 
     const variants = {
-        primary: 'bg-purple text-white shadow-lg hover:shadow-glow',
+        primary: 'bg-accent-primary text-white shadow-lg hover:shadow-glow',
         secondary: 'glass text-primary hover:bg-white/10',
         ghost: 'hover:bg-white/5 text-secondary hover:text-primary',
         danger: 'bg-red text-white hover:shadow-lg',
-        glow: 'bg-purple text-white shadow-glow brightness-110'
+        glow: 'bg-accent-primary text-white shadow-glow brightness-110'
     };
 
     const sizes = {
@@ -37,7 +37,7 @@ export const Button: React.FC<ButtonProps> = ({
     };
 
     const styleObj: any = {};
-    if (variant === 'primary' || variant === 'glow') styleObj.backgroundColor = 'var(--color-purple)';
+    if (variant === 'primary' || variant === 'glow') styleObj.backgroundColor = 'var(--accent-primary)';
     if (variant === 'danger') styleObj.backgroundColor = 'var(--color-red)';
 
     return (
@@ -62,17 +62,24 @@ export interface CardProps {
     className?: string;
     title?: string;
     onClick?: () => void;
+    variant?: 'default' | 'premium';
 }
 
-export const Card: React.FC<CardProps> = ({ children, className = '', title, onClick }) => (
-    <div
-        className={`glass-card p-8 group ${onClick ? 'cursor-pointer hover-lift' : ''} ${className}`}
-        onClick={onClick}
-    >
-        {title && <h3 className="mb-8 font-outfit">{title}</h3>}
-        {children}
-    </div>
-);
+export const Card: React.FC<CardProps> = ({ children, className = '', title, onClick, variant = 'default' }) => {
+    const glassClass = variant === 'premium' 
+        ? 'glass-premium' 
+        : 'glass-card';
+
+    return (
+        <div
+            className={`${glassClass} p-8 group ${onClick ? 'cursor-pointer hover-lift' : ''} ${className}`}
+            onClick={onClick}
+        >
+            {title && <h3 className="mb-8 font-outfit font-bold text-xl tracking-tight">{title}</h3>}
+            {children}
+        </div>
+    );
+};
 
 // ─────────────────────────────────────────────
 // Input
@@ -81,7 +88,7 @@ export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { lab
     <div className="flex flex-col gap-2.5 w-full">
         {label && <label className="text-[10px] font-bold text-muted ml-2 uppercase tracking-widest">{label}</label>}
         <input
-            className="w-full glass p-4 focus:outline-none focus:ring-2 focus:ring-purple/20 transition-all border-white/5 bg-white/2 text-primary placeholder:text-muted/50 rounded-2xl"
+            className="w-full glass p-4 focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all border-white/5 bg-white/2 text-primary placeholder:text-muted/50 rounded-2xl"
             {...props}
         />
     </div>
@@ -182,7 +189,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
     return (
         <div className="fixed inset-0 flex flex-col items-center justify-center bg-background z-[9999] animate-fade-in">
             <div className="relative w-32 h-32 mb-6">
-                <div className="absolute inset-0 bg-accent/20 blur-3xl rounded-full animate-pulse"></div>
+                <div className="absolute inset-0 bg-accent-primary/20 blur-3xl rounded-full animate-pulse"></div>
                 <div className="relative w-full h-full rounded-2xl overflow-hidden glass border border-white/10 shadow-2xl flex items-center justify-center">
                     <img
                         src={gifUrl}
@@ -194,9 +201,9 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
             <div className="text-center">
                 <h3 className="text-lg font-bold font-outfit tracking-wider text-primary mb-2">{message}</h3>
                 <div className="flex gap-1 justify-center">
-                    <div className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce [animation-delay:-0.3s]"></div>
-                    <div className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce [animation-delay:-0.15s]"></div>
-                    <div className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-bounce [animation-delay:-0.3s]"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-bounce [animation-delay:-0.15s]"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-bounce"></div>
                 </div>
             </div>
         </div>

@@ -61,55 +61,89 @@ const Discover: React.FC = () => {
     }
 
     return (
-        <PageShell>
-            <div className="container py-8 animate-fade-in">
-                <div className="mb-10">
-                    <h1 className="text-4xl font-outfit mb-4">Descobrir Eventos</h1>
-                    <div className="flex gap-4 flex-wrap">
-                        <div className="relative flex-grow max-w-md">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-primary opacity-60" size={18} />
+        <PageShell showBackground>
+            <div className="container py-12 animate-fade-in relative z-10">
+                <div className="mb-12">
+                    <h1 className="text-4xl md:text-5xl font-outfit font-black mb-4 tracking-tight">
+                        Descobrir <span className="text-mana-purple">Eventos</span>
+                    </h1>
+                    <p className="text-muted mb-8 max-w-2xl">
+                        Explore os melhores torneios de TCG da comunidade. Encontre seu próximo desafio e suba no ranking global.
+                    </p>
+                    
+                    <div className="flex gap-4 flex-wrap items-center">
+                        <div className="relative flex-grow max-w-md group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-purple opacity-50 group-focus-within:opacity-100 transition-opacity" size={20} />
                             <Input
                                 placeholder="Buscar por nome, formato ou local..."
-                                className="pl-10"
+                                className="pl-12 py-6 bg-white/5 border-white/10 focus:border-purple/50 focus:ring-purple/20 transition-all rounded-2xl"
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <Button variant="secondary" onClick={() => toast.success('Filtros avançados em breve!')}>
+                        <Button variant="secondary" className="px-6 py-6 rounded-2xl border-white/5 hover:bg-white/10" onClick={() => toast.success('Filtros avançados em breve!')}>
                             <Filter size={18} className="mr-2" /> Filtros
                         </Button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {filtered.length === 0 ? (
-                        <div className="col-span-full py-20 text-center glass rounded-3xl border-dashed border-2 border-white/5">
-                            <Search size={48} className="mx-auto mb-4 text-muted opacity-20" />
-                            <h3 className="text-xl font-bold mb-2">Nenhum torneio encontrado</h3>
-                            <p className="text-secondary text-sm">Tente ajustar seus filtros ou buscar por outro termo.</p>
+                        <div className="col-span-full py-32 text-center glass rounded-[2.5rem] border-dashed border-2 border-white/5">
+                            <Search size={64} className="mx-auto mb-6 text-muted opacity-10" />
+                            <h3 className="text-2xl font-bold mb-3">Nenhum torneio encontrado</h3>
+                            <p className="text-muted text-sm max-w-xs mx-auto">Tente ajustar seus filtros ou buscar por outro termo de busca.</p>
                         </div>
                     ) : (
                         filtered.map(t => (
-                            <Card key={t.id} className="group hover:border-purple/30 transition-all cursor-pointer" onClick={() => navigate(`/tournament/${t.id}/public`)}>
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${t.format === 'multiplayer' ? 'bg-purple/10 text-purple' : 'bg-blue/10 text-blue'}`} style={{ color: t.format === 'multiplayer' ? 'var(--color-purple)' : 'var(--color-blue)' }}>
-                                        {t.format === 'multiplayer' ? 'Multijogador' : '1 vs 1'}
+                            <div 
+                                key={t.id} 
+                                className="group relative cursor-pointer" 
+                                onClick={() => navigate(`/tournament/${t.id}/public`)}
+                            >
+                                {/* Premium Card Background Logic */}
+                                <div className="absolute -inset-0.5 bg-gradient-to-br from-purple/20 to-cyan/20 rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity blur-sm" />
+                                
+                                <Card className="relative h-full glass border-white/10 bg-black/40 backdrop-blur-xl p-8 rounded-[2rem] group-hover:border-purple/40 transition-all duration-500 overflow-hidden">
+                                    {/* Decorative corner */}
+                                    <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl opacity-10 group-hover:opacity-20 transition-opacity blur-2xl ${t.format === 'multiplayer' ? 'from-purple' : 'from-blue'}`} />
+                                    
+                                    <div className="flex justify-between items-start mb-8">
+                                        <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border ${t.format === 'multiplayer' ? 'bg-purple/10 border-purple/20 text-purple' : 'bg-blue/10 border-blue/20 text-blue'}`}>
+                                            {t.format === 'multiplayer' ? 'Multijogador' : '1 vs 1'}
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <span className={`w-2 h-2 rounded-full ${t.status === 'registration' ? 'bg-green animate-pulse' : 'bg-secondary'}`} />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted">
+                                                {t.status === 'registration' ? 'Inscrições' : t.status === 'ongoing' ? 'Ao Vivo' : 'Finalizado'}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <span className="text-xs text-muted">{t.status === 'registration' ? 'Inscrições Abertas' : t.status === 'ongoing' ? 'Em Andamento' : 'Concluído'}</span>
-                                </div>
-                                <h3 className="text-xl font-bold mb-3 group-hover:text-purple transition-colors truncate">
-                                    {cleanTournamentName(t.name)}
-                                </h3>
-                                <div className="flex flex-col gap-2 text-sm text-secondary mb-6">
-                                    <div className="flex items-center gap-2">
-                                        <Calendar size={14} /> 
-                                        {formatTournamentDate(t.date)}
+
+                                    <h3 className="text-2xl font-outfit font-black mb-4 group-hover:text-mana-purple transition-colors leading-tight">
+                                        {cleanTournamentName(t.name)}
+                                    </h3>
+
+                                    <div className="flex flex-col gap-3 text-sm text-secondary/80 mb-8">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 rounded-lg bg-white/5 text-purple"><Calendar size={16} /></div>
+                                            <span className="font-medium">{formatTournamentDate(t.date)}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 rounded-lg bg-white/5 text-purple"><Trophy size={16} /></div>
+                                            <span className="font-medium">{t.location}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 rounded-lg bg-white/5 text-purple"><UsersIcon size={16} /></div>
+                                            <span className="font-medium">{t.participants.length} Jogadores Inscritos</span>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2"><Trophy size={14} /> {t.location}</div>
-                                    <div className="flex items-center gap-2"><UsersIcon size={14} /> {t.participants.length} Jogadores</div>
-                                </div>
-                                <Button variant="primary" className="w-full">Ver Torneio</Button>
-                            </Card>
+
+                                    <Button variant="glow" className="w-full py-4 text-xs font-black uppercase tracking-[0.2em]">
+                                        Explorar Torneio
+                                    </Button>
+                                </Card>
+                            </div>
                         ))
                     )}
                 </div>
