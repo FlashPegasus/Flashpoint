@@ -1,41 +1,55 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Trophy, Plus, Users, Calendar, ArrowRight, Trash2, LogOut, Flag, Shield as ShieldIcon, Zap, Search, Eye, EyeOff } from 'lucide-react';
+import { Trophy, Plus, Users, Calendar, ArrowRight, Shield as ShieldIcon, Zap, Eye, EyeOff, LayoutGrid, User as UserIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageShell from '../components/layout';
+import { Button } from '../components/ui';
 import { useAuthStore } from '../features/auth/authStore';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
+import { useLeagueStore } from '../features/leagues/leagueStore';
 import { tournamentService } from '../features/tournaments/tournamentService';
 
 /* ── helpers ── */
 const statusCfg: Record<string, { label: string; cls: string }> = {
     draft:        { label: 'Rascunho',      cls: 'bg-white/5 text-white/40 border border-white/10' },
-    registration: { label: 'Aberto',        cls: 'bg-accent-bg-glass text-accent-secondary border border-accent-glow/30' },
-    ongoing:      { label: 'Em Andamento',  cls: 'bg-[rgba(16,185,129,0.15)] text-[#34d399] border border-[rgba(52,211,153,0.3)]' },
-    completed:    { label: 'Concluído',     cls: 'bg-[rgba(245,158,11,0.13)] text-[#fbbf24] border border-[rgba(251,191,36,0.3)]' },
+    registration: { label: 'Aberto',        cls: 'bg-primary/10 text-primary border border-primary/30' },
+    ongoing:      { label: 'Em Andamento',  cls: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' },
+    completed:    { label: 'Concluído',     cls: 'bg-amber-500/10 text-amber-400 border border-amber-500/30' },
 };
 
 const dicebear = (seed: string, size = 36) =>
     `https://api.dicebear.com/7.x/rings/svg?seed=${encodeURIComponent(seed)}&size=${size}`;
 
 const MyArea: React.FC = () => {
-    const { user, updateProfile } = useAuthStore();
+    const { user, updateProfile, uiMode, setUiMode } = useAuthStore();
     const { tournaments, loadTournaments } = useTournamentStore();
+    const { myLeagues, loadMyLeagues } = useLeagueStore();
     const [stats, setStats] = React.useState<any>(null);
     const navigate = useNavigate();
 
     React.useEffect(() => {
         loadTournaments();
-        if (user) tournamentService.getUserStats(user.id).then(setStats);
-    }, [loadTournaments, user]);
+        if (user) {
+            tournamentService.getUserStats(user.id).then(setStats);
+            loadMyLeagues(user.id);
+        }
+    }, [loadTournaments, loadMyLeagues, user]);
 
-    const myTournaments            = tournaments.filter(t => t.organizerId === user?.id);
-    const participatingTournaments = tournaments.filter(t => t.participants.some(p => p.playerId === user?.id));
-    const organizedCount           = tournaments.filter(t =>
-        t.organizerId === user?.id &&
-        t.status === 'completed' &&
-        t.participants.filter(p => !p.isAnonymous).length >= 4
-    ).length;
+    const myTournaments = React.useMemo(() => 
+        tournaments.filter(t => t.organizerId === user?.id),
+    [tournaments, user?.id]);
+
+    const participatingTournaments = React.useMemo(() => 
+        tournaments.filter(t => (t.participants || []).some(p => p.playerId === user?.id)),
+    [tournaments, user?.id]);
+
+    const organizedCount = React.useMemo(() => 
+        tournaments.filter(t =>
+            t.organizerId === user?.id &&
+            t.status === 'completed' &&
+            (t.participants || []).filter(p => !p.isAnonymous).length >= 4
+        ).length,
+    [tournaments, user?.id]);
 
     const handleTogglePublic = async () => {
         if (!user) return;
@@ -46,29 +60,6 @@ const MyArea: React.FC = () => {
         } catch { toast.error('Erro ao atualizar privacidade.'); }
     };
 
-    const handleDeleteTournament = async (e: React.MouseEvent, id: string) => {
-        e.preventDefault(); e.stopPropagation();
-        if (!window.confirm('Excluir este torneio? Esta ação não pode ser desfeita.')) return;
-        try {
-            await tournamentService.deleteTournament(id);
-            toast.success('Torneio excluído!');
-            loadTournaments();
-        } catch { toast.error('Erro ao excluir torneio.'); }
-    };
-
-    const handleLeaveTournament = async (e: React.MouseEvent, id: string) => {
-        e.preventDefault(); e.stopPropagation();
-        if (!window.confirm('Cancelar inscrição neste torneio?')) return;
-        await tournamentService.removeParticipant(id, user!.id);
-        loadTournaments();
-    };
-
-    const handleDropTournament = async (e: React.MouseEvent, id: string) => {
-        e.preventDefault(); e.stopPropagation();
-        if (!window.confirm('Desistir deste torneio? Seu progresso será mantido no histórico.')) return;
-        await tournamentService.withdrawParticipant(id, user!.id);
-        loadTournaments();
-    };
 
     /* ── stat cards config ── */
     const statCards = [
@@ -76,184 +67,176 @@ const MyArea: React.FC = () => {
             label: 'Organizados',
             value: organizedCount,
             icon: <Trophy size={15} />,
-            color: 'var(--accent-primary-transparent)',
-            colorHi: 'var(--accent-primary)',
+            color: 'rgba(192, 57, 43,', // primary rubro
+            colorHi: 'var(--fp-primary)',
         },
         {
             label: 'Participando',
             value: participatingTournaments.length,
             icon: <Users size={15} />,
-            color: 'var(--accent-secondary-transparent)',
-            colorHi: 'var(--accent-secondary)',
+            color: 'rgba(255, 255, 255,',
+            colorHi: '#fff',
         },
         {
-            label: 'Tx. de Vitória',
+            label: 'Winrate',
             value: stats?.winRate ?? '0%',
             icon: <ArrowRight size={15} />,
-            color: 'rgba(16,185,129,0.15)',
-            colorHi: '#34d399',
+            color: 'rgba(251, 191, 36,', // gold
+            colorHi: '#fbbf24',
         },
     ];
 
     return (
-        <PageShell>
-            <div className="container py-8 pb-28 animate-fade-in">
+        <PageShell showBackground>
+            <div className="container py-8 pb-28 animate-fade-in relative z-10">
 
                 {/* ══════════════════════════════════════
                     HEADER
                 ══════════════════════════════════════ */}
-                <div className="relative overflow-hidden rounded-2xl mb-8
-                                bg-[rgba(12,11,24,0.82)] border border-[rgba(255,255,255,0.08)]
-                                backdrop-blur-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] p-6 md:p-8">
-
-                    {/* glow de fundo */}
-                    <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{
-                        background: 'radial-gradient(ellipse at 0% 50%, var(--accent-primary-transparent) 0%, transparent 60%), radial-gradient(ellipse at 100% 50%, var(--accent-secondary-transparent) 0%, transparent 60%)'
+                <div className="fp-card overflow-hidden mb-8 p-6 md:p-8 relative">
+                    {/* Glow background */}
+                    <div className="absolute inset-0 pointer-events-none opacity-20" style={{
+                        background: 'radial-gradient(circle at 100% 0%, var(--fp-primary) 0%, transparent 50%)'
                     }} />
 
-                    <div className="relative flex flex-wrap items-center justify-between gap-4">
-                        {/* Avatar + título */}
-                        <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-accent-glow
-                                            shadow-glow flex-shrink-0">
+                    <div className="relative flex flex-wrap items-center justify-between gap-6">
+                        <div className="flex items-center gap-6">
+                            <div className="w-20 h-20 rounded-full border-4 border-primary/30 p-1 shadow-glow flex-shrink-0">
                                 {user?.avatar
-                                    ? <img src={user.avatar} className="w-full h-full object-cover" alt="" />
-                                    : <img src={dicebear(user?.id || 'default', 56)} className="w-full h-full" alt="" />
+                                    ? <img src={user.avatar} className="w-full h-full object-cover rounded-full" alt="" />
+                                    : <img src={dicebear(user?.id || 'default', 80)} className="w-full h-full rounded-full" alt="" />
                                 }
                             </div>
                             <div>
-                                <h1 className="font-[var(--fp-font-display,_'Cinzel_Decorative',serif)]
-                                               text-2xl md:text-3xl text-white leading-tight mb-1">
-                                    Minha Área
+                                <h1 className="text-3xl md:text-4xl font-display font-black text-white mb-2 uppercase tracking-tight">
+                                    {uiMode === 'organizer' ? 'Portal do Organizador' : 'Perfil do Jogador'}
                                 </h1>
-                                <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="text-[rgba(148,163,184,1)] text-sm">
-                                        Bem-vindo(a) de volta, <span className="text-white font-medium">{user?.name}</span>!
+                                <div className="flex items-center gap-3">
+                                    <p className="text-muted text-sm capitalize">
+                                        Saudações, <span className="text-white font-bold">{user?.name}</span>
                                     </p>
                                     <button
                                         onClick={handleTogglePublic}
-                                        className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold
-                                                    uppercase tracking-wider border transition-all
+                                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all
                                                     ${user?.isPublic
-                                                        ? 'bg-accent-bg-glass text-accent-primary border-accent-glow/30'
-                                                        : 'bg-white/5 text-[rgba(100,116,139,1)] border-white/10'
+                                                        ? 'bg-primary/20 text-primary border-primary/30 shadow-glow-primary'
+                                                        : 'bg-white/5 text-muted border-white/10'
                                                     }`}
-                                        title={user?.isPublic ? 'Perfil visível para outros' : 'Perfil oculto'}
                                     >
                                         {user?.isPublic ? <Eye size={10} /> : <EyeOff size={10} />}
-                                        {user?.isPublic ? 'Perfil Público' : 'Perfil Privado'}
+                                        {user?.isPublic ? 'Público' : 'Privado'}
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        {/* CTA */}
-                        <button
-                            onClick={() => navigate('/tournament/create')}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white
-                                       bg-accent-primary
-                                       shadow-glow
-                                       hover:opacity-90 hover:-translate-y-0.5 transition-all">
-                            <Plus size={16} /> Novo Torneio
-                        </button>
+                        <div className="flex items-center gap-3 bg-white/10 p-1.5 rounded-2xl border border-white/10 shadow-inner relative z-0">
+                            <button 
+                                onClick={() => setUiMode('player')}
+                                className={`relative flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all duration-300 ${uiMode === 'player' ? 'text-white' : 'text-muted hover:text-white'}`}
+                            >
+                                {uiMode === 'player' && (
+                                    <div className="absolute inset-0 bg-primary rounded-xl shadow-[0_0_20px_rgba(192,57,43,0.4)] animate-fade-in z-[-1]" />
+                                )}
+                                <UserIcon size={14} className="relative z-10" /> <span className="relative z-10">Jogador</span>
+                            </button>
+                            <button 
+                                onClick={() => setUiMode('organizer')}
+                                className={`relative flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all duration-300 ${uiMode === 'organizer' ? 'text-white' : 'text-muted hover:text-white'}`}
+                            >
+                                {uiMode === 'organizer' && (
+                                    <div className="absolute inset-0 bg-primary rounded-xl shadow-[0_0_20px_rgba(192,57,43,0.4)] animate-fade-in z-[-1]" />
+                                )}
+                                <ShieldIcon size={14} className="relative z-10" /> <span className="relative z-10">Organizador</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 {/* ══════════════════════════════════════
-                    STAT CARDS
+                    QUICK ACTIONS & STATS
                 ══════════════════════════════════════ */}
-                <div className="grid grid-cols-3 gap-4 mb-10">
-                    {statCards.map((s, i) => (
-                        <div key={i}
-                             className="relative overflow-hidden rounded-2xl p-5
-                                        bg-[rgba(12,11,24,0.7)] border border-[rgba(255,255,255,0.07)]
-                                        backdrop-blur-[16px] transition-all hover:-translate-y-0.5
-                                        hover:border-[rgba(255,255,255,0.12)] group">
-                            {/* glow de canto */}
-                            <div className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"
-                                 style={{ background: `radial-gradient(circle at 100% 0%, ${s.color} 0%, transparent 70%)` }} />
+                <div className="flex flex-col lg:flex-row gap-8 mb-12">
+                    {/* Stats List */}
+                    <div className="flex flex-wrap gap-4 flex-grow">
+                        {statCards.map((s, i) => (
+                            <div key={i} className="fp-card flex-grow min-w-[140px] p-5 group transition-all hover:-translate-y-1">
+                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] mb-2 opacity-50 group-hover:opacity-100 transition-opacity" style={{ color: s.colorHi }}>
+                                    {s.icon} {s.label}
+                                </div>
+                                <div className="text-4xl font-display font-black" style={{ color: s.colorHi }}>
+                                    {s.value}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
 
-                            <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider mb-3"
-                                 style={{ color: s.colorHi, opacity: 0.75 }}>
-                                {s.icon} {s.label}
-                            </div>
-                            <div className="text-3xl font-bold" style={{ color: s.colorHi }}>
-                                {s.value}
-                            </div>
+                    {/* Primary CTA (Organizer Only) */}
+                    {uiMode === 'organizer' && (
+                        <div className="flex-shrink-0">
+                            <button
+                                onClick={() => navigate('/tournament/create')}
+                                className="w-full lg:w-auto h-full px-8 py-6 rounded-2xl font-black text-sm uppercase tracking-[0.2em] text-white
+                                           bg-gradient-to-br from-primary to-primary-hi
+                                           shadow-glow-primary hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 group">
+                                <Plus size={20} className="group-hover:rotate-90 transition-transform duration-500" /> 
+                                Criar Novo Torneio
+                            </button>
                         </div>
-                    ))}
+                    )}
                 </div>
 
                 {/* ══════════════════════════════════════
-                    GRID: ORGANIZANDO + PARTICIPANDO
+                    DASHBOARD SECTIONS
                 ══════════════════════════════════════ */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
 
-                    {/* ── Organizando ── */}
-                    <div>
-                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-white">
-                            <span className="w-7 h-7 rounded-lg flex items-center justify-center
-                                             bg-accent-bg-glass border border-accent-glow/25">
-                                <ShieldIcon size={14} className="text-accent-secondary" />
-                            </span>
-                            Organizando
-                        </h2>
+                    {/* LEFT COLUMN: PRIMARY LISTS */}
+                    <div className="space-y-12">
+                        {/* Section Header */}
+                        <div className="flex items-center gap-4 mb-2">
+                            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                                {uiMode === 'organizer' ? <ShieldIcon size={20} /> : <Trophy size={20} />}
+                            </div>
+                            <h2 className="text-2xl font-display font-black text-white uppercase tracking-tight">
+                                {uiMode === 'organizer' ? 'Meus Torneios' : 'Torneios que participo'}
+                            </h2>
+                        </div>
 
-                        <div className="flex flex-col gap-3">
-                            {myTournaments.length === 0 ? (
-                                /* Empty state */
-                                <div className="relative overflow-hidden rounded-2xl p-10 text-center
-                                                bg-[rgba(12,11,24,0.7)] border border-dashed border-accent-glow/20
-                                                hover:border-accent-glow/45 transition-all group">
-                                    <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"
-                                         style={{ background: 'radial-gradient(ellipse at 50% 0%, var(--accent-primary-transparent) 0%, transparent 60%)' }} />
-                                    <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center
-                                                    bg-accent-bg-glass border border-accent-glow/20
-                                                    group-hover:scale-110 transition-transform">
-                                        <Zap size={24} className="text-accent-secondary" />
-                                    </div>
-                                    <h3 className="text-base font-bold mb-2 text-white">Crie seu primeiro evento</h3>
-                                    <p className="text-[rgba(148,163,184,1)] text-sm mb-6 max-w-xs mx-auto leading-relaxed">
-                                        Comece agora a organizar seu torneio. Rápido, fácil e totalmente automatizado.
-                                    </p>
-                                    <button
-                                        onClick={() => navigate('/tournament/create')}
-                                        className="px-5 py-2 rounded-xl text-sm font-bold text-white
-                                                   bg-accent-primary
-                                                   shadow-glow
-                                                   hover:opacity-90 transition-opacity">
-                                        Começar Agora
-                                    </button>
+                        <div className="grid gap-4">
+                            {(uiMode === 'organizer' ? myTournaments : participatingTournaments).length === 0 ? (
+                                <div className="fp-card p-12 text-center border-dashed opacity-50">
+                                    <Zap size={48} className="mx-auto mb-4 text-muted" />
+                                    <h3 className="text-xl font-bold mb-2">Nada por aqui...</h3>
+                                    <p className="text-sm text-muted mb-8">Comece agora a organizar ou participar de torneios.</p>
+                                    <Button variant="ghost" onClick={() => navigate(uiMode === 'organizer' ? '/tournament/create' : '/discover')}>
+                                        {uiMode === 'organizer' ? 'Criar Torneio' : 'Encontrar Torneios'}
+                                    </Button>
                                 </div>
                             ) : (
-                                myTournaments.map(t => (
-                                    <Link key={t.id} to={`/tournament/${t.id}`}>
-                                        <div className="fp-card p-5 hover:border-accent-glow/50 group
-                                                        hover:shadow-glow transition-all">
-                                            <div className="flex justify-between items-start gap-3">
-                                                <div className="min-w-0">
-                                                    <h3 className="font-semibold text-white group-hover:text-accent-secondary
-                                                                   transition-colors truncate">
-                                                        {t.name}
-                                                    </h3>
-                                                    <p className="text-xs text-[rgba(100,116,139,1)] mt-1 flex items-center gap-1">
-                                                        <Calendar size={11} />
-                                                        {t.date} · {t.participants.length} jogadores
+                                (uiMode === 'organizer' ? myTournaments : participatingTournaments).map(t => (
+                                    <Link key={t.id} to={uiMode === 'organizer' ? `/tournament/${t.id}` : `/tournament/${t.id}/public`} className="group">
+                                        <div className="fp-card p-5 group-hover:border-primary/50 transition-all flex justify-between items-center group-hover:bg-white/[0.02]">
+                                            <div className="flex gap-4">
+                                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${statusCfg[t.status]?.cls || ''} bg-opacity-20`}>
+                                                    <Calendar size={20} />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-black text-white group-hover:text-primary transition-colors uppercase tracking-tight text-lg leading-none mb-2">{t.name}</h3>
+                                                    <p className="text-xs text-muted flex items-center gap-2">
+                                                        <span className="font-bold text-primary-hi">{t.format}</span>
+                                                        <span className="opacity-30">|</span>
+                                                        <span>{new Date(t.date).toLocaleDateString('pt-BR')}</span>
+                                                        <span className="opacity-30">|</span>
+                                                        <span className="flex items-center gap-1"><Users size={12} /> {t.participants?.length || 0}</span>
                                                     </p>
                                                 </div>
-                                                <div className="flex items-center gap-2 flex-shrink-0">
-                                                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full
-                                                                      ${statusCfg[t.status]?.cls ?? statusCfg.draft.cls}`}>
-                                                        {statusCfg[t.status]?.label ?? t.status}
-                                                    </span>
-                                                    <button
-                                                        onClick={e => handleDeleteTournament(e, t.id)}
-                                                        className="text-[rgba(100,116,139,1)] hover:text-accent-primary
-                                                                   p-1 opacity-0 group-hover:opacity-100 transition-all"
-                                                        title="Excluir">
-                                                        <Trash2 size={14} />
-                                                    </button>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${statusCfg[t.status]?.cls || ''}`}>
+                                                    {statusCfg[t.status]?.label || t.status}
                                                 </div>
+                                                <ArrowRight size={18} className="text-muted group-hover:text-primary transition-all group-hover:translate-x-1" />
                                             </div>
                                         </div>
                                     </Link>
@@ -262,110 +245,57 @@ const MyArea: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* ── Participando ── */}
-                    <div>
-                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-white">
-                            <span className="w-7 h-7 rounded-lg flex items-center justify-center
-                                             bg-accent-bg-glass border border-accent-glow/25">
-                                <Trophy size={14} className="text-accent-primary" />
-                            </span>
-                            Participando
-                        </h2>
+                    {/* RIGHT COLUMN: SECONDARY LISTS (LEAGUES) */}
+                    <div className="space-y-12">
+                        <div className="flex items-center gap-4 mb-2">
+                            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                                <LayoutGrid size={20} />
+                            </div>
+                            <h2 className="text-2xl font-display font-black text-white uppercase tracking-tight">
+                                {uiMode === 'organizer' ? 'Minhas Ligas' : 'Ligas que participo'}
+                            </h2>
+                        </div>
 
-                        <div className="flex flex-col gap-3">
-                            {participatingTournaments.length === 0 ? (
-                                /* Empty state */
-                                <div className="relative overflow-hidden rounded-2xl p-10 text-center
-                                                bg-[rgba(12,11,24,0.7)] border border-dashed border-accent-glow/20
-                                                hover:border-accent-glow/45 transition-all group">
-                                    <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"
-                                         style={{ background: 'radial-gradient(ellipse at 50% 0%, var(--accent-primary-transparent) 0%, transparent 60%)' }} />
-                                    <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center
-                                                    bg-accent-bg-glass border border-accent-glow/20
-                                                    group-hover:scale-110 transition-transform">
-                                        <Search size={24} className="text-accent-primary" />
-                                    </div>
-                                    <h3 className="text-base font-bold mb-2 text-white">Busque por batalhas</h3>
-                                    <p className="text-[rgba(148,163,184,1)] text-sm mb-6 max-w-xs mx-auto leading-relaxed">
-                                        Explore torneios abertos e inscreva-se para ganhar pontos e subir no ranking.
-                                    </p>
-                                    <button
-                                        onClick={() => navigate('/discover')}
-                                        className="px-5 py-2 rounded-xl text-sm font-bold
-                                                   bg-accent-bg-glass border border-accent-glow/30
-                                                   text-accent-primary hover:bg-accent-bg-glass/80 transition-colors">
-                                        Explorar Torneios
-                                    </button>
+                        <div className="grid gap-4">
+                            {myLeagues.length === 0 ? (
+                                <div className="fp-card p-12 text-center opacity-40 border-dashed">
+                                    <p className="text-sm text-muted">Você ainda não faz parte de nenhuma liga.</p>
+                                    <Button variant="ghost" size="sm" className="mt-4" onClick={() => navigate('/leagues')}>Explorar Ligas</Button>
                                 </div>
                             ) : (
-                                participatingTournaments.map(t => {
-                                    const myPart = t.participants.find(p => p.playerId === user?.id);
-                                    return (
-                                        <Link key={t.id} to={`/tournament/${t.id}/public`}>
-                                            <div className="fp-card p-5 hover:border-accent-glow/50 group
-                                                            hover:shadow-glow transition-all">
-                                                <div className="flex justify-between items-start gap-3">
-                                                    <div className="min-w-0">
-                                                        <h3 className="font-semibold text-white group-hover:text-accent-primary
-                                                                       transition-colors truncate">
-                                                            {t.name}
-                                                        </h3>
-                                                        <p className="text-xs text-[rgba(100,116,139,1)] mt-1">
-                                                            {t.format} · {t.location}
-                                                        </p>
-                                                    </div>
-                                                    <div className="flex items-center gap-3 flex-shrink-0">
-                                                        {/* ações */}
-                                                        <div className="flex gap-1">
-                                                            {t.status === 'registration' && (
-                                                                <button
-                                                                    onClick={e => handleLeaveTournament(e, t.id)}
-                                                                    className="text-[rgba(100,116,139,1)] hover:text-accent-primary
-                                                                               p-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all"
-                                                                    title="Sair do torneio">
-                                                                    <LogOut size={14} />
-                                                                </button>
-                                                            )}
-                                                            {t.status === 'ongoing' && myPart?.status === 'active' && (
-                                                                <button
-                                                                    onClick={e => handleDropTournament(e, t.id)}
-                                                                    className="text-[rgba(100,116,139,1)] hover:text-accent-secondary
-                                                                               p-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all"
-                                                                    title="Desistir">
-                                                                    <Flag size={14} />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                        {/* posição */}
-                                                        <div className="text-center">
-                                                            <p className="text-[10px] text-[rgba(100,116,139,1)] uppercase tracking-wider">
-                                                                Posição
-                                                            </p>
-                                                            <p className="text-lg font-bold text-white leading-tight">
-                                                                #{myPart?.rank ?? '—'}
-                                                            </p>
-                                                        </div>
-                                                    </div>
+                                myLeagues.map(l => (
+                                    <Link key={l.id} to={`/league/${l.id}`} className="group">
+                                        <div className="fp-card p-5 group-hover:border-primary/50 transition-all flex justify-between items-center bg-transparent border-white/5">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-muted group-hover:text-primary group-hover:bg-primary/10 transition-all">
+                                                    <Users size={18} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-white group-hover:text-primary transition-colors text-sm uppercase tracking-wider">{l.name}</h4>
+                                                    <p className="text-[10px] text-muted flex items-center gap-2">
+                                                        <span>{l.memberIds?.length || 0} MEMBROS</span>
+                                                        <span className="opacity-30">•</span>
+                                                        <span className="text-primary-hi font-bold">#{l.standings?.find(s => s.playerId === user?.id)?.rank || '—'} RANK</span>
+                                                    </p>
                                                 </div>
                                             </div>
-                                        </Link>
-                                    );
-                                })
+                                            <div className="flex items-center gap-3">
+                                                {l.organizerId === user?.id && <span className="text-[8px] font-black bg-white/10 text-muted px-2 py-0.5 rounded-full uppercase tracking-tighter">Organizador</span>}
+                                                <ArrowRight size={14} className="text-muted group-hover:text-primary transition-all" />
+                                            </div>
+                                        </div>
+                                    </Link>
+                                ))
                             )}
+                        </div>
+
+                        {/* Publicidade Section (Re-styled) */}
+                        <div className="mt-12 p-8 border border-white/5 bg-[radial-gradient(circle_at_50%_50%,rgba(192,57,43,0.05),transparent)] rounded-3xl text-center relative overflow-hidden group">
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted/30 group-hover:text-primary/50 transition-colors">Conteúdo Patrocinado</p>
                         </div>
                     </div>
                 </div>
-
-                {/* ── ESPAÇO PUBLICITÁRIO ── */}
-                <div className="mt-12 mx-auto max-w-2xl">
-                    <div className="rounded-2xl border border-dashed border-[rgba(255,255,255,0.07)]
-                                    bg-[rgba(255,255,255,0.02)] py-6 text-center">
-                        <p className="text-[10px] font-bold uppercase tracking-[3px] text-[rgba(100,116,139,0.5)]">
-                            Espaço Publicitário
-                        </p>
-                    </div>
-                </div>
-
             </div>
         </PageShell>
     );

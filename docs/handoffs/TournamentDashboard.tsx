@@ -797,15 +797,22 @@ const TournamentDashboard: React.FC = () => {
                         <QRCodeSVG value={inviteUrl} size={280} />
                     </div>
                     <h3 className="text-xl font-semibold mb-1">{activeTournament.name}</h3>
-                    <p className="text-[var(--fp-muted)] text-sm text-center mb-6">Aponte a câmera para que os jogadores entrem no torneio instantaneamente.</p>
-                    <div className="flex gap-4 w-full">
-                        <button className="fp-btn-ghost flex-1 py-2 rounded-xl text-sm font-semibold"
-                                onClick={handleCopyLink}>Copiar Link</button>
-                        <button className="fp-btn-primary flex-1 py-2 rounded-xl text-sm font-bold"
-                                onClick={() => setIsQRModalOpen(false)}>Fechar</button>
+                    <p className="text-[var(--fp-muted)] text-sm text-center mb-6">
+                        Aponte a câmera para inscrição instantânea.
+                    </p>
+                    <div className="flex gap-3 w-full">
+                        <button className="fp-btn-ghost flex-1 py-2 rounded-xl text-sm"
+                                onClick={handleCopyLink}>
+                            Copiar Link
+                        </button>
+                        <button className="fp-btn-primary flex-1 py-2 rounded-xl text-sm"
+                                onClick={() => setIsQRModalOpen(false)}>
+                            Fechar
+                        </button>
                     </div>
                 </div>
             </Modal>
+
         </PageShell>
     );
 };

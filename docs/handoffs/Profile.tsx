@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../features/auth/authStore';
 import { tournamentService } from '../features/tournaments/tournamentService';
 import PageShell from '../components/layout';
-import { Trophy, Star, Target, Calendar, LogOut, RefreshCw, Eye, EyeOff, ShieldCheck, Mail, ArrowRight } from 'lucide-react';
+import { Trophy, Star, Target, Calendar, User as UserIcon, LogOut, RefreshCw, Eye, EyeOff, ShieldCheck, Mail, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 /* ── helpers ── */

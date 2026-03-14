@@ -9,6 +9,22 @@ Este arquivo serve como um diário de bordo da evolução do projeto. Cada "Fase
   - Mapeamento de keywords para SVGs premium (Commander, Modern, etc).
   - Suporte a URLs externas (img src) para ícones de TCG.
   - Refatoração dos Presets de Torneio e `TournamentCreate.tsx`.
+- **Status**: Concluída.
+
+## 2026-03-14: Fase 30 - Estabilização & Overhaul v2.0
+- **Objetivo**: Implementação do Master Handoff e limpeza técnica baseada no relatório DevTeam.
+- **Implementações**:
+  - [x] Correção de tipagens e performance (`useMemo`, `any`).
+  - [x] Organização de arquivos de handoff (Limpeza de `src/pages/files/`).
+  - [x] Aplicação do novo Design System em todas as páginas pendentes.
+- **Status**: Concluída.
+
+## 2026-03-14: Fase 31 - MicroManaging
+- **Objetivo**: Micro-ajustes de UI/UX, polimento visual e consistência de interações.
+- **Implementações**:
+  - [ ] Criação do guia de diretrizes de UI/UX.
+  - [ ] Revisão de espaçamentos e hierarquia visual.
+  - [ ] Refinamento de micro-animações e feedbacks sonoros/visuais.
 
 ## 2026-03-10: Fase 29 - Player Experience (Public View v1.2.1)
 - **Objetivo**: Criação de uma página pública otimizada para os jogadores e overhaul visual premium.

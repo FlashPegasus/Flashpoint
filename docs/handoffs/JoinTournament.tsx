@@ -7,8 +7,8 @@ import PageShell from '../components/layout';
 import { Calendar, MapPin, Users, Trophy, LogIn, CheckCircle } from 'lucide-react';
 import { LoadingScreen } from '../components/ui';
 
-// const dicebear = (seed: string) =>
-//     `https://api.dicebear.com/7.x/rings/svg?seed=${encodeURIComponent(seed)}&size=64`;
+const dicebear = (seed: string) =>
+    `https://api.dicebear.com/7.x/rings/svg?seed=${encodeURIComponent(seed)}&size=64`;
 
 const JoinTournament: React.FC = () => {
     const { id } = useParams<{ id: string }>();

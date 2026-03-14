@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Trophy, Users, Calendar, Copy, Check, RefreshCw, Link } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import PageShell from '../components/layout';
-import { LoadingScreen, Modal, Input } from '../components/ui';
+import { Button, Card, LoadingScreen, Modal, Input } from '../components/ui';
 import { useLeagueStore } from '../features/leagues/leagueStore';
 import { useAuthStore } from '../features/auth/authStore';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
@@ -263,6 +263,7 @@ const LeagueDashboard: React.FC = () => {
                         ) : (
                             <div className="flex flex-col gap-2">
                                 {standings.map((s: any, i: number) => {
+                                    const isTop = i < 3;
                                     const borderCls = i === 0
                                         ? 'border-[rgba(212,172,13,0.4)] bg-[rgba(212,172,13,0.05)]'
                                         : i === 1 ? 'border-[rgba(160,160,160,0.25)]'

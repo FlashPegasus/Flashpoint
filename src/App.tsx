@@ -10,6 +10,7 @@ import TournamentCreate from './pages/TournamentCreate';
 import TournamentDashboard from './pages/TournamentDashboard';
 import MyArea from './pages/MyArea';
 import Discover from './pages/Discover';
+import RankingGlobal from './pages/RankingGlobal';
 import TournamentPublic from './pages/TournamentPublic';
 import Leagues from './pages/Leagues';
 import LeagueCreate from './pages/LeagueCreate';
@@ -44,12 +45,14 @@ const App: React.FC = () => {
 
         {/* Protected Routes */}
         <Route path="/my-area" element={<ProtectedRoute><MyArea /></ProtectedRoute>} />
+        <Route path="/organizer/dashboard" element={<ProtectedRoute><MyArea /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/tournament/create" element={<ProtectedRoute><TournamentCreate /></ProtectedRoute>} />
         <Route path="/tournament/:id" element={<ProtectedRoute><TournamentDashboard /></ProtectedRoute>} />
 
         {/* Public Routes */}
         <Route path="/discover" element={<Discover />} />
+        <Route path="/ranking" element={<RankingGlobal />} />
         <Route path="/leagues" element={<Leagues />} />
         <Route path="/league/create" element={<ProtectedRoute><LeagueCreate /></ProtectedRoute>} />
         <Route path="/league/:id" element={<ProtectedRoute><LeagueDashboard /></ProtectedRoute>} />

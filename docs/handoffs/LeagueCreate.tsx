@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, Trophy } from 'lucide-react';
 import PageShell from '../components/layout';
-// import { Button, Input } from '../components/ui'; // Unused in this file
+import { Button, Input } from '../components/ui';
 import { useAuthStore } from '../features/auth/authStore';
 import { useLeagueStore } from '../features/leagues/leagueStore';
 import { TCG_PRESETS, type ScoringPreset } from '../utils/tcgPresets';
