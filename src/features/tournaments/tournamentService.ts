@@ -261,22 +261,45 @@ export const tournamentService = {
         let tables: Table[] = [];
 
         // Filter only active participants for the new round
-        const activeParticipants = tournament.participants.filter(p => {
+        let activeParticipants = tournament.participants.filter(p => {
             if (p.status !== 'active') return false;
             // Enforce check-in for Round 1 if required
             if (tournament.requiresCheckIn && roundNumber === 1 && !p.checkedIn) return false;
             return true;
         });
 
-        if (tournament.format === '1v1') {
+        // Battle Royale Logic: Survivors + Winners advance
+        if (tournament.format === 'battle_royale' && roundNumber > 1) {
+            const lastRound = tournament.rounds[tournament.rounds.length - 1];
+            if (lastRound) {
+                activeParticipants = activeParticipants.filter(p => {
+                    const result = lastRound.tables.flatMap(t => t.results).find(r => r.playerId === p.playerId);
+                    return result && (result.status === 'WINNER' || result.status === 'SURVIVED' || result.status === 'BYE');
+                });
+            }
+        }
+
+        // Epic Final Logic: players <= epic_final_max_players
+        const useEpicFinal = tournament.epicFinalEnabled && activeParticipants.length <= (tournament.epicFinalMaxPlayers || 5) && roundNumber > 1;
+
+        if (useEpicFinal) {
+            tables = [{
+                id: uuidv4(),
+                playerIds: activeParticipants.map(p => p.playerId),
+                results: [],
+                status: 'pending'
+            }];
+        } else if (tournament.format === '1v1') {
             tables = generateSwissPairings(activeParticipants, tournament.rounds, {
                 pairingMode: tournament.pairingMode
             });
         } else {
             tables = generateMultiplayerTables(activeParticipants, {
-                minPerTable: tournament.minPlayersPerTable,
-                maxPerTable: tournament.maxPlayersPerTable,
-                exactSize: tournament.exactTableSize
+                minPerTable: tournament.minPlayersPerTable || 3,
+                maxPerTable: tournament.maxPlayersPerTable || 5,
+                exactSize: tournament.exactTableSize,
+                byeIfPlayersLessEqual: 2,
+                avoidRepeats: tournament.avoidRepeatedMatchups
             });
         }
 
@@ -286,8 +309,8 @@ export const tournamentService = {
                 table.status = 'completed';
                 table.results = table.playerIds.map(pid => ({
                     playerId: pid,
-                    position: 1,
-                    points: tournament.format === '1v1' ? 3 : (tournament.scoring.positions?.[tournament.maxPlayersPerTable || 4]?.[1] || 4)
+                    status: 'BYE',
+                    points: 5
                 }));
             }
         });
@@ -317,12 +340,22 @@ export const tournamentService = {
 
         if (tournament.rounds.length === 0) throw new Error('No rounds to regenerate');
 
-        const lastRound = tournament.rounds[tournament.rounds.length - 1];
-        if (lastRound.status === 'completed' || lastRound.tables.some(t => t.status === 'completed')) {
-            throw new Error('Cannot regenerate a round that already has results');
+        // Allow popping the last round to regenerate it
+        tournament.rounds.pop();
+        
+        // IMPORTANT: Recalculate standings after removing the round to clear any points gathered in the popped round
+        tournamentService.recalculateStandings(tournament);
+        
+        // Reset current round counter
+        tournament.currentRound = tournament.rounds.length;
+        if (tournament.rounds.length > 0) {
+            tournament.currentRoundData = tournament.rounds[tournament.rounds.length - 1];
+        } else {
+            tournament.status = 'registration';
+            tournament.currentRound = 0;
+            tournament.currentRoundData = undefined;
         }
 
-        tournament.rounds.pop();
         return await tournamentService.generateNextRound(tournamentId);
     },
 
@@ -338,31 +371,6 @@ export const tournamentService = {
         tournament.rounds.forEach(round => {
             round.tables.forEach(t => {
                 if (t.status === 'completed' && t.results.length > 0) {
-                    // Shared Points Logic
-                    const posCounts: Record<number, number> = {};
-                    t.results.forEach(r => {
-                        posCounts[r.position] = (posCounts[r.position] || 0) + 1;
-                    });
-
-                    const sharedPoints: Record<number, number> = {};
-                    const sortedUniquePositions = Object.keys(posCounts).map(Number).sort((a, b) => a - b);
-
-                    let currentPosIdx = 1;
-                    sortedUniquePositions.forEach(pos => {
-                        const count = posCounts[pos];
-                        let totalPosPoints = 0;
-                        for (let i = 0; i < count; i++) {
-                            const rank = currentPosIdx + i;
-                            // Fallback to simpler points if positional config is missing for this size
-                            const tableSize = t.playerIds.length;
-                            const points = tournament.scoring.positions?.[tableSize]?.[rank]
-                                || (rank === 1 ? 3 : rank === 2 ? 1 : 0);
-                            totalPosPoints += points;
-                        }
-                        sharedPoints[pos] = totalPosPoints / count;
-                        currentPosIdx += count;
-                    });
-
                     t.playerIds.forEach(pid => {
                         const participant = tournament.participants.find(p => p.playerId === pid);
                         if (participant) {
@@ -371,9 +379,11 @@ export const tournamentService = {
 
                             const res = t.results.find(r => r.playerId === pid);
                             if (res) {
-                                participant.totalPoints += tournament.format === 'multiplayer'
-                                    ? sharedPoints[res.position]
-                                    : res.points;
+                                // New Handoff Scoring
+                                if (res.status === 'WINNER') participant.totalPoints += 5;
+                                else if (res.status === 'SURVIVED') participant.totalPoints += 2;
+                                else if (res.status === 'BYE') participant.totalPoints += 5;
+                                // ELIMINATED and ALL_DEFEATED get 0
                             }
                         }
                     });
@@ -381,7 +391,8 @@ export const tournamentService = {
             });
         });
 
-        // Calculate tie-breakers
+        // Calculate tie-breakers (1. Total Points, 2. OMW%, 3. Opponent Points, 4. Wins)
+        // Simplified for now: 1. Points, 2. Buchholz (Opponent Points)
         tournament.participants.forEach(p => {
             let buchholz = 0;
             p.previousOpponents?.forEach(oppId => {
@@ -519,18 +530,6 @@ export const tournamentService = {
 
     getGlobalRank: async (userId: string): Promise<number> => {
         try {
-            // Ideally we'd fetch all users from Firestore 'users' collection
-            // and rank them by stats.accumulatedPoints.
-            // For now, let's look at the current user's points vs others if we have them cached
-            // but the correct way is a Firestore query.
-            // Since I don't have a list of all users in local storage usually, 
-            // I'll simulate a fetch or use the accumulatedPoints from the current user.
-
-            // For this implementation, let's assume we fetch top 100 users from Firestore
-            // and find where the current user fits.
-            // Simplified: return a plausible rank based on points for now or 
-            // search across known participants in all tournaments.
-
             const tournaments = await tournamentService.getTournaments();
             const playerPoints: Record<string, number> = {};
 
@@ -549,6 +548,62 @@ export const tournamentService = {
             console.warn('Error calculating global rank:', err);
             return 999;
         }
+    },
+
+    /**
+     * Data Cleanup: Purge stale drafts and anonymize guest data.
+     */
+    runDataCleanup: async (organizerId: string): Promise<{ draftsRemoved: number, guestsCleaned: number }> => {
+        const tournaments = await tournamentService.getTournaments();
+        const now = new Date();
+        const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+        
+        let draftsRemoved = 0;
+        let guestsCleaned = 0;
+
+        const updatedTournaments = [];
+
+        for (const t of tournaments) {
+            // 1. Remove old drafts (older than 7 days)
+            if (t.status === 'draft' && new Date(t.date) < sevenDaysAgo) {
+                try {
+                    await deleteDoc(doc(db, 'tournaments', t.id));
+                    draftsRemoved++;
+                    continue; // Skip adding to updatedTournaments
+                } catch (err) {
+                    console.warn(`Failed to delete old draft ${t.id}:`, err);
+                }
+            }
+
+            // 2. Anonymize Guest data in completed tournaments
+            if (t.status === 'completed') {
+                let changed = false;
+                t.participants.forEach(p => {
+                    if (p.isAnonymous && p.name !== 'Anônimo') {
+                        p.name = 'Anônimo';
+                        p.avatar = '';
+                        p.commanderName = undefined;
+                        p.decklistUrl = undefined;
+                        p.commanderImageUrl = undefined;
+                        changed = true;
+                        guestsCleaned++;
+                    }
+                });
+                
+                if (changed) {
+                    try {
+                        await updateDoc(doc(db, 'tournaments', t.id), { participants: t.participants });
+                    } catch (err) {
+                        console.warn(`Failed to anonymize guests in tournament ${t.id}:`, err);
+                    }
+                }
+            }
+
+            updatedTournaments.push(t);
+        }
+
+        await storage.set(STORAGE_KEY, updatedTournaments);
+        return { draftsRemoved, guestsCleaned };
     }
 };
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../features/auth/authStore';
 import { tournamentService } from '../features/tournaments/tournamentService';
 import PageShell from '../components/layout';
-import { Trophy, Star, Target, Calendar, LogOut, RefreshCw, Eye, EyeOff, ShieldCheck, Mail, ArrowRight } from 'lucide-react';
+import { Trophy, Star, Target, Calendar, LogOut, RefreshCw, Eye, EyeOff, ShieldCheck, Mail, ArrowRight, Crown, Medal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 /* ── helpers ── */
@@ -196,8 +196,13 @@ const Profile: React.FC = () => {
                                                     </p>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-sm font-bold text-white">
-                                                        {t.rank ? `#${t.rank}º lugar` : 'Sem rank'}
+                                                    <div className="flex items-center gap-1.5 justify-end">
+                                                        {t.rank === 1 && <Crown size={14} className="text-[var(--fp-gold)]" />}
+                                                        {t.rank === 2 && <Medal size={14} className="text-[#94a3b8]" />}
+                                                        {t.rank === 3 && <Medal size={14} className="text-[#cd7c3a]" />}
+                                                        <div className="text-sm font-bold text-white">
+                                                            {t.rank ? `#${t.rank}º lugar` : 'Sem rank'}
+                                                        </div>
                                                     </div>
                                                     <div className="text-xs text-[#7a5c5c]">{t.points} pts</div>
                                                 </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, Button } from '../../../components/ui';
 import { IconSubmitResults, IconPairingTable } from '../../../assets/icons';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Crown, Medal } from 'lucide-react';
 
 interface MatchCardProps {
     idx: number;
@@ -55,17 +55,25 @@ export const MatchCard: React.FC<MatchCardProps> = ({
                     const res = table.results?.find((r: any) => r.playerId === pid);
 
                     return (
-                        <div key={pid} className="flex justify-between items-center group/player">
+                        <div key={pid} className={`flex justify-between items-center group/player p-1 rounded-lg transition-all ${status === 'completed' && res?.position === 1 ? 'bg-[var(--fp-purple-lo)] border border-purple/10' : ''}`}>
                             <div className="flex items-center gap-3 truncate">
-                                <div className="w-1 h-4 rounded-full bg-white/10 group-hover/player:bg-purple transition-all" />
-                                <span className={`text-sm truncate font-bold tracking-tight ${status === 'completed' && res?.position === 1 ? 'text-primary' : 'text-secondary'}`}>
+                                <div className={`w-1 h-4 rounded-full transition-all ${status === 'completed' && res?.position === 1 ? 'bg-[var(--fp-gold)]' : 'bg-white/10 group-hover/player:bg-purple'}`} />
+                                <span className={`text-sm truncate font-bold tracking-tight ${status === 'completed' && res?.position === 1 ? 'text-[var(--fp-gold)]' : 'text-secondary'}`}>
                                     {player?.name || 'Desconhecido'}
                                 </span>
                             </div>
                             {status === 'completed' && res && (
                                 <div className="flex items-center gap-2">
-                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-black flex items-center gap-1.5 transition-colors ${res.position === 1 ? 'bg-gold/20 text-gold border border-gold/30' : 'bg-white/5 text-muted border border-white/10'}`}>
-                                        {res.position === 1 ? '🏆' : `${res.position}º`}
+                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-black flex items-center gap-1.5 transition-colors ${
+                                        res.position === 1 ? 'bg-[var(--fp-gold-lo)] text-[var(--fp-gold)] border border-[var(--fp-gold-lo)]' : 
+                                        res.position === 2 ? 'bg-white/5 text-[#94a3b8] border border-white/10' :
+                                        res.position === 3 ? 'bg-white/5 text-[#cd7c3a] border border-white/10' :
+                                        'bg-white/5 text-muted border border-white/10'
+                                    }`}>
+                                        {res.position === 1 && <Crown size={10} />}
+                                        {res.position === 2 && <Medal size={10} />}
+                                        {res.position === 3 && <Medal size={10} />}
+                                        {res.position > 3 && `${res.position}º`}
                                         <span className="opacity-70">{res.points} PTS</span>
                                     </span>
                                 </div>

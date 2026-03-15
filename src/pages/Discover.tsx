@@ -5,6 +5,7 @@ import PageShell from '../components/layout';
 import { LoadingScreen } from '../components/ui';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { useLeagueStore } from '../features/leagues/leagueStore';
+import { useAuthStore } from '../features/auth/authStore';
 import { toast } from 'react-hot-toast';
 
 /* ── helpers ── */
@@ -36,15 +37,18 @@ const statusCfg: Record<string, { label: string; cls: string; dot: string }> = {
 
 const Discover: React.FC = () => {
     const { tournaments, loadTournaments, isLoading: loadingTournaments } = useTournamentStore();
-    const { publicLeagues, loadPublicLeagues, isLoading: loadingLeagues } = useLeagueStore();
+    const { publicLeagues, myLeagues, loadPublicLeagues, loadMyLeagues, isLoading: loadingLeagues } = useLeagueStore();
+    const { user } = useAuthStore();
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = React.useState('');
     const [viewMode, setViewMode] = React.useState<'tournaments' | 'leagues'>('tournaments');
+    const [leagueFilter, setLeagueFilter] = React.useState<'all' | 'my' | 'featured'>('all');
 
     React.useEffect(() => { 
         loadTournaments(); 
         loadPublicLeagues();
-    }, [loadTournaments, loadPublicLeagues]);
+        if (user) loadMyLeagues(user.id);
+    }, [loadTournaments, loadPublicLeagues, loadMyLeagues, user]);
 
     const filteredTournaments = tournaments.filter(t => {
         const createdDate = new Date(t.date || Date.now());
@@ -54,9 +58,18 @@ const Discover: React.FC = () => {
                t.format.toLowerCase().includes(searchTerm.toLowerCase());
     });
 
-    const filteredLeagues = publicLeagues.filter(l => 
-        l.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredLeagues = publicLeagues.filter(l => {
+        const matchesSearch = l.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const isJoined = myLeagues.some(ml => ml.id === l.id);
+        
+        if (!matchesSearch) return false;
+        if (leagueFilter === 'my') return isJoined;
+        if (leagueFilter === 'featured') {
+             // In this version, featured are those with more than 5 members
+             return (l.memberIds?.length || 0) > 5;
+        }
+        return true;
+    });
 
     if ((loadingTournaments && tournaments.length === 0) || (loadingLeagues && publicLeagues.length === 0)) {
         return <LoadingScreen message="Buscando a arena..." />;
@@ -125,6 +138,24 @@ const Discover: React.FC = () => {
                         >
                             <Filter size={16} /> Filtros
                         </button>
+
+                        {viewMode === 'leagues' && (
+                            <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl border border-white/10">
+                                {[
+                                    { id: 'all', label: 'Todas' },
+                                    { id: 'my', label: 'Participando' },
+                                    { id: 'featured', label: 'Destaques' }
+                                ].map(f => (
+                                    <button
+                                        key={f.id}
+                                        onClick={() => setLeagueFilter(f.id as any)}
+                                        className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${leagueFilter === f.id ? 'bg-amber-500 text-white shadow-lg' : 'text-muted hover:text-white'}`}
+                                    >
+                                        {f.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -151,7 +182,6 @@ const Discover: React.FC = () => {
                                         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
                                         
                                         <div className="p-6 flex-grow flex flex-col">
-                                            {/* Top badges */}
                                             <div className="flex items-center justify-between mb-6">
                                                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${isMP ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-white/5 border-white/10 text-muted'}`}>
                                                     {isMP ? 'Multijogador' : '1 VS 1 Duel'}
@@ -203,50 +233,61 @@ const Discover: React.FC = () => {
                                 <p className="text-muted text-sm">Tente ajustar seus filtros ou buscar por outro termo.</p>
                             </div>
                         ) : (
-                            filteredLeagues.map((l, i) => (
-                                <div
-                                    key={l.id}
-                                    onClick={() => navigate(`/league/${l.id}`)}
-                                    className="fp-card group cursor-pointer relative overflow-hidden flex flex-col h-full"
-                                    style={{ animationDelay: `${i * 0.05}s` }}>
-                                    
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    
-                                    <div className="p-6 flex-grow flex flex-col">
-                                        <div className="flex items-center justify-between mb-6">
-                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border bg-amber-500/10 border-amber-500/30 text-amber-400">
-                                                Liga Regional
-                                            </span>
-                                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
-                                                Ativa
-                                            </div>
-                                        </div>
-
-                                        <h3 className="text-xl font-display font-black text-white mb-6 uppercase tracking-tight group-hover:text-amber-400 transition-colors line-clamp-2">
-                                            {l.name}
-                                        </h3>
-
-                                        <div className="space-y-3 mb-8">
-                                            <div className="flex items-center gap-3 text-sm text-muted">
-                                                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-amber-500/50 group-hover:text-amber-400 transition-colors">
-                                                    <UsersIcon size={14} />
+                            filteredLeagues.map((l, i) => {
+                                const isJoined = myLeagues.some(ml => ml.id === l.id);
+                                return (
+                                    <div
+                                        key={l.id}
+                                        onClick={() => navigate(`/league/${l.id}`)}
+                                        className={`fp-card group cursor-pointer relative overflow-hidden flex flex-col h-full transition-all duration-300 ${isJoined ? 'border-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.15)] ring-1 ring-amber-500/20' : ''}`}
+                                        style={{ animationDelay: `${i * 0.05}s` }}>
+                                        
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        
+                                        {isJoined && (
+                                            <div className="absolute top-3 right-3 z-10">
+                                                <div className="bg-amber-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter shadow-xl">
+                                                    Membro
                                                 </div>
-                                                <span className="font-medium">{l.memberIds?.length || 0} Membros ativos</span>
                                             </div>
-                                            <div className="flex items-center gap-3 text-sm text-muted">
-                                                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-amber-500/50 group-hover:text-amber-400 transition-colors">
-                                                    <Trophy size={14} />
+                                        )}
+                                        
+                                        <div className="p-6 flex-grow flex flex-col">
+                                            <div className="flex items-center justify-between mb-6">
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border bg-amber-500/10 border-amber-500/30 text-amber-400">
+                                                    Liga Regional
+                                                </span>
+                                                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
+                                                    Ativa
                                                 </div>
-                                                <span className="font-medium truncate">{l.tournamentIds?.length || 0} Torneios vinculados</span>
                                             </div>
-                                        </div>
 
-                                        <button className="w-full mt-auto py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] bg-white/5 border border-white/10 text-white group-hover:bg-amber-500 group-hover:border-amber-500 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all duration-300">
-                                            Ver Detalhes
-                                        </button>
+                                            <h3 className="text-xl font-display font-black text-white mb-6 uppercase tracking-tight group-hover:text-amber-400 transition-colors line-clamp-2">
+                                                {l.name}
+                                            </h3>
+
+                                            <div className="space-y-3 mb-8">
+                                                <div className="flex items-center gap-3 text-sm text-muted">
+                                                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-amber-500/50 group-hover:text-amber-400 transition-colors">
+                                                        <UsersIcon size={14} />
+                                                    </div>
+                                                    <span className="font-medium">{l.memberIds?.length || 0} Membros ativos</span>
+                                                </div>
+                                                <div className="flex items-center gap-3 text-sm text-muted">
+                                                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-amber-500/50 group-hover:text-amber-400 transition-colors">
+                                                        <Trophy size={14} />
+                                                    </div>
+                                                    <span className="font-medium truncate">{l.tournamentIds?.length || 0} Torneios vinculados</span>
+                                                </div>
+                                            </div>
+
+                                            <button className="w-full mt-auto py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] bg-white/5 border border-white/10 text-white group-hover:bg-amber-500 group-hover:border-amber-500 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all duration-300">
+                                                Ver Detalhes
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            ))
+                                );
+                            })
                         )
                     )}
                 </div>

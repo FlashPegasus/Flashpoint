@@ -55,9 +55,19 @@ export const leagueService = {
     },
 
     createLeague: async (data: Partial<League> & { organizerId: string; name: string }): Promise<League> => {
+        const nameLowercase = data.name.trim().toLowerCase();
+        
+        // 1. Check uniqueness
+        const nameQuery = query(collection(db, LEAGUES_COLLECTION), where('nameLowercase', '==', nameLowercase));
+        const nameSnap = await getDocs(nameQuery);
+        if (!nameSnap.empty) {
+            throw new Error('Já existe uma liga com este nome (ou similar). Escolha um nome exclusivo.');
+        }
+
         const league: League = {
             id: uuidv4(),
-            name: data.name,
+            name: data.name.trim(),
+            nameLowercase,
             description: data.description || '',
             organizerId: data.organizerId,
             startDate: data.startDate || new Date().toISOString(),
@@ -142,30 +152,51 @@ export const leagueService = {
     joinLeague: async (leagueId: string, userId: string, userName: string): Promise<void> => {
         const league = await leagueService.getLeagueById(leagueId);
         if (!league) throw new Error('Liga não encontrada.');
-        if (league.memberIds.includes(userId)) throw new Error('Você já é membro desta liga.');
-
-        // 1. Check if user was previously banned
+        
         const memberRef = doc(db, LEAGUES_COLLECTION, leagueId, 'members', userId);
         const memberSnap = await getDoc(memberRef);
-        if (memberSnap.exists() && memberSnap.data().status === 'banned') {
-            throw new Error('Você foi banido desta liga e não pode entrar novamente.');
+        
+        if (memberSnap.exists()) {
+            const status = memberSnap.data().status;
+            if (status === 'active') throw new Error('Você já é membro ativo desta liga.');
+            if (status === 'pending') throw new Error('Sua solicitação de entrada ainda está pendente.');
+            if (status === 'banned') throw new Error('Você foi banido desta liga.');
         }
 
-        // 2. Add to active members array
-        await updateDoc(doc(db, LEAGUES_COLLECTION, leagueId), {
-            memberIds: arrayUnion(userId)
-        });
-
-        // 3. Create/Update member document
+        // Create member document as 'pending'
         const member: LeagueMember = {
             playerId: userId,
             playerName: userName,
             joinedAt: new Date().toISOString(),
-            status: 'active'
+            status: 'pending'
         };
         await setDoc(memberRef, member);
 
-        await leagueService.addAuditLog(leagueId, 'JOIN_LEAGUE', `Jogador ${userName} entrou na liga`, userId);
+        await leagueService.addAuditLog(leagueId, 'JOIN_REQUEST', `Jogador ${userName} solicitou entrada na liga`, userId);
+        leagueService._notifyUpdate(leagueId);
+    },
+
+    approveMember: async (leagueId: string, playerId: string, adminId: string): Promise<void> => {
+        const memberRef = doc(db, LEAGUES_COLLECTION, leagueId, 'members', playerId);
+        const memberSnap = await getDoc(memberRef);
+        if (!memberSnap.exists()) throw new Error('Membro não encontrado.');
+
+        const playerName = memberSnap.data().playerName;
+
+        await updateDoc(memberRef, { status: 'active' });
+        await updateDoc(doc(db, LEAGUES_COLLECTION, leagueId), {
+            memberIds: arrayUnion(playerId)
+        });
+
+        await leagueService.addAuditLog(leagueId, 'APPROVE_MEMBER', `Aprovou a entrada de ${playerName}`, adminId);
+        leagueService._notifyUpdate(leagueId);
+    },
+
+    rejectMember: async (leagueId: string, playerId: string, adminId: string): Promise<void> => {
+        const memberRef = doc(db, LEAGUES_COLLECTION, leagueId, 'members', playerId);
+        await updateDoc(memberRef, { status: 'rejected' });
+        
+        await leagueService.addAuditLog(leagueId, 'REJECT_MEMBER', `Rejeitou a entrada do jogador ${playerId}`, adminId);
         leagueService._notifyUpdate(leagueId);
     },
 
@@ -249,19 +280,56 @@ export const leagueService = {
         return snap.docs.map(d => d.data() as LeagueSeason);
     },
 
-    linkTournament: async (leagueId: string, tournamentId: string, organizerId: string): Promise<void> => {
+    requestTournamentLink: async (leagueId: string, tournamentId: string, organizerId: string): Promise<void> => {
         const league = await leagueService.getLeagueById(leagueId);
         if (!league) throw new Error('Liga não encontrada.');
-        if (league.organizerId !== organizerId) throw new Error('Apenas o organizador pode vincular torneios.');
+        
+        // If the requester is also the league organizer, link it immediately
+        if (league.organizerId === organizerId) {
+            return await leagueService.linkTournament(leagueId, tournamentId, organizerId);
+        }
+
+        // Otherwise, creates a request in subcollection
+        const requestRef = doc(db, LEAGUES_COLLECTION, leagueId, 'tournament_requests', tournamentId);
+        await setDoc(requestRef, {
+            tournamentId,
+            requesterId: organizerId,
+            status: 'pending',
+            requestedAt: new Date().toISOString()
+        });
+
+        await leagueService.addAuditLog(leagueId, 'LINK_REQUEST', `Torneio ${tournamentId} aguardando aprovação`, organizerId);
+        leagueService._notifyUpdate(leagueId);
+    },
+
+    getPendingTournamentLinks: async (leagueId: string): Promise<any[]> => {
+        const requestsRef = collection(db, LEAGUES_COLLECTION, leagueId, 'tournament_requests');
+        const q = query(requestsRef, where('status', '==', 'pending'));
+        const snap = await getDocs(q);
+        return snap.docs.map(d => d.data());
+    },
+
+    approveTournamentLink: async (leagueId: string, tournamentId: string, adminId: string): Promise<void> => {
+        const requestRef = doc(db, LEAGUES_COLLECTION, leagueId, 'tournament_requests', tournamentId);
+        await updateDoc(requestRef, { status: 'approved' });
+        
+        await leagueService.linkTournament(leagueId, tournamentId, adminId);
+        await leagueService.addAuditLog(leagueId, 'APPROVE_LINK', `Torneio ${tournamentId} aprovado e vinculado`, adminId);
+    },
+
+    linkTournament: async (leagueId: string, tournamentId: string, adminId: string): Promise<void> => {
+        const league = await leagueService.getLeagueById(leagueId);
+        if (!league) throw new Error('Liga não encontrada.');
+        
+        // This is the direct link (used after approval or by league owner)
         if (league.tournamentIds.includes(tournamentId)) throw new Error('Torneio já vinculado.');
 
         await updateDoc(doc(db, LEAGUES_COLLECTION, leagueId), {
             tournamentIds: arrayUnion(tournamentId)
         });
 
-        // Also set leagueId on the tournament
         await updateDoc(doc(db, 'tournaments', tournamentId), { leagueId });
-        await leagueService.addAuditLog(leagueId, 'LINK_TOURNAMENT', `Vinculou o torneio: ${tournamentId}`, organizerId);
+        await leagueService.addAuditLog(leagueId, 'LINK_TOURNAMENT', `Vinculou o torneio: ${tournamentId}`, adminId);
         leagueService._notifyUpdate(leagueId);
     },
 
@@ -294,11 +362,19 @@ export const leagueService = {
         // Sort chronologically ascending to calculate streaks properly
         tournaments.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
+        // Fetch all active members first to filter standings efficiently
+        const membersRef = collection(db, LEAGUES_COLLECTION, leagueId, 'members');
+        const membersSnap = await getDocs(query(membersRef, where('status', '==', 'active')));
+        const activeMemberIds = new Set(membersSnap.docs.map(d => d.id));
+
         // Collect per-player scores
         const playerScores: Record<string, { pointsList: number[]; name: string; currentStreak: number }> = {};
 
         for (const tournament of tournaments) {
             tournament.participants.forEach(p => {
+                // Check if player is an active member using the cached set
+                if (!activeMemberIds.has(p.playerId)) return; // Skip players not approved
+
                 const rank = p.rank ?? 999;
                 let points = league.pointsParticipation ?? 1;
 
@@ -310,10 +386,9 @@ export const leagueService = {
                     playerScores[p.playerId] = { pointsList: [], name: p.name, currentStreak: 0 };
                 }
 
-                // Top 4 finishes count towards the streak (e.g. "Consistência de Top Cut")
+                // Top 4 finishes count towards the streak
                 if (rank <= 4) {
                     playerScores[p.playerId].currentStreak += 1;
-                    // Apply streak bonus if streak >= 2
                     if (playerScores[p.playerId].currentStreak >= 2 && league.streakBonus) {
                         points += league.streakBonus;
                     }

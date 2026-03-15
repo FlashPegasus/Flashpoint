@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { X, Zap, ArrowRight, ShieldCheck, Camera, StopCircle } from 'lucide-react';
 import { tournamentService } from '../../features/tournaments/tournamentService';
 import toast from 'react-hot-toast';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 
 interface CheckInModalProps {
     isOpen: boolean;
@@ -14,8 +14,16 @@ const CheckInModal: React.FC<CheckInModalProps> = ({ isOpen, onClose }) => {
     const [code, setCode] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
-    const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+    const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        return () => {
+            if (html5QrCodeRef.current?.isScanning) {
+                stopScanner();
+            }
+        };
+    }, []);
 
     useEffect(() => {
         if (!isOpen && isScanning) {
@@ -23,47 +31,89 @@ const CheckInModal: React.FC<CheckInModalProps> = ({ isOpen, onClose }) => {
         }
     }, [isOpen]);
 
-    const startScanner = () => {
+    const extractIdFromText = (text: string): string => {
+        // Try to parse as URL
+        try {
+            if (text.startsWith('http')) {
+                const url = new URL(text);
+                const pathParts = url.pathname.split('/');
+                
+                // Handle /tournament/:id/public or /join/:id
+                if (url.pathname.includes('/tournament/')) {
+                    const idx = pathParts.indexOf('tournament');
+                    return pathParts[idx + 1] || text;
+                }
+                if (url.pathname.includes('/join/')) {
+                    const idx = pathParts.indexOf('join');
+                    return pathParts[idx + 1] || text;
+                }
+            }
+        } catch (e) {
+            // Not a valid URL, treat as raw code
+        }
+        return text;
+    };
+
+    const startScanner = async () => {
         setIsScanning(true);
-        // Delay initialization to ensure the container is mounted
-        setTimeout(() => {
-            const scanner = new Html5QrcodeScanner(
-                "qr-reader",
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                /* verbose= */ false
-            );
-            
-            scanner.render((decodedText) => {
-                setCode(decodedText.toUpperCase());
-                stopScanner();
-                toast.success("Código escaneado!");
-            }, () => {
-                // Ignore frame errors
-            });
-            
-            scannerRef.current = scanner;
+        // Delay to ensure container is mounted
+        setTimeout(async () => {
+            try {
+                const html5QrCode = new Html5Qrcode("qr-reader");
+                html5QrCodeRef.current = html5QrCode;
+
+                const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+                await html5QrCode.start(
+                    { facingMode: "environment" }, 
+                    config,
+                    (decodedText) => {
+                        const extracted = extractIdFromText(decodedText);
+                        setCode(extracted.toUpperCase());
+                        stopScanner();
+                        toast.success("Código detectado!");
+                        
+                        // Auto-submit if it looks like a valid ID from a URL
+                        if (decodedText !== extracted) {
+                            handleCheckInInternal(extracted.toUpperCase());
+                        }
+                    },
+                    () => {
+                        // Suppress frame errors
+                    }
+                );
+            } catch (err) {
+                console.error("Erro ao iniciar câmera:", err);
+                toast.error("Não foi possível acessar a câmera.");
+                setIsScanning(false);
+            }
         }, 300);
     };
 
-    const stopScanner = () => {
-        if (scannerRef.current) {
-            scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
-            scannerRef.current = null;
+    const stopScanner = async () => {
+        if (html5QrCodeRef.current) {
+            try {
+                if (html5QrCodeRef.current.isScanning) {
+                    await html5QrCodeRef.current.stop();
+                }
+                html5QrCodeRef.current.clear();
+            } catch (err) {
+                console.error("Erro ao parar scanner:", err);
+            }
+            html5QrCodeRef.current = null;
         }
         setIsScanning(false);
     };
 
-    const handleCheckIn = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
-        if (code.length < 4) {
+    const handleCheckInInternal = async (targetCode: string) => {
+        if (targetCode.length < 4) {
             toast.error('Código muito curto.');
             return;
         }
 
         setIsLoading(true);
         try {
-            // Check if tournament exists
-            const tournament = await tournamentService.getTournament(code);
+            const tournament = await tournamentService.getTournament(targetCode);
             if (tournament) {
                 toast.success('Torneio encontrado!');
                 navigate(`/tournament/${tournament.id}/public`);
@@ -76,6 +126,11 @@ const CheckInModal: React.FC<CheckInModalProps> = ({ isOpen, onClose }) => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleCheckIn = (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        handleCheckInInternal(code);
     };
 
     if (!isOpen) return null;
@@ -142,7 +197,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({ isOpen, onClose }) => {
                     </form>
                 ) : (
                     <div className="space-y-6 animate-fade-in">
-                        <div id="qr-reader" className="w-full overflow-hidden rounded-2xl border border-primary/30 bg-black/40"></div>
+                        <div id="qr-reader" className="w-full overflow-hidden rounded-2xl border border-primary/30 bg-black/40 min-h-[250px]"></div>
                         <button 
                             type="button"
                             onClick={stopScanner}

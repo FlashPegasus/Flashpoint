@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Trophy, Plus, Users, Calendar, ArrowRight, Shield as ShieldIcon, Zap, Eye, EyeOff, LayoutGrid, User as UserIcon } from 'lucide-react';
+import { Trophy, Plus, Users, Calendar, ArrowRight, Shield as ShieldIcon, Zap, Eye, EyeOff, LayoutGrid } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageShell from '../components/layout';
 import { Button } from '../components/ui';
@@ -21,7 +21,7 @@ const dicebear = (seed: string, size = 36) =>
     `https://api.dicebear.com/7.x/rings/svg?seed=${encodeURIComponent(seed)}&size=${size}`;
 
 const MyArea: React.FC = () => {
-    const { user, updateProfile, uiMode, setUiMode } = useAuthStore();
+    const { user, updateProfile, uiMode } = useAuthStore();
     const { tournaments, loadTournaments } = useTournamentStore();
     const { myLeagues, loadMyLeagues } = useLeagueStore();
     const [stats, setStats] = React.useState<any>(null);
@@ -130,26 +130,7 @@ const MyArea: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3 bg-white/10 p-1.5 rounded-2xl border border-white/10 shadow-inner relative z-0">
-                            <button 
-                                onClick={() => setUiMode('player')}
-                                className={`relative flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all duration-300 ${uiMode === 'player' ? 'text-white' : 'text-muted hover:text-white'}`}
-                            >
-                                {uiMode === 'player' && (
-                                    <div className="absolute inset-0 bg-primary rounded-xl shadow-[0_0_20px_rgba(192,57,43,0.4)] animate-fade-in z-[-1]" />
-                                )}
-                                <UserIcon size={14} className="relative z-10" /> <span className="relative z-10">Jogador</span>
-                            </button>
-                            <button 
-                                onClick={() => setUiMode('organizer')}
-                                className={`relative flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all duration-300 ${uiMode === 'organizer' ? 'text-white' : 'text-muted hover:text-white'}`}
-                            >
-                                {uiMode === 'organizer' && (
-                                    <div className="absolute inset-0 bg-primary rounded-xl shadow-[0_0_20px_rgba(192,57,43,0.4)] animate-fade-in z-[-1]" />
-                                )}
-                                <ShieldIcon size={14} className="relative z-10" /> <span className="relative z-10">Organizador</span>
-                            </button>
-                        </div>
+
                     </div>
                 </div>
 

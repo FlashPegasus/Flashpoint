@@ -1,13 +1,14 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Calendar, Users, MapPin, Trophy, Info, Search, Sword } from 'lucide-react';
+import { Calendar, Users, MapPin, Trophy, Info, Search, Sword, Crown, Medal } from 'lucide-react';
 import PageShell from '../components/layout';
-import { Button, Card, Breadcrumbs, LoadingScreen, Modal, Input } from '../components/ui';
+import { Button, Card, LoadingScreen, Modal, Input } from '../components/ui';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { useAuthStore } from '../features/auth/authStore';
 import { MatchCard } from '../features/tournaments/components/MatchCard';
-import { IconPairingTable, IconLeagueLeader, IconShareInvite } from '../assets/icons';
+import { IconPairingTable, IconShareInvite } from '../assets/icons';
 import { getInviteLink, copyToClipboard } from '../utils/inviteHelper';
+import { syncService } from '../features/tournaments/syncService';
 import toast from 'react-hot-toast';
 
 /**
@@ -29,7 +30,14 @@ const TournamentPublic: React.FC = () => {
     });
 
     useEffect(() => {
-        if (id) loadTournament(id);
+        if (id) {
+            loadTournament(id);
+            // Subscribe for real-time updates
+            const unsubscribe = syncService.subscribe(id, () => {
+                loadTournament(id);
+            });
+            return () => unsubscribe();
+        }
     }, [id, loadTournament]);
 
     const filteredTables = useMemo(() => {
@@ -76,12 +84,7 @@ const TournamentPublic: React.FC = () => {
     return (
         <PageShell showBackground>
             <div className="container py-8 animate-fade-in">
-                <Breadcrumbs
-                    items={[
-                        { label: 'Descobrir', path: '/discover' },
-                        { label: activeTournament.name }
-                    ]}
-                />
+
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Header & Content Area */}
@@ -91,12 +94,12 @@ const TournamentPublic: React.FC = () => {
                             <div className="absolute inset-0 bg-bg-dark/40 backdrop-blur-[2px]"></div>
                             <div className="relative z-10 flex flex-col gap-6">
                                 <div className="flex items-center gap-3">
-                                    <div className="px-3 py-1 glass rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-purple">
+                                    <div className="px-3 py-1 bg-[var(--fp-purple-lo)] border border-[rgba(139,92,246,0.3)] rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-[var(--fp-purple-hi)]">
                                         {activeTournament.format === 'multiplayer' ? 'MULTIJOGADOR' : activeTournament.format === '1v1' ? '1 VS 1' : 'TORNEIO TCG'}
                                     </div>
                                     {activeTournament.status === 'ongoing' && (
-                                        <div className="px-3 py-1 bg-green/20 border border-green/30 rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-green animate-pulse flex items-center gap-1.5">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-green" /> AO VIVO
+                                        <div className="px-3 py-1 bg-[var(--fp-emerald-lo)] border border-[rgba(16,185,129,0.3)] rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-[var(--fp-emerald-hi)] animate-pulse flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--fp-emerald)]" /> AO VIVO
                                         </div>
                                     )}
                                 </div>
@@ -105,13 +108,13 @@ const TournamentPublic: React.FC = () => {
                                 </h1>
                                 <div className="flex gap-6 flex-wrap text-secondary text-sm font-bold">
                                     <div className="flex items-center gap-2.5 bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
-                                        <Calendar size={18} className="text-purple" /> {new Date(activeTournament.date).toLocaleDateString()}
+                                        <Calendar size={18} className="text-[var(--fp-purple)]" /> {new Date(activeTournament.date).toLocaleDateString()}
                                     </div>
                                     <div className="flex items-center gap-2.5 bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
-                                        <MapPin size={18} className="text-purple" /> {activeTournament.location || 'Online'}
+                                        <MapPin size={18} className="text-[var(--fp-purple)]" /> {activeTournament.location || 'Online'}
                                     </div>
                                     <div className="flex items-center gap-2.5 bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
-                                        <Users size={18} className="text-purple" /> {activeTournament.participants.length} / {activeTournament.maxParticipants || '∞'} Jogadores
+                                        <Users size={18} className="text-[var(--fp-purple)]" /> {activeTournament.participants.length} / {activeTournament.maxParticipants || '∞'} Jogadores
                                     </div>
                                 </div>
                             </div>
@@ -227,8 +230,16 @@ const TournamentPublic: React.FC = () => {
                                                         className={`flex justify-between items-center p-4 rounded-2xl transition-all ${i === 0 ? 'bg-purple/10 border border-purple/20' : 'glass border-white/5'}`}
                                                     >
                                                         <div className="flex items-center gap-4">
-                                                            <div className="w-8 h-8 rounded-lg bg-black/20 flex items-center justify-center font-bold text-sm">
-                                                                {i === 0 ? <IconLeagueLeader size={18} className="text-gold" style={{ color: 'var(--color-gold)' }} /> : i + 1}
+                                                            <div className={`w-8 h-8 rounded-lg bg-black/20 flex items-center justify-center font-bold text-sm ${
+                                                                i === 0 ? 'text-[var(--fp-gold)]' : 
+                                                                i === 1 ? 'text-[#94a3b8]' : 
+                                                                i === 2 ? 'text-[#cd7c3a]' : 
+                                                                'text-white'
+                                                            }`}>
+                                                                {i === 0 && <Crown size={16} />}
+                                                                {i === 1 && <Medal size={16} />}
+                                                                {i === 2 && <Medal size={16} />}
+                                                                {i > 2 && i + 1}
                                                             </div>
                                                             <div>
                                                                 <span className={`font-bold ${i === 0 ? 'text-purple' : 'text-primary'}`} style={i === 0 ? { color: 'var(--color-purple)' } : {}}>{p.name}</span>
@@ -254,14 +265,16 @@ const TournamentPublic: React.FC = () => {
                     {/* Sidebar Actions */}
                     <div className="flex flex-col gap-6">
                         {/* Sidebar Actions - Phase 29 Visual Overhaul */}
-                        <Card className="sticky top-24 border border-white/10 bg-bg-card/40 backdrop-blur-xl shadow-2xl p-8 rounded-[2rem] hover-glow-purple transition-all duration-500">
+                        <Card className="sticky top-24 border border-white/5 bg-black/60 backdrop-blur-3xl shadow-2xl shadow-purple/20 p-8 rounded-[2.5rem] transition-all duration-500 overflow-hidden">
+                            {/* Inner glow */}
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple/30 to-transparent" />
                             <div className="text-center mb-8">
                                 <p className="text-[10px] font-black text-muted uppercase tracking-[0.25em] mb-4">Status do Evento</p>
                                 <div className="text-2xl font-black uppercase tracking-tight text-purple flex items-center justify-center gap-3 font-outfit">
                                     {activeTournament.status === 'ongoing' ? (
                                         <>
-                                            <span className="w-2.5 h-2.5 rounded-full bg-green animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
-                                            <span className="text-mana-purple">Ao Vivo</span>
+                                            <span className="w-2.5 h-2.5 rounded-full bg-green animate-pulse shadow-[0_0_12px_rgba(34,197,94,0.6)]" />
+                                            <span className="text-[var(--fp-emerald-hi)]">Ao Vivo</span>
                                         </>
                                     ) : (
                                         <span className="text-secondary opacity-60">
@@ -289,17 +302,16 @@ const TournamentPublic: React.FC = () => {
                                     </div>
 
                                     <div className="flex flex-col gap-2">
-                                        {user?.id === activeTournament.organizerId ? (
+                                        {user?.id === activeTournament.organizerId && (
                                             <Button variant="glow" onClick={() => navigate(`/tournament/${id}`)}>Acessar Painel</Button>
-                                        ) : (
-                                            <Button variant="secondary" onClick={() => navigate('/my-area')}>Minha Área</Button>
                                         )}
+                                        <Button variant="secondary" onClick={() => navigate('/my-area')}>Minha Área</Button>
                                     </div>
                                 </div>
                             ) : (
                                 <Button
                                     variant="glow"
-                                    className="w-full text-lg py-5 shadow-2xl shadow-purple/40"
+                                    className="w-full text-base py-4 shadow-2xl shadow-purple/40 font-black uppercase tracking-widest mt-4"
                                     onClick={() => activeTournament.format === 'multiplayer' ? setIsJoining(true) : handleJoin()}
                                     disabled={activeTournament.status !== 'registration'}
                                 >

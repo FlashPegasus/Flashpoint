@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Play, CheckCircle2, Trophy, Plus, UserMinus, ChevronRight, Copy, Check, Clock, RefreshCw, Globe, Settings, Users, Swords, BarChart3 } from 'lucide-react';
+import type { ResultStatus } from '../types';
+import { Play, CheckCircle2, Trophy, Plus, UserMinus, ChevronRight, Copy, Check, Clock, RefreshCw, Globe, Settings, Users, Swords, BarChart3, Crown, Medal, Search, UserPlus } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import PageShell from '../components/layout';
 import { Button, Input, Modal, LoadingScreen } from '../components/ui';
@@ -103,14 +104,19 @@ const TournamentDashboard: React.FC = () => {
     const [linkCopied, setLinkCopied] = useState(false);
     const [isQRModalOpen, setIsQRModalOpen] = useState(false);
     const [selectedTable, setSelectedTable] = useState<{ round: number; table: any } | null>(null);
-    const [tempResults, setTempResults] = useState<Record<string, number>>({});
+    const [participantSearch, setParticipantSearch] = useState('');
+    const [tempResults, setTempResults] = useState<Record<string, string>>({});
 
     /* ── load + sync ── */
     useEffect(() => {
-        if (!id) return;
-        loadTournament(id);
-        const unsubscribe = syncService.subscribe(id, () => loadTournament(id));
-        return () => unsubscribe();
+        if (id) {
+            loadTournament(id);
+            // Sync subscribe
+            const unsubscribe = syncService.subscribe(id, () => {
+                loadTournament(id);
+            });
+            return () => unsubscribe();
+        }
     }, [id, loadTournament]);
 
     /* ── timer ── */
@@ -160,9 +166,9 @@ const TournamentDashboard: React.FC = () => {
 
     const handleOpenResultModal = (roundNum: number, table: any) => {
         setSelectedTable({ round: roundNum, table });
-        const init: Record<string, number> = {};
-        table.playerIds.forEach((pid: string) => { init[pid] = 1; });
-        setTempResults(init);
+        const init: Record<string, string> = {};
+        table.playerIds.forEach((pid: string) => { init[pid] = 'ELIMINATED'; });
+        setTempResults(init as any);
     };
 
     const handleSubmitTableResults = () => {
@@ -170,12 +176,16 @@ const TournamentDashboard: React.FC = () => {
         const msg = activeTournament.format === 'multiplayer'
             ? 'Confirmar os resultados desta mesa?' : 'Confirmar vencedor desta partida?';
         if (!window.confirm(msg)) return;
+        
         const results = selectedTable.table.playerIds.map((pid: string) => {
-            const pos = tempResults[pid] || 1;
-            let pts = (selectedTable.table.playerIds.length + 1) - pos;
-            if (activeTournament.format === '1v1') pts = pos === 1 ? 3 : 0;
-            return { playerId: pid, position: pos, points: pts };
+            const statusValue = tempResults[pid] as unknown as ResultStatus;
+            let pts = 0;
+            if (statusValue === 'WINNER' || statusValue === 'BYE') pts = 5;
+            else if (statusValue === 'SURVIVED') pts = 2;
+            
+            return { playerId: pid, status: statusValue, points: pts };
         });
+
         submitResult(id, selectedTable.round, selectedTable.table.id, results)
             .then(() => toast.success('Resultados salvos!'))
             .catch(() => toast.error('Erro ao salvar resultados.'));
@@ -200,10 +210,12 @@ const TournamentDashboard: React.FC = () => {
             <div className="container py-8 pb-28">
 
                 {/* ── BREADCRUMBS ── */}
-                <Breadcrumbs items={[
-                    { label: 'Minha Área', path: '/my-area' },
-                    { label: activeTournament.name }
-                ]} />
+                <div className="flex items-center gap-2 mb-6">
+                    <Breadcrumbs items={[
+                        { label: 'Minha Área', path: '/my-area' },
+                        { label: activeTournament.name }
+                    ]} />
+                </div>
 
                 {/* ══════════════════════════════════════════
                     HEADER
@@ -340,6 +352,16 @@ const TournamentDashboard: React.FC = () => {
                                             {activeTournament.participants.length}
                                         </span>
                                     </h3>
+                                    <div className="relative w-full max-w-[200px]">
+                                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--fp-muted)]" />
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar..."
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs text-[var(--fp-text)] focus:outline-none focus:border-[var(--fp-purple)] transition-colors"
+                                            value={participantSearch}
+                                            onChange={(e) => setParticipantSearch(e.target.value)}
+                                        />
+                                    </div>
                                 </div>
 
                                 {activeTournament.participants.length === 0 ? (
@@ -349,7 +371,9 @@ const TournamentDashboard: React.FC = () => {
                                     </div>
                                 ) : (
                                     <div className="flex flex-col gap-1.5">
-                                        {activeTournament.participants.map((p, _i) => (
+                                        {activeTournament.participants
+                                            .filter(p => p.name.toLowerCase().includes(participantSearch.toLowerCase()) || p.commanderName?.toLowerCase().includes(participantSearch.toLowerCase()))
+                                            .map((p, _i) => (
                                             <div key={p.playerId}
                                                  className="flex justify-between items-center p-3 rounded-xl
                                                             bg-white/[0.03] border border-white/[0.05]
@@ -429,6 +453,26 @@ const TournamentDashboard: React.FC = () => {
                                                 onClick={handleAddPlayer}>
                                             <Plus size={16} /> Adicionar
                                         </button>
+                                        
+                                        {!activeTournament.participants.some(p => p.playerId === user?.id) && (
+                                            <button 
+                                                className="w-full py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold bg-white/5 border border-white/10 text-[var(--fp-purple-hi)] hover:bg-white/10 transition-all mt-1"
+                                                onClick={async () => {
+                                                    if (!user || !id) return;
+                                                    try {
+                                                        await addParticipant(id, {
+                                                            playerId: user.id,
+                                                            name: user.name
+                                                        });
+                                                        toast.success('Você entrou no seu torneio!');
+                                                    } catch (err: any) {
+                                                        toast.error(err.message || 'Erro ao entrar.');
+                                                    }
+                                                }}
+                                            >
+                                                <UserPlus size={16} /> Participar do meu Torneio
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -579,9 +623,9 @@ const TournamentDashboard: React.FC = () => {
                                                 <div className="font-semibold text-[var(--fp-text)]">{p.name}</div>
                                                 <div className="text-[var(--fp-muted)] text-xs mt-0.5">{p.totalPoints} pts · BH {p.buchholz}</div>
                                             </div>
-                                            <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-white/5"
+                                            <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-white/5 flex items-center gap-1.5"
                                                   style={{ color: c.border.replace('0.', '0.8').replace('rgba', 'rgba') }}>
-                                                {pos === 1 ? '🏆' : pos === 2 ? '🥈' : '🥉'} {c.label}
+                                                {pos === 1 ? <Crown size={12} /> : <Medal size={12} />} {c.label}
                                             </span>
                                         </div>
                                     );
@@ -611,9 +655,15 @@ const TournamentDashboard: React.FC = () => {
                                         {activeTournament.participants.map((p, idx) => (
                                             <tr key={p.playerId}
                                                 className="border-b border-[var(--fp-border-lo)] hover:bg-white/[0.03] transition-colors">
-                                                <td className="py-3 px-5 text-sm font-bold text-[var(--fp-muted)]">
-                                                    {idx === 0 && <Trophy size={13} className="inline mr-1 text-[var(--fp-gold)]" />}
-                                                    #{idx + 1}
+                                                <td className="py-3 px-5 text-sm font-bold">
+                                                    <div className="flex items-center gap-1.5">
+                                                        {idx === 0 && <Crown size={13} className="text-[var(--fp-gold)]" />}
+                                                        {idx === 1 && <Medal size={13} className="text-[#94a3b8]" />}
+                                                        {idx === 2 && <Medal size={13} className="text-[#cd7c3a]" />}
+                                                        <span className={idx < 3 ? 'text-[var(--fp-text-hi)]' : 'text-[var(--fp-muted)]'}>
+                                                            #{idx + 1}
+                                                        </span>
+                                                    </div>
                                                 </td>
                                                 <td className="py-3 px-3">
                                                     <div className="flex items-center gap-2">
@@ -759,23 +809,12 @@ const TournamentDashboard: React.FC = () => {
                                         className="bg-[var(--fp-void)] border border-[var(--fp-border-hi)] rounded-lg px-3 py-2
                                                    outline-none focus:border-[var(--fp-purple)] transition-colors
                                                    text-[var(--fp-gold-hi)] font-bold text-sm"
-                                        value={tempResults[pid] || 1}
-                                        onChange={e => setTempResults(prev => ({ ...prev, [pid]: parseInt(e.target.value) }))}>
-                                        {activeTournament.format === 'multiplayer' ? (
-                                            <>
-                                                <option value="1">🏆 1º Lugar (Vitória)</option>
-                                                <option value="1">🤝 Empate (1º)</option>
-                                                {selectedTable.table.playerIds.length >= 2 && <option value="2">2º Lugar</option>}
-                                                {selectedTable.table.playerIds.length >= 3 && <option value="3">3º Lugar</option>}
-                                                {selectedTable.table.playerIds.length >= 4 && <option value="4">4º Lugar</option>}
-                                            </>
-                                        ) : (
-                                            <>
-                                                <option value="1">Vencedor(a)</option>
-                                                <option value="2">Perdedor(a)</option>
-                                                <option value="0">Empate</option>
-                                            </>
-                                        )}
+                                        value={tempResults[pid] || 'ELIMINATED'}
+                                        onChange={e => setTempResults(prev => ({ ...prev, [pid]: e.target.value }))}>
+                                        <option value="WINNER">🏆 Vencedor(a)</option>
+                                        <option value="SURVIVED">🛡️ Sobrevivente</option>
+                                        <option value="ELIMINATED">💀 Eliminado(a)</option>
+                                        <option value="ALL_DEFEATED">💥 Todos Derrotados</option>
                                     </select>
                                 </div>
                             );

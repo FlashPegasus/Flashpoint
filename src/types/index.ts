@@ -20,8 +20,10 @@ export interface User {
     };
 }
 
-export type TournamentFormat = '1v1' | 'multiplayer';
+export type TournamentFormat = '1v1' | 'multiplayer' | 'battle_royale';
 export type TournamentStatus = 'draft' | 'registration' | 'ongoing' | 'completed' | 'cancelled';
+
+export type ResultStatus = 'WINNER' | 'SURVIVED' | 'ELIMINATED' | 'ALL_DEFEATED' | 'BYE' | 'PENDING';
 
 export interface ScoringPosition {
     position: number;
@@ -58,8 +60,9 @@ export interface Participant {
 
 export interface TableResult {
     playerId: string;
-    position: number;
+    status: ResultStatus;
     points: number;
+    position?: number; // Keep for backward compatibility if needed, but primary is status
 }
 
 export interface Table {
@@ -108,6 +111,11 @@ export interface Tournament {
     participants: Participant[];
     rounds: Round[];
     leagueId?: string;
+    
+    // Handoff specific configs
+    avoidRepeatedMatchups?: boolean;
+    epicFinalEnabled?: boolean;
+    epicFinalMaxPlayers?: number;
 }
 
 export type LeagueScoringType = 'sum' | 'best_x_of_y' | 'weighted';
@@ -126,7 +134,7 @@ export interface LeagueMember {
     playerId: string;
     playerName: string;
     joinedAt: string;
-    status: 'active' | 'banned';
+    status: 'active' | 'pending' | 'rejected' | 'banned';
     nickname?: string;
 }
 
@@ -149,6 +157,7 @@ export interface LeagueSeason {
 export interface League {
     id: string;
     name: string;
+    nameLowercase?: string;
     primaryColor?: string;
     description: string;
     organizerId: string;
