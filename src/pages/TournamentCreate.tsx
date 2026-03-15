@@ -191,7 +191,8 @@ const TournamentCreate: React.FC = () => {
                                     label="Formato da Partida"
                                     options={[
                                         { value: '1v1', label: '1v1 (Padrão)' },
-                                        { value: 'multiplayer', label: 'Multijogador (Commander/Casual)' }
+                                        { value: 'multiplayer', label: 'Multijogador (Commander/Casual)' },
+                                        { value: 'battle_royale', label: 'Battle Royale (Eliminação)' }
                                     ]}
                                     value={formData.format}
                                     onChange={e => setFormData({ ...formData, format: e.target.value as TournamentFormat })}

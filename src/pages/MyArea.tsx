@@ -271,9 +271,6 @@ const MyArea: React.FC = () => {
                         </div>
 
                         {/* Publicidade Section (Re-styled) */}
-                        <div className="mt-12 p-8 border border-white/5 bg-[radial-gradient(circle_at_50%_50%,rgba(192,57,43,0.05),transparent)] rounded-3xl text-center relative overflow-hidden group">
-                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted/30 group-hover:text-primary/50 transition-colors">Conteúdo Patrocinado</p>
                         </div>
                     </div>
                 </div>
