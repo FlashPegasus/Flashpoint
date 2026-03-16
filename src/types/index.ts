@@ -53,8 +53,10 @@ export interface Participant {
     totalPoints: number;
     rank?: number;
     // Tie-breakers
+    wins?: number;
+    omw?: number;
     buchholz?: number;
-    owp?: number;
+    owp?: number; // Keep existing or use omw interchangeably? OMW% usually refers to OWP
     previousOpponents?: string[]; // Array of playerIds
 }
 
@@ -116,6 +118,8 @@ export interface Tournament {
     avoidRepeatedMatchups?: boolean;
     epicFinalEnabled?: boolean;
     epicFinalMaxPlayers?: number;
+    maxRounds?: number;
+    pointsLimit?: number;
 }
 
 export type LeagueScoringType = 'sum' | 'best_x_of_y' | 'weighted';
@@ -136,6 +140,29 @@ export interface LeagueMember {
     joinedAt: string;
     status: 'active' | 'pending' | 'rejected' | 'banned';
     nickname?: string;
+}
+
+export interface TournamentTemplate {
+    id: string;
+    organizerId: string;
+    name: string;
+    format: TournamentFormat;
+    pairingMode: 'standard' | 'fair';
+    minPlayersPerTable: number;
+    maxPlayersPerTable: number;
+    exactTableSize?: number;
+    hasTimer: boolean;
+    defaultRoundTimer?: number;
+    allowByes: boolean;
+    scoring: ScoringConfig;
+    allowLateRegistration: boolean;
+    requiresCheckIn: boolean;
+    avoidRepeatedMatchups?: boolean;
+    epicFinalEnabled?: boolean;
+    epicFinalMaxPlayers?: number;
+    maxRounds?: number;
+    pointsLimit?: number;
+    createdAt: string;
 }
 
 export interface LeagueOrganizer {
@@ -185,4 +212,21 @@ export interface League {
     memberIds: string[];
     standings: LeagueStanding[];
     cachedTopRanking?: LeagueStanding[]; // Top 10 for fast homepage reads
+    organizers?: LeagueOrganizer[];
+    createdAt?: string;
+}
+
+export type NotificationType = 'info' | 'success' | 'warning' | 'error';
+export type NotificationActionType = 'link' | 'none';
+
+export interface AppNotification {
+    id: string;
+    userId: string;
+    title: string;
+    message: string;
+    type: NotificationType;
+    actionType?: NotificationActionType;
+    actionData?: string; // e.g. URL to redirect
+    isRead: boolean;
+    createdAt: string;
 }

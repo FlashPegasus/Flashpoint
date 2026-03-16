@@ -6,12 +6,17 @@ service cloud.firestore {
     // USERS — each user can only access their own profile
     // ============================================
     match /users/{userId} {
-      // Users can read their own profile (even private).
-      // Anyone can read public profiles (e.g. for landing podium, user stats).
       allow read: if (request.auth != null && request.auth.uid == userId) || resource.data.isPublic == true;
-      // Allow listing/querying public users (for landing page top players, etc.)
       allow list: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
+
+      match /notifications/{notifId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        // Permite que qualquer usuário logado envie uma notificação para outro (ex: convites, desafios)
+        allow create: if request.auth != null;
+        allow update: if request.auth != null && request.auth.uid == userId;
+        allow delete: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
     // ============================================

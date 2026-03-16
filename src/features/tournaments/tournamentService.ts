@@ -77,7 +77,12 @@ export const tournamentService = {
         }
         if (!tournament) throw new Error('Torneio não encontrado.');
         if (tournament.status !== 'registration' && tournament.status !== 'draft') {
-            throw new Error('Este torneio não está aceitando inscrições.');
+            // If tournament is ongoing, check for late registration
+            if (tournament.status === 'ongoing' && tournament.allowLateRegistration) {
+                // Allowed
+            } else {
+                throw new Error('As inscrições para este torneio estão encerradas.');
+            }
         }
         const existingParticipant = tournament.participants.find(p => p.playerId === userId);
         if (existingParticipant) {
@@ -132,7 +137,9 @@ export const tournamentService = {
         await storage.set(STORAGE_KEY, tournaments);
         // Mirror to public Firestore collection so invite links work cross-device
         try {
-            await setDoc(doc(db, 'tournaments', tournament.id), tournament, { merge: true });
+            // Firestore does not accept `undefined` values — strip them recursively
+            const sanitized = JSON.parse(JSON.stringify(tournament));
+            await setDoc(doc(db, 'tournaments', tournament.id), sanitized, { merge: true });
             // Signal update via RTDB (low cost sync)
             await syncService.notifyUpdate(tournament.id);
         } catch (err) {
@@ -359,12 +366,42 @@ export const tournamentService = {
         return await tournamentService.generateNextRound(tournamentId);
     },
 
-    recalculateStandings: (tournament: Tournament) => {
+    swapParticipantsInRound: async (
+        tournamentId: string,
+        tableAId: string,
+        playerAId: string,
+        tableBId: string,
+        playerBId: string
+    ): Promise<void> => {
+        const tournament = await tournamentService.getTournamentById(tournamentId);
+        if (!tournament) throw new Error('Tournament not found');
+
+        const currentRound = tournament.rounds[tournament.rounds.length - 1];
+        if (!currentRound || currentRound.status !== 'pending') {
+            throw new Error('Can only swap players in a pending round.');
+        }
+
+        const { swapParticipantsBetweenTables } = await import('./pairingEngine');
+        currentRound.tables = swapParticipantsBetweenTables(
+            currentRound.tables,
+            tableAId,
+            playerAId,
+            tableBId,
+            playerBId
+        );
+
+        tournament.currentRoundData = currentRound;
+        await tournamentService.saveTournament(tournament);
+    },
+
+    recalculateStandings: (tournament: Tournament): void => {
         // Reset all participants points and opponents
         tournament.participants.forEach(p => {
             p.totalPoints = 0;
+            p.wins = 0; // Ensure wins property exists or is reset
             p.previousOpponents = [];
             p.buchholz = 0;
+            p.omw = 0;
         });
 
         // Recalculate based on all completed tables in all rounds
@@ -380,9 +417,15 @@ export const tournamentService = {
                             const res = t.results.find(r => r.playerId === pid);
                             if (res) {
                                 // New Handoff Scoring
-                                if (res.status === 'WINNER') participant.totalPoints += 5;
+                                if (res.status === 'WINNER') {
+                                    participant.totalPoints += 5;
+                                    participant.wins = (participant.wins || 0) + 1;
+                                }
                                 else if (res.status === 'SURVIVED') participant.totalPoints += 2;
-                                else if (res.status === 'BYE') participant.totalPoints += 5;
+                                else if (res.status === 'BYE') {
+                                    participant.totalPoints += 5;
+                                    participant.wins = (participant.wins || 0) + 1;
+                                }
                                 // ELIMINATED and ALL_DEFEATED get 0
                             }
                         }
@@ -391,21 +434,28 @@ export const tournamentService = {
             });
         });
 
-        // Calculate tie-breakers (1. Total Points, 2. OMW%, 3. Opponent Points, 4. Wins)
-        // Simplified for now: 1. Points, 2. Buchholz (Opponent Points)
+        // Calculate tie-breakers:
+        // 1. Buchholz (Total Opponent Points)
+        // 2. OMW% (Average Opponent Points)
         tournament.participants.forEach(p => {
-            let buchholz = 0;
+            let totalOpponentPoints = 0;
+            const oppCount = p.previousOpponents?.length || 0;
+            
             p.previousOpponents?.forEach(oppId => {
                 const opponent = tournament.participants.find(opp => opp.playerId === oppId);
-                if (opponent) buchholz += opponent.totalPoints;
+                if (opponent) totalOpponentPoints += opponent.totalPoints;
             });
-            p.buchholz = buchholz;
+            
+            p.buchholz = totalOpponentPoints;
+            p.omw = oppCount > 0 ? totalOpponentPoints / oppCount : 0;
         });
 
-        // Sort and assign ranks
+        // Sort and assign ranks (Handoff Order: 1. Points, 2. OMW%, 3. Opponent Points, 4. Wins)
         tournament.participants.sort((a, b) => {
             if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
-            return (b.buchholz || 0) - (a.buchholz || 0);
+            if ((b.omw || 0) !== (a.omw || 0)) return (b.omw || 0) - (a.omw || 0);
+            if ((b.buchholz || 0) !== (a.buchholz || 0)) return (b.buchholz || 0) - (a.buchholz || 0);
+            return (b.wins || 0) - (a.wins || 0);
         });
         tournament.participants.forEach((p, idx) => { p.rank = idx + 1; });
     },
@@ -553,7 +603,7 @@ export const tournamentService = {
     /**
      * Data Cleanup: Purge stale drafts and anonymize guest data.
      */
-    runDataCleanup: async (organizerId: string): Promise<{ draftsRemoved: number, guestsCleaned: number }> => {
+    runDataCleanup: async () => {
         const tournaments = await tournamentService.getTournaments();
         const now = new Date();
         const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));

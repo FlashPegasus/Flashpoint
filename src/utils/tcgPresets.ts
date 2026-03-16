@@ -71,5 +71,23 @@ export const TCG_PRESETS: ScoringPreset[] = [
                 3: { 1: 2, 2: 1, 3: 0 }
             }
         }
+    },
+    {
+        id: 'battle_royale',
+        name: 'Battle Royale (Eliminação)',
+        icon: 'zap',
+        description: 'Apenas sobreviventes avançam para as próximas mesas.',
+        leaguePoints: {
+            participation: 1,
+            win: 5,
+            top4: 2,
+            top8: 0
+        },
+        tournamentScoring: {
+            positions: {
+                4: { 1: 5, 2: 2, 3: 0, 4: 0 },
+                3: { 1: 5, 2: 2, 3: 0 }
+            }
+        }
     }
 ];

@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { Link } from 'react-router-dom';
 import { X, ChevronRight, Home } from 'lucide-react';
 export * from './DynamicIcon';
@@ -140,15 +141,30 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
 
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in">
+    const modalContent = (
+        <div
+            className="fixed flex items-center justify-center p-3 sm:p-4"
+            style={{ inset: 0, zIndex: 9999 }}
+        >
+            {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+                style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(8px)' }}
                 onClick={onClose}
             />
-            <div className="glass-card w-full max-w-lg relative z-10 flex flex-col max-h-[90vh] shadow-2xl border-white/10">
-                <div className="flex justify-between items-center p-6 border-b border-white/5">
-                    <h2 className="text-2xl font-outfit font-bold">{title}</h2>
+            {/* Modal card */}
+            <div
+                className="glass-card w-full max-w-lg shadow-2xl border-white/10 animate-scale-in"
+                style={{
+                    position: 'relative',
+                    zIndex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: 'min(88dvh, 680px)',
+                }}
+            >
+                {/* Header */}
+                <div className="flex justify-between items-center px-5 py-4 border-b border-white/5" style={{ flexShrink: 0 }}>
+                    <h2 className="text-xl font-outfit font-bold">{title}</h2>
                     <button
                         onClick={onClose}
                         className="p-2 hover:bg-white/5 rounded-full transition-colors text-secondary hover:text-primary"
@@ -156,22 +172,28 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
                         <X size={20} />
                     </button>
                 </div>
-                <div className="p-6 overflow-y-auto custom-scrollbar">
+                {/* Scrollable body */}
+                <div
+                    className="px-5 py-4 custom-scrollbar"
+                    style={{ overflowY: 'auto', flexGrow: 1, minHeight: 0, WebkitOverflowScrolling: 'touch' as const }}
+                >
                     {children}
                 </div>
                 {footer && (
-                    <div className="p-6 border-t border-white/5 bg-white/2">
+                    <div className="px-5 py-4 border-t border-white/5" style={{ flexShrink: 0 }}>
                         {footer}
                     </div>
                 )}
             </div>
             <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border-glass); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
       `}</style>
         </div>
     );
+
+    return ReactDOM.createPortal(modalContent, document.body);
 };
 
 // ─────────────────────────────────────────────
@@ -184,27 +206,31 @@ interface LoadingScreenProps {
 
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({
     message = 'Carregando...',
-    gifUrl = 'https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHp1eHR6ZDV6ZDV6ZDV6ZDV6ZDV6ZDV6ZDV6ZDV6ZDV6ZDV&ep=v1_gifs_search&rid=giphy.gif&ct=g'
+    gifUrl
 }) => {
     return (
-        <div className="fixed inset-0 flex flex-col items-center justify-center bg-background z-[9999] animate-fade-in">
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-background z-[3000] animate-fade-in">
             <div className="relative w-32 h-32 mb-6">
                 <div className="absolute inset-0 bg-accent-primary/20 blur-3xl rounded-full animate-pulse"></div>
-                <div className="relative w-full h-full rounded-2xl overflow-hidden glass border border-white/10 shadow-2xl flex items-center justify-center">
-                    <img
-                        src={gifUrl}
-                        alt="Loading..."
-                        className="w-20 h-20 object-contain mix-blend-screen opacity-80"
-                    />
+                <div className="relative w-full h-full rounded-2xl overflow-hidden glass border border-white/10 shadow-2xl flex items-center justify-center bg-black/20">
+                    {gifUrl ? (
+                         <img
+                            src={gifUrl}
+                            alt="Loading..."
+                            className="w-20 h-20 object-contain mix-blend-screen opacity-80"
+                        />
+                    ) : (
+                        <div className="flex items-center justify-center space-x-2">
+                             <div className="w-4 h-4 rounded-full bg-accent-primary animate-bounce [animation-delay:-0.3s]"></div>
+                             <div className="w-4 h-4 rounded-full bg-accent-primary animate-bounce [animation-delay:-0.15s]"></div>
+                             <div className="w-4 h-4 rounded-full bg-accent-primary animate-bounce"></div>
+                        </div>
+                    )}
                 </div>
             </div>
             <div className="text-center">
                 <h3 className="text-lg font-bold font-outfit tracking-wider text-primary mb-2">{message}</h3>
-                <div className="flex gap-1 justify-center">
-                    <div className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-bounce [animation-delay:-0.3s]"></div>
-                    <div className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-bounce [animation-delay:-0.15s]"></div>
-                    <div className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-bounce"></div>
-                </div>
+                <p className="text-xs text-muted uppercase tracking-[0.2em] opacity-50">Sincronizando com o Multiverso</p>
             </div>
         </div>
     );

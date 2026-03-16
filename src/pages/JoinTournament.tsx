@@ -210,6 +210,22 @@ const JoinTournament: React.FC = () => {
                                         Ver Torneio
                                     </button>
                                 </div>
+                            ) : tournament.status === 'ongoing' && !tournament.allowLateRegistration ? (
+                                <div className="text-center p-6 rounded-2xl border border-[rgba(231,76,60,0.3)] bg-[rgba(231,76,60,0.05)]">
+                                    <div className="flex justify-center mb-3">
+                                        <div className="px-3 py-1 bg-[var(--fp-rose-lo)] border border-[var(--fp-rose-hi)] rounded-full text-[10px] font-bold text-[var(--fp-rose-hi)] uppercase tracking-widest animate-pulse">
+                                            Torneio em Andamento
+                                        </div>
+                                    </div>
+                                    <p className="font-bold text-white text-sm mb-1">Inscrições Encerradas</p>
+                                    <p className="text-xs text-[#7a5c5c] mb-4">Este torneio já começou e não está aceitando retardatários.</p>
+                                    <button onClick={() => navigate(`/tournament/${tournament.id}/public`)}
+                                            className="w-full py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider
+                                                       bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)]
+                                                       text-[#7a5c5c] hover:text-white hover:border-white/20 transition-all">
+                                        Ver Resultados Online
+                                    </button>
+                                </div>
                             ) : !isOpen ? (
                                 <div className="text-center p-5 rounded-xl
                                                 bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.07)]">

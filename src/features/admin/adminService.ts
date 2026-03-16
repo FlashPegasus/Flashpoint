@@ -1,5 +1,5 @@
 import { db } from '../../lib/firebase';
-import { collection, getDocs, deleteDoc, doc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, writeBatch } from 'firebase/firestore';
 
 export const adminService = {
     /**

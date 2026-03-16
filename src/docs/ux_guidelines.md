@@ -31,7 +31,7 @@ Este documento serve como a "Bússola de Qualidade" para a Fase 31. Todas as nov
 - Use `container` e `px-4` para garantir que o conteúdo não encoste nas bordas.
 
 ## 6. checklist de "Qualidade Premium"
-- [ ] O card tem um gradiente sutil de fundo?
+- [ ] O card tem um gradiente sutil de fundo? sim
 - [ ] Existe uma borda fina (stroke) para destacar o card do fundo preto?
 - [ ] As cores seguem a paleta oficial?
 - [ ] O feedback visual ao clicar é imediato?

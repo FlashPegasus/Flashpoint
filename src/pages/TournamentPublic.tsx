@@ -9,6 +9,8 @@ import { MatchCard } from '../features/tournaments/components/MatchCard';
 import { IconPairingTable, IconShareInvite } from '../assets/icons';
 import { getInviteLink, copyToClipboard } from '../utils/inviteHelper';
 import { syncService } from '../features/tournaments/syncService';
+import { leagueService } from '../features/leagues/leagueService';
+import type { League } from '../types';
 import toast from 'react-hot-toast';
 
 /**
@@ -20,6 +22,7 @@ const TournamentPublic: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuthStore();
     const { activeTournament, loadTournament, addParticipant } = useTournamentStore();
+    const [linkedLeague, setLinkedLeague] = useState<League | null>(null);
 
     const [activeTab, setActiveTab] = useState<'info' | 'rounds' | 'standings'>('info');
     const [searchTerm, setSearchTerm] = useState('');
@@ -39,6 +42,55 @@ const TournamentPublic: React.FC = () => {
             return () => unsubscribe();
         }
     }, [id, loadTournament]);
+
+    useEffect(() => {
+        if (activeTournament?.leagueId) {
+            leagueService.getLeagueById(activeTournament.leagueId).then(l => l && setLinkedLeague(l)).catch(console.error);
+        }
+    }, [activeTournament?.leagueId]);
+
+    // Dynamic Meta Tags for Social Sharing
+    useEffect(() => {
+        if (activeTournament) {
+            document.title = `${activeTournament.name} | FlashPoint TCG`;
+            
+            // Try to update Open Graph tags if they exist in index.html, or create them
+            const updateMeta = (property: string, content: string) => {
+                let element = document.querySelector(`meta[property="${property}"]`);
+                if (!element) {
+                    element = document.createElement('meta');
+                    element.setAttribute('property', property);
+                    document.head.appendChild(element);
+                }
+                element.setAttribute('content', content);
+            };
+
+            updateMeta('og:title', activeTournament.name);
+            updateMeta('og:description', activeTournament.description || `Torneio de ${activeTournament.format} em ${activeTournament.location || 'Online'}`);
+            updateMeta('og:type', 'website');
+        }
+    }, [activeTournament]);
+
+    const handleShare = async () => {
+        const link = getInviteLink('tournament', activeTournament?.id || '');
+        const shareData = {
+            title: activeTournament?.name || 'Torneio no FlashPoint',
+            text: `Venha participar do torneio ${activeTournament?.name} no FlashPoint!`,
+            url: link
+        };
+
+        if (navigator.share && /mobile|android|iphone|ipad/i.test(navigator.userAgent)) {
+            try {
+                await navigator.share(shareData);
+                toast.success('Compartilhado com sucesso!');
+            } catch (err) {
+                console.warn('Erro ao compartilhar', err);
+            }
+        } else {
+            // Fallback for Desktop
+            copyToClipboard(link, 'Link do torneio copiado para área de transferência!');
+        }
+    };
 
     const filteredTables = useMemo(() => {
         // cast to any for now until types are updated
@@ -93,9 +145,17 @@ const TournamentPublic: React.FC = () => {
                         <div className="mesh-gradient p-10 md:p-14 rounded-[2.5rem] relative overflow-hidden shadow-2xl border border-white/5 animate-fade-in">
                             <div className="absolute inset-0 bg-bg-dark/40 backdrop-blur-[2px]"></div>
                             <div className="relative z-10 flex flex-col gap-6">
+                                {linkedLeague && (
+                                    <div 
+                                        onClick={() => navigate(`/league/${linkedLeague.id}`)}
+                                        className="inline-flex items-center w-max gap-2 px-3 py-1.5 bg-[var(--fp-gold-lo)] border border-[rgba(245,158,11,0.4)] rounded-xl text-[var(--fp-gold-hi)] text-[11px] font-black uppercase tracking-widest cursor-pointer hover:bg-[rgba(245,158,11,0.2)] transition-colors shadow-[0_0_15px_rgba(245,158,11,0.15)]"
+                                    >
+                                        <Trophy size={14} className="text-[#f59e0b]" /> LIGA: {linkedLeague.name}
+                                    </div>
+                                )}
                                 <div className="flex items-center gap-3">
                                     <div className="px-3 py-1 bg-[var(--fp-purple-lo)] border border-[rgba(139,92,246,0.3)] rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-[var(--fp-purple-hi)]">
-                                        {activeTournament.format === 'multiplayer' ? 'MULTIJOGADOR' : activeTournament.format === '1v1' ? '1 VS 1' : 'TORNEIO TCG'}
+                                        {activeTournament.format === 'multiplayer' ? 'MULTIJOGADOR' : '1 VS 1'}
                                     </div>
                                     {activeTournament.status === 'ongoing' && (
                                         <div className="px-3 py-1 bg-[var(--fp-emerald-lo)] border border-[rgba(16,185,129,0.3)] rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-[var(--fp-emerald-hi)] animate-pulse flex items-center gap-1.5">
@@ -333,8 +393,9 @@ const TournamentPublic: React.FC = () => {
                                             <p className="text-[9px] text-muted italic">Inscrições abertas!</p>
                                         </div>
                                         <button
-                                            onClick={() => copyToClipboard(getInviteLink('tournament', activeTournament.id || ''), 'Link copiado!')}
+                                            onClick={handleShare}
                                             className="p-2 glass rounded-lg text-purple hover:bg-purple/10 transition-all hover:scale-110"
+                                            title="Compartilhar"
                                         >
                                             <IconShareInvite size={18} />
                                         </button>
@@ -349,8 +410,9 @@ const TournamentPublic: React.FC = () => {
                                         <p className="text-[9px] text-green-500 font-bold uppercase">Ainda dá tempo!</p>
                                     </div>
                                     <button
-                                        onClick={() => copyToClipboard(getInviteLink('tournament', activeTournament.id || ''), 'Link copiado!')}
+                                        onClick={handleShare}
                                         className="p-2 glass rounded-lg text-purple hover:bg-purple/10 transition-all hover:scale-110"
+                                        title="Compartilhar link de entrada tardia"
                                     >
                                         <IconShareInvite size={18} />
                                     </button>

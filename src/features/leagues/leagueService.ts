@@ -87,6 +87,7 @@ export const leagueService = {
             pointsTop8: data.pointsTop8 ?? 2,
             streakBonus: data.streakBonus ?? 0,
             bestXof: data.bestXof,
+            createdAt: new Date().toISOString()
         };
 
         // Remove undefined values since Firestore does not support them
@@ -235,7 +236,27 @@ export const leagueService = {
             addedAt: new Date().toISOString()
         };
         await setDoc(orgRef, organizer);
+        
+        // Ensure organizers are also listed in memberIds so the league appears in their Dashboard
+        await updateDoc(doc(db, LEAGUES_COLLECTION, leagueId), {
+            memberIds: arrayUnion(userId)
+        });
+        
         await leagueService.addAuditLog(leagueId, 'ADD_ORGANIZER', `Adicionou ${userId} como ${role}`, adminId);
+        leagueService._notifyUpdate(leagueId);
+    },
+
+    removeOrganizer: async (leagueId: string, userId: string, adminId: string): Promise<void> => {
+        const orgRef = doc(db, LEAGUES_COLLECTION, leagueId, 'organizers', userId);
+        await deleteDoc(orgRef);
+        await leagueService.addAuditLog(leagueId, 'REMOVE_ORGANIZER', `Removeu o organizador ${userId}`, adminId);
+        leagueService._notifyUpdate(leagueId);
+    },
+
+    updateOrganizerRole: async (leagueId: string, userId: string, role: 'admin' | 'moderator', adminId: string): Promise<void> => {
+        const orgRef = doc(db, LEAGUES_COLLECTION, leagueId, 'organizers', userId);
+        await updateDoc(orgRef, { role });
+        await leagueService.addAuditLog(leagueId, 'UPDATE_ORGANIZER_ROLE', `Alterou a role de ${userId} para ${role}`, adminId);
         leagueService._notifyUpdate(leagueId);
     },
 

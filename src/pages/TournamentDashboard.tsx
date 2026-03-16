@@ -106,6 +106,38 @@ const TournamentDashboard: React.FC = () => {
     const [selectedTable, setSelectedTable] = useState<{ round: number; table: any } | null>(null);
     const [participantSearch, setParticipantSearch] = useState('');
     const [tempResults, setTempResults] = useState<Record<string, string>>({});
+    const [winnerSelectorOpen, setWinnerSelectorOpen] = useState(false);
+    const [isReviewPhase, setIsReviewPhase] = useState(false);
+    const [isEditingTables, setIsEditingTables] = useState(false);
+    const [swapSource, setSwapSource] = useState<{ tableId: string, playerId: string } | null>(null);
+
+    const handleSwapSelection = async (tableId: string, playerId: string) => {
+        if (!swapSource) {
+            setSwapSource({ tableId, playerId });
+            return;
+        }
+
+        if (swapSource.tableId === tableId && swapSource.playerId === playerId) {
+            setSwapSource(null);
+            return;
+        }
+
+        try {
+            if (!id) return;
+            await tournamentService.swapParticipantsInRound(
+                id,
+                swapSource.tableId,
+                swapSource.playerId,
+                tableId,
+                playerId
+            );
+            toast.success('Mesas ajustadas com sucesso!');
+            setSwapSource(null);
+            loadTournament(id);
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao trocar jogadores.');
+        }
+    };
 
     /* ── load + sync ── */
     useEffect(() => {
@@ -166,22 +198,47 @@ const TournamentDashboard: React.FC = () => {
 
     const handleOpenResultModal = (roundNum: number, table: any) => {
         setSelectedTable({ round: roundNum, table });
-        const init: Record<string, string> = {};
-        table.playerIds.forEach((pid: string) => { init[pid] = 'ELIMINATED'; });
-        setTempResults(init as any);
+        setWinnerSelectorOpen(false);
+        const initRes: Record<string, string> = {};
+        
+        table.playerIds.forEach((pid: string) => {
+            const existing = table.results?.find((r: any) => r.playerId === pid);
+            initRes[pid] = existing?.status || 'ELIMINATED';
+        });
+
+        setTempResults(initRes);
     };
 
     const handleSubmitTableResults = () => {
         if (!id || !selectedTable) return;
-        const msg = activeTournament.format === 'multiplayer'
-            ? 'Confirmar os resultados desta mesa?' : 'Confirmar vencedor desta partida?';
-        if (!window.confirm(msg)) return;
-        
+
+        // Validation: single survivor should be the winner
+        const statuses = Object.values(tempResults);
+        const survivedIds = Object.entries(tempResults).filter(([, s]) => s === 'SURVIVED').map(([pid]) => pid);
+        const winnerCount = statuses.filter(s => s === 'WINNER').length;
+
+        if (survivedIds.length === 1 && winnerCount === 0) {
+            const soloSurvivor = activeTournament.participants.find(p => p.playerId === survivedIds[0]);
+            const confirm = window.confirm(
+                `${soloSurvivor?.name || 'Jogador'} é o único sobrevivente. Se apenas ele restou, ele é o vencedor (5 pts em vez de 2). Confirmar como VENCEDOR?`
+            );
+            if (confirm) {
+                setTempResults(prev => ({ ...prev, [survivedIds[0]]: 'WINNER' }));
+                return; // Let the user review the updated state and click confirm again
+            }
+        }
+
+        if (winnerCount > 1) {
+            toast.error('Só pode haver um vencedor por mesa!');
+            return;
+        }
+
         const results = selectedTable.table.playerIds.map((pid: string) => {
             const statusValue = tempResults[pid] as unknown as ResultStatus;
             let pts = 0;
             if (statusValue === 'WINNER' || statusValue === 'BYE') pts = 5;
             else if (statusValue === 'SURVIVED') pts = 2;
+            // ELIMINATED and ALL_DEFEATED = 0
             
             return { playerId: pid, status: statusValue, points: pts };
         });
@@ -238,6 +295,15 @@ const TournamentDashboard: React.FC = () => {
                                 </span>
                                 {timeLeft && <RoundTimer timeLeft={timeLeft} />}
                             </div>
+
+                            {activeTournament.leagueId && myLeagues.find(l => l.id === activeTournament.leagueId) && (
+                                <div 
+                                    onClick={() => navigate(`/league/${activeTournament.leagueId}`)}
+                                    className="inline-flex items-center w-max gap-2 mb-3 px-3 py-1.5 bg-[var(--fp-gold-lo)] border border-[rgba(245,158,11,0.3)] rounded-lg text-[var(--fp-gold-hi)] text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-[rgba(245,158,11,0.2)] transition-colors"
+                                >
+                                    <Trophy size={14} /> Liga: {myLeagues.find(l => l.id === activeTournament.leagueId)?.name}
+                                </div>
+                            )}
 
                             <h1 className="font-[var(--fp-font-display)] text-3xl md:text-4xl text-[var(--fp-text-hi)] mb-1 leading-tight">
                                 {activeTournament.name}
@@ -314,6 +380,50 @@ const TournamentDashboard: React.FC = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* ══════════════════════════════════════════
+                    PROGRESS BAR
+                ══════════════════════════════════════════ */}
+                {activeTournament.status === 'ongoing' && (activeTournament.maxRounds || activeTournament.pointsLimit) && (
+                    <div className="mb-6 p-4 fp-card animate-fade-in">
+                        {activeTournament.maxRounds && (
+                            <div>
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-[10px] font-bold text-[var(--fp-muted)] uppercase tracking-widest">Progresso de Rodadas</span>
+                                    <span className="text-sm font-bold text-[var(--fp-text)]">
+                                        {activeTournament.rounds.length} / {activeTournament.maxRounds}
+                                    </span>
+                                </div>
+                                <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                                    <div className="h-full bg-gradient-to-r from-[var(--fp-purple)] to-[var(--fp-emerald)] rounded-full transition-all duration-700 ease-out"
+                                         style={{ width: `${Math.min(100, (activeTournament.rounds.length / activeTournament.maxRounds) * 100)}%` }} />
+                                </div>
+                            </div>
+                        )}
+                        {activeTournament.pointsLimit && (
+                            <div className={activeTournament.maxRounds ? 'mt-4' : ''}>
+                                {(() => {
+                                    const leader = [...activeTournament.participants].sort((a, b) => b.totalPoints - a.totalPoints)[0];
+                                    const pct = leader ? Math.min(100, (leader.totalPoints / activeTournament.pointsLimit!) * 100) : 0;
+                                    return (
+                                        <>
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-[10px] font-bold text-[var(--fp-muted)] uppercase tracking-widest">Pontuação Alvo</span>
+                                                <span className="text-sm font-bold text-[var(--fp-text)]">
+                                                    {leader ? `${leader.name}: ${leader.totalPoints}` : '0'} / {activeTournament.pointsLimit} pts
+                                                </span>
+                                            </div>
+                                            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                                                <div className="h-full bg-gradient-to-r from-[var(--fp-gold)] to-[var(--fp-rose)] rounded-full transition-all duration-700 ease-out"
+                                                     style={{ width: `${pct}%` }} />
+                                            </div>
+                                        </>
+                                    );
+                                })()}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* ══════════════════════════════════════════
                     TABS
@@ -528,14 +638,30 @@ const TournamentDashboard: React.FC = () => {
                                         <h3 className="text-xl font-semibold text-[var(--fp-text)]">
                                             Rodada {round.number}
                                         </h3>
-                                        <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase border
-                                            ${round.status === 'completed'
-                                                ? 'bg-[var(--fp-emerald-lo)] text-[var(--fp-emerald-hi)] border-[rgba(16,185,129,0.3)]'
-                                                : 'bg-[var(--fp-purple-lo)] text-[var(--fp-purple-hi)] border-[rgba(139,92,246,0.3)]'
-                                            }`}>
-                                            {round.status === 'completed' && <CheckCircle2 size={12} />}
-                                            {round.status === 'completed' ? 'Concluída' : 'Pendente'}
-                                        </span>
+                                        <div className="flex items-center gap-3">
+                                            {isOrganizer && round.status === 'pending' && (
+                                                <button 
+                                                    onClick={() => {
+                                                        setIsEditingTables(!isEditingTables);
+                                                        setSwapSource(null);
+                                                    }}
+                                                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase border transition-all
+                                                        ${isEditingTables 
+                                                            ? 'bg-[var(--fp-purple)] text-white border-[var(--fp-purple)] shadow-glow-sm' 
+                                                            : 'bg-white/5 text-[var(--fp-muted)] border-white/10 hover:bg-white/10'}`}>
+                                                    <RefreshCw size={10} className={isEditingTables ? 'animate-spin-slow' : ''} />
+                                                    {isEditingTables ? 'Concluir Ajuste' : 'Ajustar Mesas'}
+                                                </button>
+                                            )}
+                                            <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase border
+                                                ${round.status === 'completed'
+                                                    ? 'bg-[var(--fp-emerald-lo)] text-[var(--fp-emerald-hi)] border-[rgba(16,185,129,0.3)]'
+                                                    : 'bg-[var(--fp-purple-lo)] text-[var(--fp-purple-hi)] border-[rgba(139,92,246,0.3)]'
+                                                }`}>
+                                                {round.status === 'completed' && <CheckCircle2 size={12} />}
+                                                {round.status === 'completed' ? 'Concluída' : 'Pendente'}
+                                            </span>
+                                        </div>
                                     </div>
 
                                     {/* Match cards */}
@@ -550,6 +676,9 @@ const TournamentDashboard: React.FC = () => {
                                                 status={table.status === 'completed' ? 'completed' : 'pending'}
                                                 onEnterResult={() => handleOpenResultModal(round.number, table)}
                                                 roundNumber={round.number}
+                                                isEditing={isOrganizer && isEditingTables && round.status === 'pending' && round.number === activeTournament.rounds.length}
+                                                onSwapSelect={handleSwapSelection}
+                                                swapSource={swapSource}
                                             />
                                         ))}
                                     </div>
@@ -621,7 +750,7 @@ const TournamentDashboard: React.FC = () => {
                                             </div>
                                             <div className="text-center">
                                                 <div className="font-semibold text-[var(--fp-text)]">{p.name}</div>
-                                                <div className="text-[var(--fp-muted)] text-xs mt-0.5">{p.totalPoints} pts · BH {p.buchholz}</div>
+                                                <div className="text-[var(--fp-muted)] text-xs mt-0.5">{p.totalPoints} pts · Vit {p.wins || 0}</div>
                                             </div>
                                             <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-white/5 flex items-center gap-1.5"
                                                   style={{ color: c.border.replace('0.', '0.8').replace('rgba', 'rgba') }}>
@@ -633,12 +762,27 @@ const TournamentDashboard: React.FC = () => {
                             </div>
                         )}
 
-                        {/* Tabela */}
+                        {/* Tabela de Classificação */}
                         <div className="fp-card overflow-hidden">
-                            <div className="px-5 py-4 border-b border-[var(--fp-border)]">
+                            <div className="px-5 py-4 border-b border-[var(--fp-border)] flex items-center justify-between">
                                 <h3 className="font-semibold text-[var(--fp-text)]">
                                     {activeTournament.status === 'completed' ? 'Classificação Final' : 'Classificação Atual'}
                                 </h3>
+                                
+                                <div className="group relative">
+                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-[var(--fp-muted)] uppercase tracking-wider cursor-help">
+                                        <BarChart3 size={12} /> Como funciona o ranking?
+                                    </div>
+                                    <div className="absolute right-0 top-full mt-2 w-56 p-3 rounded-xl bg-[var(--fp-void)] border border-[var(--fp-border-hi)] shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                                        <p className="text-[10px] font-bold text-white mb-2 uppercase tracking-tight">Critérios de Desempate</p>
+                                        <ol className="text-[10px] text-[var(--fp-muted)] space-y-1">
+                                            <li className="flex items-start gap-2"><span>1.</span> <strong>Pontos Totais</strong></li>
+                                            <li className="flex items-start gap-2"><span>2.</span> <span><strong>OMW%</strong>: Performance dos oponentes</span></li>
+                                            <li className="flex items-start gap-2"><span>3.</span> <span><strong>BH (Buchholz)</strong>: Soma pontos dos oponentes</span></li>
+                                            <li className="flex items-start gap-2"><span>4.</span> <span><strong>Vitórias</strong>: Qtd. de primeiros lugares</span></li>
+                                        </ol>
+                                    </div>
+                                </div>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
@@ -647,7 +791,9 @@ const TournamentDashboard: React.FC = () => {
                                             <th className="py-3 px-5">#</th>
                                             <th className="py-3 px-3">Jogador</th>
                                             <th className="py-3 px-3">Pts</th>
+                                            <th className="py-3 px-3">OMW%</th>
                                             <th className="py-3 px-3">BH</th>
+                                            <th className="py-3 px-3">Vit</th>
                                             <th className="py-3 px-5 text-right">Status</th>
                                         </tr>
                                     </thead>
@@ -668,12 +814,16 @@ const TournamentDashboard: React.FC = () => {
                                                 <td className="py-3 px-3">
                                                     <div className="flex items-center gap-2">
                                                         <img src={dicebearUrl(p.playerId || p.name, 28)}
-                                                             className="w-7 h-7 rounded-full border border-white/10" alt="" />
+                                                              className="w-7 h-7 rounded-full border border-white/10" alt="" />
                                                         <span className="text-sm font-medium text-[var(--fp-text)]">{p.name}</span>
                                                     </div>
                                                 </td>
                                                 <td className="py-3 px-3 font-bold text-[var(--fp-text-hi)] text-sm">{p.totalPoints}</td>
+                                                <td className="py-3 px-3 text-[var(--fp-muted)] text-[11px] font-mono">
+                                                    {((p.omw || 0) * 10).toFixed(1)}%
+                                                </td>
                                                 <td className="py-3 px-3 text-[var(--fp-muted)] text-sm">{p.buchholz || 0}</td>
+                                                <td className="py-3 px-3 text-[var(--fp-muted)] text-[11px] font-bold">{p.wins || 0}</td>
                                                 <td className="py-3 px-5 text-right">
                                                     <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full
                                                         ${p.status === 'active'
@@ -771,56 +921,185 @@ const TournamentDashboard: React.FC = () => {
             ══════════════════════════════════════════ */}
             <Modal
                 isOpen={!!selectedTable}
-                onClose={() => setSelectedTable(null)}
+                onClose={() => { setSelectedTable(null); setIsReviewPhase(false); }}
                 title={`Resultados — Mesa ${
                     activeTournament.rounds
                         .find(r => r.number === selectedTable?.round)
                         ?.tables.findIndex(t => t.id === selectedTable?.table.id)! + 1
                 }`}
                 footer={
-                    <div className="flex gap-3 justify-end">
+                    <div className="flex gap-3 justify-end w-full">
                         <button className="fp-btn-ghost px-5 py-2 rounded-xl text-sm"
-                                onClick={() => setSelectedTable(null)}>
-                            Cancelar
+                                onClick={() => {
+                                    if (isReviewPhase) setIsReviewPhase(false);
+                                    else setSelectedTable(null);
+                                }}>
+                            {isReviewPhase ? 'Voltar' : 'Cancelar'}
                         </button>
-                        <button className="fp-btn-primary px-5 py-2 rounded-xl flex items-center gap-2 text-sm"
-                                onClick={handleSubmitTableResults}>
-                            <IconSubmitResults size={16} /> Confirmar Pontos
-                        </button>
+                        
+                        {/* Only show "Review" step if there are many players, otherwise submit directly */}
+                        {!isReviewPhase && selectedTable && selectedTable.table.playerIds.length > 4 ? (
+                            <button className="fp-btn-primary px-5 py-2 rounded-xl flex items-center gap-2 text-sm"
+                                    onClick={() => setIsReviewPhase(true)}>
+                                Revisar Resumo <ChevronRight size={16} />
+                            </button>
+                        ) : (
+                            <button className="fp-btn-primary px-5 py-2 rounded-xl flex items-center gap-2 text-sm bg-gradient-to-r from-[var(--fp-purple)] to-[var(--fp-rose)]"
+                                    onClick={handleSubmitTableResults}>
+                                <IconSubmitResults size={16} /> Confirmar Pontos
+                            </button>
+                        )}
                     </div>
                 }
             >
-                <div className="flex flex-col gap-5">
-                    <p className="text-[var(--fp-muted)] text-sm">Selecione a colocação final de cada jogador.</p>
-                    <div className="flex flex-col gap-2">
-                        {selectedTable?.table.playerIds.map((pid: string) => {
-                            const player = activeTournament.participants.find(p => p.playerId === pid);
-                            return (
-                                <div key={pid}
-                                     className="flex justify-between items-center p-4
-                                                bg-white/[0.03] border border-[var(--fp-border)]
-                                                rounded-xl">
-                                    <div className="flex items-center gap-3">
-                                        <img src={dicebearUrl(pid, 32)}
-                                             className="w-8 h-8 rounded-full border border-white/10" alt="" />
-                                        <span className="font-semibold text-sm text-[var(--fp-text)]">{player?.name}</span>
-                                    </div>
-                                    <select
-                                        className="bg-[var(--fp-void)] border border-[var(--fp-border-hi)] rounded-lg px-3 py-2
-                                                   outline-none focus:border-[var(--fp-purple)] transition-colors
-                                                   text-[var(--fp-gold-hi)] font-bold text-sm"
-                                        value={tempResults[pid] || 'ELIMINATED'}
-                                        onChange={e => setTempResults(prev => ({ ...prev, [pid]: e.target.value }))}>
-                                        <option value="WINNER">🏆 Vencedor(a)</option>
-                                        <option value="SURVIVED">🛡️ Sobrevivente</option>
-                                        <option value="ELIMINATED">💀 Eliminado(a)</option>
-                                        <option value="ALL_DEFEATED">💥 Todos Derrotados</option>
-                                    </select>
+                    {/* ── Content Area ── */}
+                    <div className="flex flex-col gap-6">
+                        {isReviewPhase ? (
+                            <div className="flex flex-col gap-4 animate-fade-in">
+                                <div className="p-4 rounded-xl bg-[var(--fp-purple-lo)] border border-[rgba(139,92,246,0.3)]">
+                                    <h4 className="text-xs font-bold text-[var(--fp-purple-hi)] uppercase tracking-widest mb-1">Resumo do Resultado</h4>
+                                    <p className="text-[11px] text-[var(--fp-muted)]">Verifique se as pontuações estão corretas antes de finalizar.</p>
                                 </div>
-                            );
-                        })}
+                                <div className="space-y-2">
+                                    {selectedTable?.table.playerIds.map((pid: string) => {
+                                        const player = activeTournament.participants.find(p => p.playerId === pid);
+                                        const status = tempResults[pid] || 'ELIMINATED';
+                                        return (
+                                            <div key={pid} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
+                                                <span className="text-sm font-medium">{player?.name}</span>
+                                                <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider
+                                                    ${status === 'WINNER' ? 'bg-var(--fp-gold-lo) text-var(--fp-gold-hi)' : 
+                                                      status === 'SURVIVED' ? 'bg-var(--fp-emerald-lo) text-var(--fp-emerald-hi)' : 
+                                                      'text-var(--fp-muted)'}`}>
+                                                    {status === 'WINNER' ? '🏆 VENCEDOR' : status === 'SURVIVED' ? '🛡️ SOBREVIVEU' : '💀 ELIMINADO'}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                {/* ── Quick Actions ── */}
+                                <div className="flex flex-wrap gap-2 p-3 bg-white/5 rounded-xl border border-white/5">
+                                    <p className="w-full text-[10px] font-bold text-[var(--fp-muted)] uppercase tracking-widest mb-1 ml-1">Assistente Rápido</p>
+                                    <button
+                                        onClick={() => setWinnerSelectorOpen(true)}
+                                        className="px-3 py-1.5 bg-[var(--fp-purple-lo)] text-[var(--fp-purple-hi)] text-[10px] font-bold uppercase rounded-lg border border-[rgba(139,92,246,0.3)] hover:bg-[var(--fp-purple)] hover:text-white transition-all">
+                                        🏆 Declarar Vencedor
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (!selectedTable) return;
+                                            const newRes: Record<string, string> = {};
+                                            selectedTable.table.playerIds.forEach((pid: string) => {
+                                                newRes[pid] = 'SURVIVED';
+                                            });
+                                            setTempResults(newRes);
+                                            setWinnerSelectorOpen(false);
+                                            toast('Todos marcados como sobreviventes (empate).', { icon: '🛡️' });
+                                        }}
+                                        className="px-3 py-1.5 bg-[var(--fp-emerald-lo)] text-[var(--fp-emerald-hi)] text-[10px] font-bold uppercase rounded-lg border border-[rgba(16,185,129,0.3)] hover:bg-[var(--fp-emerald)] hover:text-white transition-all">
+                                        🛡️ Timeout (Empate)
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (!selectedTable) return;
+                                            const newRes: Record<string, string> = {};
+                                            selectedTable.table.playerIds.forEach((pid: string) => {
+                                                newRes[pid] = 'ELIMINATED';
+                                            });
+                                            setTempResults(newRes);
+                                            setWinnerSelectorOpen(false);
+                                            toast('Eliminação geral — ninguém pontua.', { icon: '💀' });
+                                        }}
+                                        className="px-3 py-1.5 bg-[var(--fp-rose-lo)] text-[var(--fp-rose-hi)] text-[10px] font-bold uppercase rounded-lg border border-[rgba(244,63,94,0.3)] hover:bg-[var(--fp-rose)] hover:text-white transition-all">
+                                        💀 Eliminação Geral
+                                    </button>
+                                </div>
+
+                                {/* ── Winner Selector Overlay ── */}
+                                {winnerSelectorOpen && (
+                                    <div className="p-4 bg-[var(--fp-purple-lo)] border border-[rgba(139,92,246,0.3)] rounded-2xl animate-fade-in">
+                                        <p className="text-xs font-bold text-[var(--fp-purple-hi)] uppercase tracking-widest mb-3">Quem venceu esta mesa?</p>
+                                        <div className="flex flex-col gap-2">
+                                            {selectedTable?.table.playerIds.map((pid: string) => {
+                                                const player = activeTournament.participants.find(p => p.playerId === pid);
+                                                return (
+                                                    <button key={pid}
+                                                        onClick={() => {
+                                                            const newRes: Record<string, string> = {};
+                                                            selectedTable.table.playerIds.forEach((p: string) => {
+                                                                newRes[p] = p === pid ? 'WINNER' : 'ELIMINATED';
+                                                            });
+                                                            setTempResults(newRes);
+                                                            setWinnerSelectorOpen(false);
+                                                            toast.success(`${player?.name || 'Jogador'} declarado vencedor!`);
+                                                        }}
+                                                        className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.04] border border-white/5
+                                                                    hover:border-[var(--fp-purple)] hover:bg-[rgba(139,92,246,0.1)] transition-all group">
+                                                        <img src={dicebearUrl(pid, 32)}
+                                                            className="w-8 h-8 rounded-full border border-white/10" alt="" />
+                                                        <span className="font-semibold text-sm text-[var(--fp-text)] group-hover:text-[var(--fp-purple-hi)] transition-colors">
+                                                            {player?.name}
+                                                        </span>
+                                                        <Crown size={14} className="ml-auto text-[var(--fp-muted)] group-hover:text-[var(--fp-gold)] transition-colors" />
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        <button onClick={() => setWinnerSelectorOpen(false)}
+                                            className="mt-3 text-[10px] text-[var(--fp-muted)] hover:text-white transition-colors uppercase font-bold">
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* ── Player Status Cards ── */}
+                                <div className="flex flex-col gap-3">
+                                    {selectedTable?.table.playerIds.map((pid: string) => {
+                                        const player = activeTournament.participants.find(p => p.playerId === pid);
+                                        const status = tempResults[pid] || 'ELIMINATED';
+                                        const statusCfg: Record<string, { emoji: string; label: string; cls: string }> = {
+                                            WINNER:       { emoji: '🏆', label: 'Vencedor',    cls: 'border-[var(--fp-gold)] bg-[var(--fp-gold-lo)] shadow-[0_0_12px_rgba(245,158,11,0.15)]' },
+                                            SURVIVED:     { emoji: '🛡️', label: 'Sobreviveu', cls: 'border-[rgba(16,185,129,0.4)] bg-[var(--fp-emerald-lo)]' },
+                                            ELIMINATED:   { emoji: '💀', label: 'Eliminado',   cls: 'border-[var(--fp-border)] bg-white/[0.03] opacity-60' },
+                                            ALL_DEFEATED: { emoji: '💀', label: 'Eliminado',   cls: 'border-[var(--fp-border)] bg-white/[0.03] opacity-60' },
+                                            BYE:          { emoji: '🎟️', label: 'Bye',         cls: 'border-[rgba(139,92,246,0.3)] bg-[var(--fp-purple-lo)]' },
+                                        };
+                                        const cfg = statusCfg[status] || statusCfg.ELIMINATED;
+                                        return (
+                                            <div key={pid}
+                                                className={`flex justify-between items-center p-4 border rounded-xl transition-all ${cfg.cls}`}>
+                                                <div className="flex items-center gap-3">
+                                                    <img src={dicebearUrl(pid, 32)}
+                                                        className="w-8 h-8 rounded-full border border-white/10" alt="" />
+                                                    <div className="flex flex-col">
+                                                        <span className="font-semibold text-sm text-[var(--fp-text)] text-left">{player?.name}</span>
+                                                        <span className="text-[10px] text-[var(--fp-muted)] uppercase font-bold tracking-tight text-left">
+                                                            {cfg.emoji} {cfg.label}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                {isOrganizer && (
+                                                    <select
+                                                        className="bg-white/10 border border-white/30 rounded-lg px-2 py-1.5
+                                                                    outline-none focus:border-[var(--fp-purple)] transition-colors
+                                                                    text-white font-bold text-xs w-36 cursor-pointer"
+                                                        value={status}
+                                                        onChange={e => setTempResults(prev => ({ ...prev, [pid]: e.target.value }))}>
+                                                        <option value="WINNER" style={{background: '#1a0c0c'}}>🏆 Vencedor</option>
+                                                        <option value="SURVIVED" style={{background: '#1a0c0c'}}>🛡️ Sobreviveu</option>
+                                                        <option value="ELIMINATED" style={{background: '#1a0c0c'}}>💀 Eliminado</option>
+                                                    </select>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
                     </div>
-                </div>
             </Modal>
 
             {/* ══════════════════════════════════════════

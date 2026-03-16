@@ -25,11 +25,30 @@ import { BottomNav } from './components/layout';
 
 
 const App: React.FC = () => {
-  const { initialize, user } = useAuthStore();
+  const { initialize, user, isLoading } = useAuthStore();
 
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0505] flex flex-col items-center justify-center animate-fade-in">
+        <div className="relative">
+          <div className="w-24 h-24 rounded-full border-t-2 border-primary border-r-2 border-transparent animate-spin" />
+          <img 
+            src="https://i.postimg.cc/LX1Z1Ss4/Image-1-(1).png" 
+            alt="FlashPoint" 
+            className="absolute inset-0 w-16 h-16 m-auto object-contain animate-pulse-subtle"
+          />
+        </div>
+        <div className="mt-8 flex flex-col items-center gap-2">
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60">FlashPoint</p>
+          <p className="text-[11px] font-bold text-muted/40 uppercase tracking-widest">Sincronizando Deck...</p>
+        </div>
+      </div>
+    );
+  }
 
   const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     if (!user) return <Navigate to="/login" />;

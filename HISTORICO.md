@@ -2,6 +2,17 @@
 
 Este arquivo serve como um diário de bordo da evolução do projeto. Cada "Fase" concluída deve ser registrada aqui para manter a continuidade do desenvolvimento.
 
+## 2026-03-16: Fase 32 - Estabilização de Ligas, Relatórios e E2E
+- **Objetivo**: Refinamento da gestão de Ligas, vínculos seguros com torneios, melhorias de UI nos relatórios de resultados e testes rápidos (E2E).
+- **Implementações**:
+  - Configuração de Firebase Hosting para testes integrados.
+  - Vínculos seguros de torneio à liga (acesso condicionado ao painel Master).
+  - Implementação de templates de torneios (`templateService.ts`, `templateStore.ts`).
+  - Atualização do motor de testes e skill E2E Playwright.
+  - Correção de bugs de UI (modais sumindo, telas de loading presas).
+  - Mecanismos de filtro aprimorados em `/leagues`.
+- **Status**: Concluída. Deploy no Firebase (Hosting) e Checkpoint no GitHub.
+
 ## 2026-03-10: Fase 29.1 - Side Mission: Ícones Dinâmicos
 - **Objetivo**: Suporte a ícones externos, emojis e palavras-chave sem custo de Firestore.
 - **Implementações**:

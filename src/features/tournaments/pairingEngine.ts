@@ -109,32 +109,66 @@ interface MultiplayerConfig {
 
 /**
  * Technical Handoff - Table Size Generation Logic
+ * Refined to prioritize table density (max players) and strictly respect limits.
  */
-function generateTableSizes(count: number): number[] {
-    const sizes: number[] = [];
-    let players = count;
+export function generateTableSizes(count: number, min: number = 3, max: number = 4): number[] {
+    if (count <= 0) return [];
+    
+    // For very small counts, we might have Byes depending on min configuration
+    if (count < min) return [count];
 
-    while (players > 0) {
-        if (players === 5) { sizes.push(5); break; }
-        if (players === 6) { sizes.push(3, 3); break; }
-        if (players === 7) { sizes.push(4, 3); break; }
-        if (players === 8) { sizes.push(4, 4); break; }
-        if (players === 9) { sizes.push(3, 3, 3); break; }
+    // Find number of tables k. We want k such that k*min <= N <= k*max
+    const kMin = Math.ceil(count / max);
+    const kMax = Math.floor(count / min);
 
-        if (players >= 10) {
-            const rem = players % 4;
-            if (rem === 0) { sizes.push(4); players -= 4; continue; }
-            if (rem === 1) { sizes.push(5); players -= 5; continue; }
-            if (rem === 2) { sizes.push(3); players -= 3; continue; }
-            if (rem === 3) { sizes.push(3); players -= 3; continue; }
-        } else {
-            // Backup for < 10 not handled above
-            sizes.push(players);
-            break;
-        }
+    // If we can satisfy the [min, max] range for all tables
+    if (kMin <= kMax) {
+        const k = kMin; // Maximize density by using the smallest k
+        const q = Math.floor(count / k);
+        const r = count % k;
+        const result = new Array(k).fill(q);
+        for (let i = 0; i < r; i++) result[i]++;
+        return result;
     }
+
+    // If no perfect k exists (e.g., N=5, min=3, max=4), compromise by filling to max
+    const k = kMin;
+    const sizes: number[] = [];
+    let remaining = count;
+    for (let i = 0; i < k - 1; i++) {
+        sizes.push(max);
+        remaining -= max;
+    }
+    sizes.push(remaining);
     return sizes;
 }
+
+/**
+ * Manually swap two participants between tables in a round.
+ */
+export const swapParticipantsBetweenTables = (
+    tables: Table[],
+    tableAId: string,
+    playerAId: string,
+    tableBId: string,
+    playerBId: string
+): Table[] => {
+    return tables.map(table => {
+        if (table.id === tableAId) {
+            return {
+                ...table,
+                playerIds: table.playerIds.map(id => id === playerAId ? playerBId : id)
+            };
+        }
+        if (table.id === tableBId) {
+            return {
+                ...table,
+                playerIds: table.playerIds.map(id => id === playerBId ? playerAId : id)
+            };
+        }
+        return table;
+    });
+};
 
 /**
  * Multiplayer table assignment engine.
@@ -150,7 +184,7 @@ export const generateMultiplayerTables = (
 
     if (sortedPlayers.length === 0) return [];
 
-    const sizes = generateTableSizes(sortedPlayers.length);
+    const sizes = generateTableSizes(sortedPlayers.length, config.minPerTable, config.maxPerTable);
     const tables: Table[] = [];
     let index = 0;
 

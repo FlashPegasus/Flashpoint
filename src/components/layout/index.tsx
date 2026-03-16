@@ -1,11 +1,12 @@
 import React from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Trophy, Users, LayoutDashboard, LogOut, Search, Menu, X, User, Bell, Plus, ChevronDown } from 'lucide-react';
+import { Trophy, Users, LayoutDashboard, LogOut, Search, Menu, X, User, Plus, ChevronDown } from 'lucide-react';
 import { useAuthStore } from '../../features/auth/authStore';
 import { IconCreatePlus } from '../../assets/icons';
 import AdPlaceholder from '../ui/AdPlaceholder';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useNavBump } from '../../hooks/useNavBump';
+import { NotificationBell } from './NotificationBell';
 
 // ——————————————————————————————————————————————————————————————————————————
 // Navbar Sub-components
@@ -34,7 +35,6 @@ export const Navbar: React.FC = () => {
     const location = useLocation();
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
     const [isCreateOpen, setIsCreateOpen] = React.useState(false);
-    const [isNotifOpen, setIsNotifOpen] = React.useState(false);
 
     // Detect mobile for the SVG bump position
     const isMobile = useMediaQuery('(max-width: 768px)');
@@ -44,23 +44,16 @@ export const Navbar: React.FC = () => {
     const handleModeSwitch = (newMode: 'player' | 'organizer') => {
         setUiMode(newMode);
         
-        // Logical redirection for dashboard contexts
-        const path = window.location.pathname;
-        const dashboardPaths = ['/', '/my-area', '/organizer/dashboard', '/discover'];
-        
-        const isDashboardContext = dashboardPaths.some(p => path === p || path.startsWith(p + '/'));
-
-        if (isDashboardContext) {
-            if (newMode === 'player') {
-                navigate('/my-area');
-            } else {
-                navigate('/organizer/dashboard');
-            }
+        // Sempre redirecionar para o dashboard correspondente ao trocar de modo
+        if (newMode === 'player') {
+            navigate('/my-area');
+        } else {
+            navigate('/organizer/dashboard');
         }
     };
 
     const handleLogout = () => { logout(); navigate('/'); };
-    const closeAll = () => { setIsMenuOpen(false); setIsCreateOpen(false); setIsNotifOpen(false); };
+    const closeAll = () => { setIsMenuOpen(false); setIsCreateOpen(false); };
 
     return (
         <div className="nav-wrap">
@@ -165,27 +158,7 @@ export const Navbar: React.FC = () => {
                                         </button>
                                     </div>
                                     
-                                    <div className="nav-notifs relative">
-                                        <button
-                                            onClick={() => setIsNotifOpen(!isNotifOpen)}
-                                            className="p-1.5 text-secondary hover:text-primary transition-all relative rounded-lg hover:bg-white/5"
-                                        >
-                                            <Bell size={16} />
-                                            <span className="absolute top-1.5 right-1.5 w-1 h-1 bg-red-500 rounded-full animate-pulse"></span>
-                                        </button>
-                                        {isNotifOpen && (
-                                            <div className="absolute top-full right-0 mt-3 w-64 glass-card p-3 shadow-2xl border border-white/10 z-[60] animate-fade-in-up">
-                                                <div className="flex justify-between items-center mb-3">
-                                                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted">Notificações</p>
-                                                    <button className="text-[8px] text-accent-primary hover:underline">Limpar</button>
-                                                </div>
-                                                <div className="text-center py-4 opacity-40">
-                                                    <Bell size={18} className="mx-auto mb-2" />
-                                                    <p className="text-[9px]">Sem novidades</p>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
+                                    <NotificationBell />
                                 </>
                             )}
 
@@ -219,21 +192,49 @@ export const Navbar: React.FC = () => {
                 </div>
             </nav>
 
-            {/* Mobile Menu Overlay */}
             {isMenuOpen && (
                 <div className="md:hidden fixed inset-x-0 top-20 mx-4 glass-card p-6 animate-fade-in shadow-2xl border border-white/10 z-[1001]">
                     <div className="flex flex-col gap-6">
-                        <Link to="/discover" onClick={closeAll} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
-                            <Search size={18} /> <span>Descobrir Eventos</span>
-                        </Link>
-                        <Link to="/leagues" onClick={closeAll} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
-                            <Users size={18} /> <span>Ver Ligas</span>
-                        </Link>
                         {user && (
-                            <Link to="/my-area" onClick={closeAll} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
-                                <LayoutDashboard size={18} /> <span>Minha Área</span>
-                            </Link>
+                            <div className="flex flex-col gap-3">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-[#7a5c5c] ml-1">Modo de Visualização</p>
+                                <div className="flex items-center bg-white/5 rounded-xl p-1 border border-white/10 shadow-inner relative z-0">
+                                    <button
+                                        onClick={() => handleModeSwitch('player')}
+                                        className={`relative flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${uiMode === 'player' ? 'text-white' : 'text-muted'}`}
+                                    >
+                                        {uiMode === 'player' && (
+                                            <div className="absolute inset-0 bg-[#c0392b] rounded-lg shadow-[0_0_15px_rgba(192,57,43,0.4)] animate-scale-in -z-1" />
+                                        )}
+                                        <span className="relative z-10">Jogador</span>
+                                    </button>
+                                    <button
+                                        onClick={() => handleModeSwitch('organizer')}
+                                        className={`relative flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${uiMode === 'organizer' ? 'text-white' : 'text-muted'}`}
+                                    >
+                                        {uiMode === 'organizer' && (
+                                            <div className="absolute inset-0 bg-[#c0392b] rounded-lg shadow-[0_0_15px_rgba(192,57,43,0.4)] animate-scale-in -z-1" />
+                                        )}
+                                        <span className="relative z-10">Organizador</span>
+                                    </button>
+                                </div>
+                            </div>
                         )}
+
+                        <div className="flex flex-col gap-6">
+                            <Link to="/discover" onClick={closeAll} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
+                                <Search size={18} /> <span>Descobrir Eventos</span>
+                            </Link>
+                            <Link to="/leagues" onClick={closeAll} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
+                                <Users size={18} /> <span>Ver Ligas</span>
+                            </Link>
+                            {user && (
+                                <Link to="/my-area" onClick={closeAll} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
+                                    <LayoutDashboard size={18} /> <span>Minha Área</span>
+                                </Link>
+                            )}
+                        </div>
+                        
                         <div className="h-px bg-white/10"></div>
                         <div className="flex flex-col gap-4">
                             {user ? (
@@ -405,7 +406,7 @@ const PageShell: React.FC<PageShellProps> = ({ children, showAd = true, showBack
                 </>
             )}
 
-            <main className="flex-grow pt-32 animate-fade-in relative z-10">
+            <main className="flex-grow pt-32 animate-fade-in relative">
                 {children}
 
                 {showAd && (

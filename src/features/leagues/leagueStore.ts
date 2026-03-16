@@ -23,6 +23,8 @@ interface LeagueStore {
     getMembers: (leagueId: string) => Promise<any[]>;
     updateMemberStatus: (leagueId: string, playerId: string, status: 'active' | 'banned', adminId: string) => Promise<void>;
     addOrganizer: (leagueId: string, userId: string, role: 'admin' | 'moderator', adminId: string) => Promise<void>;
+    removeOrganizer: (leagueId: string, userId: string, adminId: string) => Promise<void>;
+    updateOrganizerRole: (leagueId: string, userId: string, role: 'admin' | 'moderator', adminId: string) => Promise<void>;
     getOrganizers: (leagueId: string) => Promise<any[]>;
     archiveSeason: (leagueId: string, seasonName: string, adminId: string) => Promise<void>;
     getSeasons: (leagueId: string) => Promise<any[]>;
@@ -148,6 +150,14 @@ export const useLeagueStore = create<LeagueStore>((set) => ({
 
     addOrganizer: async (leagueId, userId, role, adminId) => {
         await leagueService.addOrganizer(leagueId, userId, role, adminId);
+    },
+
+    removeOrganizer: async (leagueId, userId, adminId) => {
+        await leagueService.removeOrganizer(leagueId, userId, adminId);
+    },
+
+    updateOrganizerRole: async (leagueId, userId, role, adminId) => {
+        await leagueService.updateOrganizerRole(leagueId, userId, role, adminId);
     },
 
     getOrganizers: async (leagueId) => {
