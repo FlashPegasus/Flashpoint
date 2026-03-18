@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Trophy, Users, Calendar, Copy, Check, RefreshCw, Link } from 'lucide-react';
+import { Trophy, Users, Calendar, Copy, Check, Link } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import PageShell from '../components/layout';
 import { LoadingScreen, Modal, Input } from '../components/ui';
@@ -10,6 +10,8 @@ import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { leagueService } from '../features/leagues/leagueService';
 import { LeagueMembersTab } from '../features/leagues/components/LeagueMembersTab';
 import { LeagueSeasonsTab } from '../features/leagues/components/LeagueSeasonsTab';
+import { LeagueRankingTab } from '../features/leagues/components/LeagueRankingTab';
+import { LeagueTournamentsTab } from '../features/leagues/components/LeagueTournamentsTab';
 import { LeagueDetailsTab } from '../features/leagues/components/LeagueDetailsTab';
 import { LeagueManagersTab } from '../features/leagues/components/LeagueManagersTab';
 import { getInviteLink, copyToClipboard } from '../utils/inviteHelper';
@@ -17,11 +19,6 @@ import { getInviteLink, copyToClipboard } from '../utils/inviteHelper';
 import toast from 'react-hot-toast';
 
 export type LeagueTabId = 'ranking' | 'tournaments' | 'membros' | 'temporadas' | 'ajustes' | 'equipe';
-
-const MEDALS = ['🥇', '🥈', '🥉'];
-
-const dicebear = (seed: string, size = 32) =>
-    `https://api.dicebear.com/7.x/rings/svg?seed=${encodeURIComponent(seed)}&size=${size}`;
 
 const TABS: { id: LeagueTabId; label: string }[] = [
     { id: 'ranking',     label: '🏆 Ranking'    },
@@ -48,20 +45,20 @@ const LeagueDashboard: React.FC = () => {
     const [recalcLoading, setRecalcLoading] = useState(false);
     const [linkMode, setLinkMode]           = useState(false);
     const [editMode, setEditMode]           = useState(false);
-    const [editData, setEditData]           = useState<any>({});
+    const [editData, setEditData]           = useState<Record<string, unknown>>({});
     const [isQRModalOpen, setIsQRModalOpen]         = useState(false);
     const [isAuditModalOpen, setIsAuditModalOpen]   = useState(false);
-    const [auditLogs, setAuditLogs]                 = useState<any[]>([]);
-    const [members, setMembers]                     = useState<any[]>([]);
-    const [seasons, setSeasons]                     = useState<any[]>([]);
-    const [organizers, setOrganizers]               = useState<any[]>([]);
+    const [auditLogs, setAuditLogs]                 = useState<import('../features/leagues/leagueService').LeagueAuditLog[]>([]);
+    const [members, setMembers]                     = useState<import('../types').LeagueMember[]>([]);
+    const [seasons, setSeasons]                     = useState<import('../types').LeagueSeason[]>([]);
+    const [organizers, setOrganizers]               = useState<import('../types').LeagueOrganizer[]>([]);
     const [isSeasonModalOpen, setIsSeasonModalOpen] = useState(false);
     const [seasonName, setSeasonName]               = useState('');
-    const [linkedTournaments, setLinkedTournaments] = useState<Record<string, any>>({});
+    const [linkedTournaments, setLinkedTournaments] = useState<Record<string, import('../types').Tournament>>({});
 
-    const handleLoadMembers = async () => { if (id) setMembers(await getMembers(id)); };
-    const handleLoadSeasons = async () => { if (id) setSeasons(await getSeasons(id)); };
-    const handleLoadOrganizers = async () => { if (id) setOrganizers(await getOrganizers(id)); };
+    const handleLoadMembers = useCallback(async () => { if (id) setMembers(await getMembers(id)); }, [id, getMembers]);
+    const handleLoadSeasons = useCallback(async () => { if (id) setSeasons(await getSeasons(id)); }, [id, getSeasons]);
+    const handleLoadOrganizers = useCallback(async () => { if (id) setOrganizers(await getOrganizers(id)); }, [id, getOrganizers]);
 
     // Remove the individual fetch for equipe and just load it globally once to establish guards
     useEffect(() => {
@@ -70,13 +67,13 @@ const LeagueDashboard: React.FC = () => {
             handleLoadOrganizers();
             loadTournaments(); // Load tournaments to show their names
         }
-    }, [id, loadLeague, loadTournaments]);
+    }, [id, loadLeague, loadTournaments, handleLoadOrganizers]);
 
     useEffect(() => {
         if (tab === 'membros')    handleLoadMembers();
         if (tab === 'temporadas') handleLoadSeasons();
         if (tab === 'equipe')     handleLoadMembers(); // organizers is already loaded globally
-    }, [tab, id]);
+    }, [tab, id, handleLoadMembers, handleLoadSeasons]);
 
     useEffect(() => {
         if (!id) return;
@@ -85,13 +82,13 @@ const LeagueDashboard: React.FC = () => {
              handleLoadOrganizers();
         });
         return () => { if (typeof unsubscribe === 'function') unsubscribe(); };
-    }, [id, loadLeague]);
+    }, [id, loadLeague, handleLoadOrganizers]);
 
     useEffect(() => {
         if (activeLeague?.tournamentIds && activeLeague.tournamentIds.length > 0) {
             const fetchLinked = async () => {
                 const { tournamentService } = await import('../features/tournaments/tournamentService');
-                const results: Record<string, any> = {};
+                const results: Record<string, import('../types').Tournament> = {};
                 for (const tId of activeLeague.tournamentIds) {
                     const t = await tournamentService.getTournament(tId);
                     if (t) results[tId] = t;
@@ -138,23 +135,23 @@ const LeagueDashboard: React.FC = () => {
     const handleRecalculate = async () => {
         setRecalcLoading(true);
         try { await recalculateStandings(activeLeague.id); toast.success('Ranking atualizado!'); }
-        catch (err: any) { toast.error(err.message); }
+        catch (error) { const err = error as Error; toast.error(err.message); }
         finally { setRecalcLoading(false); }
     };
 
     const handleLinkTournament = async (tournamentId: string) => {
         if (!user) return;
         try { await linkTournament(activeLeague.id, tournamentId, user.id); toast.success('Torneio vinculado!'); setLinkMode(false); }
-        catch (err: any) { toast.error(err.message); }
+        catch (error) { const err = error as Error; toast.error(err.message); }
     };
 
     const handleSaveEdit = async () => {
         if (!id || !activeLeague) return;
         try {
-            const sanitized = Object.fromEntries(Object.entries(editData).filter(([_, v]) => v !== undefined && v !== ''));
+            const sanitized = Object.fromEntries(Object.entries(editData).filter(([_key, v]) => v !== undefined && v !== ''));
             await leagueService.updateLeague(id, sanitized);
             toast.success('Liga atualizada!'); setEditMode(false); loadLeague(id);
-        } catch (err: any) { toast.error(err.message || 'Erro ao atualizar liga.'); }
+        } catch (error) { const err = error as Error; toast.error(err.message || 'Erro ao atualizar liga.'); }
     };
 
     const handleDeleteLeague = async () => {
@@ -164,12 +161,12 @@ const LeagueDashboard: React.FC = () => {
             const { useLeagueStore } = await import('../features/leagues/leagueStore');
             await useLeagueStore.getState().deleteLeague(id);
             toast.success('Liga excluída.'); navigate('/my-area');
-        } catch (err: any) { toast.error(err.message || 'Erro ao excluir.'); }
+        } catch (error) { const err = error as Error; toast.error(err.message || 'Erro ao excluir.'); }
     };
 
     const handleOpenAudit = async () => {
         if (!id) return;
-        const logs = await getAuditLogs(id); setAuditLogs(logs); setIsAuditModalOpen(true);
+        const logs = await getAuditLogs(id); setAuditLogs(logs as import('../features/leagues/leagueService').LeagueAuditLog[]); setIsAuditModalOpen(true);
     };
 
 
@@ -178,8 +175,8 @@ const LeagueDashboard: React.FC = () => {
         try {
             await updateMemberStatus(id, playerId, status, user.id);
             toast.success(status === 'banned' ? 'Jogador banido!' : 'Jogador reativado!');
-            setMembers(await getMembers(id));
-        } catch (err: any) { toast.error(err.message || 'Erro ao atualizar membro'); }
+            setMembers(await getMembers(id) as import('../types').LeagueMember[]);
+        } catch (error) { const err = error as Error; toast.error(err.message || 'Erro ao atualizar membro'); }
     };
 
     const handleArchiveSeason = async () => {
@@ -187,7 +184,7 @@ const LeagueDashboard: React.FC = () => {
         try {
             await archiveSeason(id, seasonName.trim(), user.id);
             toast.success('Temporada arquivada!'); setIsSeasonModalOpen(false); setSeasonName(''); setTab('temporadas');
-        } catch (err: any) { toast.error(err.message || 'Erro ao arquivar temporada'); }
+        } catch (error) { const err = error as Error; toast.error(err.message || 'Erro ao arquivar temporada'); }
     };
 
     const handleAddOrganizer = async (userId: string, role: 'admin' | 'moderator') => {
@@ -196,7 +193,7 @@ const LeagueDashboard: React.FC = () => {
             await addOrganizer(id, userId, role, user.id);
             toast.success('Organizador adicionado!');
             handleLoadOrganizers();
-        } catch(err:any) { toast.error('Erro ao adicionar organizador'); }
+        } catch { toast.error('Erro ao adicionar organizador'); }
     };
 
     const handleRemoveOrganizer = async (userId: string) => {
@@ -205,7 +202,7 @@ const LeagueDashboard: React.FC = () => {
             await removeOrganizer(id, userId, user.id);
             toast.success('Organizador removido!');
             handleLoadOrganizers();
-        } catch(err:any) { toast.error('Erro ao remover organizador'); }
+        } catch { toast.error('Erro ao remover organizador'); }
     };
 
     const handleUpdateOrganizerRole = async (userId: string, role: 'admin' | 'moderator') => {
@@ -214,13 +211,13 @@ const LeagueDashboard: React.FC = () => {
             await updateOrganizerRole(id, userId, role, user.id);
             toast.success('Permissão atualizada!');
             handleLoadOrganizers();
-        } catch(err:any) { toast.error('Erro ao atualizar permissão'); }
+        } catch { toast.error('Erro ao atualizar permissão'); }
     };
 
     return (
         <PageShell>
             <div className="container py-8 pb-28 flex flex-col gap-6 animate-fade-in"
-                 style={{ '--color-purple': activeLeague.primaryColor || '#c0392b' } as any}>
+                 style={{ '--color-purple': activeLeague.primaryColor || '#c0392b' } as React.CSSProperties}>
 
                 {/* ══════════════════════════════════
                     HEADER
@@ -351,151 +348,29 @@ const LeagueDashboard: React.FC = () => {
                     TAB: RANKING
                 ══════════════════════════════════ */}
                 {tab === 'ranking' && (
-                    <div className="flex flex-col gap-4">
-                        {isAnyOrganizer && (
-                            <div className="flex justify-end">
-                                <button onClick={handleRecalculate} disabled={recalcLoading}
-                                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
-                                                   bg-[rgba(255,255,255,0.04)] border border-[rgba(192,57,43,0.2)]
-                                                   text-[#a07070] hover:text-[#e74c3c] hover:border-[rgba(192,57,43,0.4)]
-                                                   transition-all disabled:opacity-50">
-                                    <RefreshCw size={14} className={recalcLoading ? 'animate-spin' : ''} />
-                                    Recalcular
-                                </button>
-                            </div>
-                        )}
-
-                        {standings.length === 0 ? (
-                            <div className="py-20 text-center rounded-2xl
-                                            border border-dashed border-[rgba(212,172,13,0.15)]
-                                            bg-[rgba(212,172,13,0.02)]">
-                                <Trophy size={40} className="mx-auto mb-4 text-[#d4ac0d] opacity-20" />
-                                <p className="text-[#7a5c5c] text-sm">
-                                    Nenhum resultado ainda. Finalize um torneio vinculado para atualizar.
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col gap-2">
-                                {standings.map((s: any, i: number) => {
-                                    const borderCls = i === 0
-                                        ? 'border-[rgba(212,172,13,0.4)] bg-[rgba(212,172,13,0.05)]'
-                                        : i === 1 ? 'border-[rgba(160,160,160,0.25)]'
-                                        : i === 2 ? 'border-[rgba(180,100,60,0.25)]'
-                                        : 'border-[rgba(192,57,43,0.1)]';
-                                    return (
-                                        <div key={s.playerId}
-                                             className={`flex items-center gap-4 px-5 py-4 rounded-2xl
-                                                         bg-[linear-gradient(160deg,#130a0a,#1a0c0c)]
-                                                         border transition-all
-                                                         hover:border-[rgba(192,57,43,0.3)] ${borderCls}`}>
-                                            <div className="text-xl w-10 text-center flex-shrink-0">
-                                                {i < 3 ? MEDALS[i] : <span className="text-[#7a5c5c] text-sm font-bold">#{s.rank}</span>}
-                                            </div>
-                                            <div className="w-8 h-8 rounded-full overflow-hidden border border-[rgba(255,255,255,0.1)] flex-shrink-0">
-                                                <img src={dicebear(s.playerId || s.playerName, 32)} alt="" className="w-full h-full" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-semibold text-white text-sm flex items-center gap-2 flex-wrap">
-                                                    {s.playerName}
-                                                    {s.currentStreak >= 2 && (
-                                                        <span className="text-[10px] bg-[rgba(192,57,43,0.15)] text-[#e74c3c]
-                                                                         font-bold px-2 py-0.5 rounded-full border
-                                                                         border-[rgba(192,57,43,0.3)] animate-pulse">
-                                                            🔥 {s.currentStreak} Top Cut
-                                                        </span>
-                                                    )}
-                                                </p>
-                                                <p className="text-xs text-[#7a5c5c] mt-0.5">
-                                                    {s.tournamentsPlayed} torneio{s.tournamentsPlayed !== 1 ? 's' : ''}
-                                                </p>
-                                            </div>
-                                            <div className="text-right flex-shrink-0">
-                                                <p className="text-lg font-bold text-[#e74c3c]">{s.totalPoints}</p>
-                                                <p className="text-[10px] text-[#7a5c5c]">pts</p>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
+                    <LeagueRankingTab 
+                        standings={standings} 
+                        isAnyOrganizer={isAnyOrganizer} 
+                        handleRecalculate={handleRecalculate} 
+                        recalcLoading={recalcLoading} 
+                    />
                 )}
 
                 {/* ══════════════════════════════════
                     TAB: TORNEIOS
                 ══════════════════════════════════ */}
-                {tab === 'tournaments' && isSuperAdmin && (
-                    <div className="flex flex-col gap-4">
-                        {canManageTournaments && (
-                            <div className="flex justify-end">
-                                <button onClick={() => setLinkMode(!linkMode)}
-                                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
-                                                   bg-[rgba(192,57,43,0.1)] border border-[rgba(192,57,43,0.25)]
-                                                   text-[#e74c3c] hover:bg-[rgba(192,57,43,0.18)] transition-all">
-                                    {linkMode ? 'Cancelar' : '+ Vincular Torneio'}
-                                </button>
-                            </div>
-                        )}
-
-                        {linkMode && (
-                            <div className="rounded-2xl p-5 bg-[linear-gradient(160deg,#130a0a,#1a0c0c)]
-                                            border border-[rgba(192,57,43,0.2)]">
-                                <h4 className="text-sm font-semibold text-white mb-4">Seus Torneios Disponíveis</h4>
-                                {myTournaments.length === 0 ? (
-                                    <p className="text-[#7a5c5c] text-sm">Nenhum torneio disponível para vincular.</p>
-                                ) : (
-                                    <div className="flex flex-col gap-2">
-                                        {myTournaments.map(t => (
-                                            <div key={t.id}
-                                                 className="flex justify-between items-center p-3 rounded-xl
-                                                            bg-[rgba(255,255,255,0.02)] border border-[rgba(192,57,43,0.1)]">
-                                                <span className="text-sm text-white">{t.name}</span>
-                                                <button onClick={() => handleLinkTournament(t.id)}
-                                                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-white
-                                                                   bg-gradient-to-r from-[#c0392b] to-[#e67e22]
-                                                                   hover:opacity-90 transition-opacity">
-                                                    Vincular
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {activeLeague.tournamentIds.length === 0 ? (
-                            <div className="py-16 text-center rounded-2xl
-                                            border border-dashed border-[rgba(192,57,43,0.15)]
-                                            bg-[rgba(192,57,43,0.02)]">
-                                <p className="text-[#7a5c5c] text-sm">Nenhum torneio vinculado ainda.</p>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col gap-2">
-                                {activeLeague.tournamentIds.map(tId => {
-                                    const tournament = linkedTournaments[tId] || tournaments.find(t => t.id === tId);
-                                    return (
-                                        <div key={tId}
-                                             className="flex justify-between items-center p-4 rounded-2xl
-                                                        bg-[linear-gradient(160deg,#130a0a,#1a0c0c)]
-                                                        border border-[rgba(192,57,43,0.15)]">
-                                            <div className="flex flex-col">
-                                                <span className="text-sm text-white font-medium">
-                                                    {tournament?.name || 'Carregando...'}
-                                                </span>
-                                                <span className="text-[10px] text-[#7a5c5c] font-mono">{tId.split('-')[0]}...</span>
-                                            </div>
-                                            <button onClick={() => navigate(`/tournament/${tId}`)}
-                                                    className="px-3 py-1.5 rounded-lg text-xs font-semibold
-                                                               bg-[rgba(192,57,43,0.1)] border border-[rgba(192,57,43,0.25)]
-                                                               text-[#e74c3c] hover:bg-[rgba(192,57,43,0.18)] transition-all">
-                                                Ver →
-                                            </button>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
+                {tab === 'tournaments' && (
+                    <LeagueTournamentsTab 
+                        isSuperAdmin={isSuperAdmin}
+                        canManageTournaments={canManageTournaments}
+                        linkMode={linkMode}
+                        setLinkMode={setLinkMode}
+                        myTournaments={myTournaments}
+                        handleLinkTournament={handleLinkTournament}
+                        tournamentIds={activeLeague.tournamentIds}
+                        linkedTournaments={linkedTournaments}
+                        allTournaments={tournaments}
+                    />
                 )}
 
                 {/* Tabs que delegam para sub-componentes existentes */}

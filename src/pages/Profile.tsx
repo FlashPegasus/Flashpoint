@@ -36,6 +36,8 @@ const Profile: React.FC = () => {
     const [showUpgradePw, setShowUpgradePw]     = useState(false);
     const [upgradeSuccess, setUpgradeSuccess]   = useState(false);
 
+    const [hideCompleted, setHideCompleted] = useState(false);
+
     const isGuest = user?.email === 'guest@flashpoint.app';
 
     useEffect(() => {
@@ -57,9 +59,13 @@ const Profile: React.FC = () => {
         if (!error) setUpgradeSuccess(true);
     };
 
+    const filteredTournaments = stats?.recentTournaments?.filter((t: any) => 
+        !hideCompleted || t.status !== 'completed'
+    ) || [];
+
     return (
         <PageShell title="Meu Perfil">
-            <div className="container py-8 pb-28 animate-fade-in">
+            <div className="container py-8 pb-28 animate-fade-in text-left">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                     {/* ══════════════════════════════════
@@ -93,7 +99,7 @@ const Profile: React.FC = () => {
                                 </div>
                             </div>
 
-                            <h2 className="text-xl font-bold text-white mb-1">
+                            <h2 className="text-xl font-bold text-white mb-1 leading-tight">
                                 {isGuest ? 'Convidado' : user.name}
                             </h2>
                             <p className="text-[#7a5c5c] text-sm mb-4">
@@ -168,17 +174,29 @@ const Profile: React.FC = () => {
                                         border border-[rgba(192,57,43,0.18)]">
 
                             <div className="px-5 py-4 border-b border-[rgba(192,57,43,0.12)]
-                                            flex items-center gap-2">
-                                <Calendar size={16} className="text-[#e74c3c]" />
-                                <h3 className="font-semibold text-white text-sm">Participação Recente</h3>
+                                            flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Calendar size={16} className="text-[#e74c3c]" />
+                                    <h3 className="font-semibold text-white text-sm">Participação Recente</h3>
+                                </div>
+                                
+                                <button 
+                                    onClick={() => setHideCompleted(!hideCompleted)}
+                                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all
+                                        ${hideCompleted 
+                                            ? 'bg-[#e74c3c] text-white' 
+                                            : 'bg-white/5 text-[#7a5c5c] border border-white/5 hover:bg-white/10'}`}>
+                                    {hideCompleted ? <EyeOff size={11} /> : <Eye size={11} />}
+                                    {hideCompleted ? 'Escondendo Concluídos' : 'Mostrar Apenas Ativos'}
+                                </button>
                             </div>
 
                             <div className="p-4">
                                 {!stats ? (
                                     <div className="py-10 text-center text-[#7a5c5c] text-sm">Carregando...</div>
-                                ) : stats.recentTournaments?.length > 0 ? (
+                                ) : filteredTournaments.length > 0 ? (
                                     <div className="flex flex-col gap-2">
-                                        {stats.recentTournaments.map((t: any) => (
+                                        {filteredTournaments.map((t: any) => (
                                             <div
                                                 key={t.id}
                                                 onClick={() => navigate(`/tournament/${t.id}${t.status === 'completed' ? '/public' : ''}`)}

@@ -1,6 +1,6 @@
 import { Card, Button } from '../../../components/ui';
 import { IconSubmitResults, IconPairingTable } from '../../../assets/icons';
-import { CheckCircle2, Crown } from 'lucide-react';
+import { CheckCircle2, Crown, Flag, AlertTriangle } from 'lucide-react';
 
 interface MatchCardProps {
     idx: number;
@@ -27,33 +27,55 @@ export const MatchCard: React.FC<MatchCardProps> = ({
     onSwapSelect,
     swapSource
 }) => {
+    // Conflict Detection: multiple players reporting themselves as WINNER
+    const reports = table.playerReports || [];
+    const winnersCount = reports.filter((r: any) => r.status === 'WINNER').length;
+    const hasConflict = winnersCount > 1;
+    const hasReports = reports.length > 0;
+
     return (
-        <Card className="relative overflow-hidden group transition-all duration-500 border-white/5 bg-black/40 backdrop-blur-xl hover:shadow-lg hover:border-purple/30 hover:-translate-y-1">
+        <Card className={`relative overflow-hidden group transition-all duration-500 premium-glass shuffle-item hover:shadow-lg hover:border-purple/30 hover:-translate-y-1 ${hasConflict ? 'border-[var(--fp-rose)]/40' : ''}`}>
             {/* Holographic Overlay Effect */}
             <div className="absolute inset-0 bg-gradient-to-tr from-purple/5 via-transparent to-blue/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
             <div className="relative z-10 flex justify-between items-center mb-5 pb-3 border-b border-white/10">
                 <div className="flex items-center gap-2.5">
-                    <div className={`p-1.5 rounded-lg ${status === 'completed' ? 'bg-green/10 text-green' : 'bg-purple/10 text-purple'}`}>
-                        <IconPairingTable size={14} />
+                    <div className={`p-1.5 rounded-lg ${
+                        status === 'completed' ? 'bg-green/10 text-green' : 
+                        hasConflict ? 'bg-[var(--fp-rose-lo)] text-[var(--fp-rose-hi)]' : 'bg-purple/10 text-purple'
+                    }`}>
+                        {hasConflict ? <AlertTriangle size={14} /> : <IconPairingTable size={14} />}
                     </div>
                     <span className="text-xs font-black text-muted uppercase tracking-[0.15em]">Mesa {idx + 1}</span>
                 </div>
-                {status === 'completed' ? (
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green/10 border border-green/20 text-[10px] font-bold text-green uppercase tracking-wider">
-                        <CheckCircle2 size={10} /> Concluída
-                    </div>
-                ) : (
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-purple/10 border border-purple/20 text-[10px] font-bold text-purple uppercase tracking-wider animate-pulse">
-                        <span className="w-1.5 h-1.5 rounded-full bg-purple" /> Ao Vivo
-                    </div>
-                )}
+                
+                <div className="flex items-center gap-2">
+                    {hasConflict && (
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--fp-rose-lo)] border border-[var(--fp-rose-hi)]/20 text-[9px] font-bold text-[var(--fp-rose-hi)] uppercase tracking-wider animate-pulse">
+                            CONFLITO
+                        </div>
+                    )}
+                    
+                    {status === 'completed' ? (
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green/10 border border-green/20 text-[10px] font-bold text-green uppercase tracking-wider">
+                            <CheckCircle2 size={10} /> Concluída
+                        </div>
+                    ) : (
+                        <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${
+                            hasReports ? 'bg-blue/10 border-blue/20 text-blue' : 'bg-purple/10 border-purple/20 text-purple animate-pulse'
+                        }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${hasReports ? 'bg-blue' : 'bg-purple'}`} /> 
+                            {hasReports ? 'Reportado' : 'Ao Vivo'}
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div className="relative z-10 flex flex-col gap-3.5">
                 {table.playerIds.map((pid: string) => {
                     const player = participants.find(p => p.playerId === pid);
                     const res = table.results?.find((r: any) => r.playerId === pid);
+                    const report = reports.find((r: any) => r.playerId === pid);
                     const isSource = swapSource?.playerId === pid;
 
                     return (
@@ -73,15 +95,34 @@ export const MatchCard: React.FC<MatchCardProps> = ({
                                       isSource ? 'bg-[var(--fp-purple)]' :
                                       'bg-white/10 group-hover/player:bg-purple'}`} 
                                 />
-                                <span className={`text-sm truncate font-bold tracking-tight 
-                                    ${status === 'completed' && res?.status === 'WINNER' ? 'text-[var(--fp-gold)]' : 
-                                      isSource ? 'text-[var(--fp-purple-hi)]' :
-                                      'text-secondary'}`}>
-                                    {player?.name || 'Desconhecido'}
-                                </span>
+                                <div className="flex flex-col truncate">
+                                    <span className={`text-sm truncate font-bold tracking-tight 
+                                        ${status === 'completed' && res?.status === 'WINNER' ? 'text-[var(--fp-gold)]' : 
+                                        isSource ? 'text-[var(--fp-purple-hi)]' :
+                                        'text-secondary'}`}>
+                                        {player?.name || 'Desconhecido'}
+                                    </span>
+                                    {report && status !== 'completed' && (
+                                        <span className={`text-[8px] font-black uppercase tracking-widest ${
+                                            report.status === 'WINNER' ? 'text-[var(--fp-gold)]' : 
+                                            report.status === 'SURVIVED' ? 'text-green' : 'text-muted'
+                                        }`}>
+                                            Reportou: {report.status}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
-                            {status === 'completed' && res && (
-                                <div className="flex items-center gap-2">
+                            
+                            <div className="flex items-center gap-2">
+                                {report && status !== 'completed' && (
+                                    <div className={`p-1 rounded-md ${
+                                        report.status === 'WINNER' ? 'text-[var(--fp-gold)] bg-[var(--fp-gold-lo)]' : 'text-muted bg-white/5'
+                                    }`}>
+                                        <Flag size={10} />
+                                    </div>
+                                )}
+                                
+                                {status === 'completed' && res && (
                                     <span className={`px-2 py-0.5 rounded-md text-[10px] font-black flex items-center gap-1.5 transition-colors ${
                                         res.status === 'WINNER' ? 'bg-[var(--fp-gold-lo)] text-[var(--fp-gold)] border border-[var(--fp-gold-lo)]' : 
                                         res.status === 'SURVIVED' ? 'bg-green/10 text-green border border-green/20' :
@@ -93,8 +134,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({
                                         {res.status === 'ELIMINATED' && <span className="opacity-70">💀</span>}
                                         <span className="opacity-70">{res.points} PTS</span>
                                     </span>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     );
                 })}
@@ -138,12 +179,16 @@ export const MatchCard: React.FC<MatchCardProps> = ({
                     <Button
                         variant="ghost"
                         size="sm"
-                        className={`w-full group/btn transition-all ${status === 'completed' ? 'hover:bg-green/10' : 'hover:bg-purple/10'}`}
+                        className={`w-full group/btn transition-all ${
+                            status === 'completed' ? 'hover:bg-green/10' : 
+                            hasConflict ? 'bg-[var(--fp-rose-lo)] text-[var(--fp-rose-hi)] hover:bg-[var(--fp-rose-hi)]/20' : 'hover:bg-purple/10'
+                        }`}
                         onClick={() => onEnterResult(roundNumber, table)}
                     >
-                        <IconSubmitResults size={14} className="mr-2 group-hover/btn:scale-110 transition-transform" />
+                        {hasConflict ? <AlertTriangle size={14} className="mr-2" /> : <IconSubmitResults size={14} className="mr-2 group-hover/btn:scale-110 transition-transform" />}
                         <span className="text-[10px] font-black uppercase tracking-widest">
-                            {status === 'completed' ? 'Editar Resultados' : 'Lançar Resultados'}
+                            {status === 'completed' ? 'Editar Resultados' : 
+                             hasConflict ? 'Resolver Conflito' : 'Lançar Resultados'}
                         </span>
                     </Button>
                 </div>

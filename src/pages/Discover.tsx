@@ -2,11 +2,10 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Calendar, Users as UsersIcon, Trophy, LayoutGrid } from 'lucide-react';
 import PageShell from '../components/layout';
-import { LoadingScreen } from '../components/ui';
+import { LoadingScreen, Modal } from '../components/ui';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { useLeagueStore } from '../features/leagues/leagueStore';
 import { useAuthStore } from '../features/auth/authStore';
-import { toast } from 'react-hot-toast';
 
 /* ── helpers ── */
 const formatDate = (dateStr: string) => {
@@ -43,6 +42,15 @@ const Discover: React.FC = () => {
     const [searchTerm, setSearchTerm] = React.useState('');
     const [viewMode, setViewMode] = React.useState<'tournaments' | 'leagues'>('tournaments');
     const [leagueFilter, setLeagueFilter] = React.useState<'all' | 'my' | 'featured'>('all');
+    
+    // Advanced Filters
+    const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+    const [filters, setFilters] = React.useState({
+        status: 'all',
+        format: 'all',
+        date: 'all',
+        hideCompleted: false
+    });
 
     React.useEffect(() => { 
         loadTournaments(); 
@@ -54,8 +62,36 @@ const Discover: React.FC = () => {
         const createdDate = new Date(t.date || Date.now());
         const isAbandoned = t.status === 'registration' && (Date.now() - createdDate.getTime() > 7 * 24 * 60 * 60 * 1000);
         if (isAbandoned || t.status === 'draft') return false;
-        return t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-               t.format.toLowerCase().includes(searchTerm.toLowerCase());
+
+        // Search
+        const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             t.format.toLowerCase().includes(searchTerm.toLowerCase());
+        if (!matchesSearch) return false;
+
+        // Status Filter
+        if (filters.status !== 'all' && t.status !== filters.status) return false;
+        if (filters.hideCompleted && t.status === 'completed') return false;
+
+        // Format Filter
+        if (filters.format !== 'all') {
+            const isMP = t.format === 'multiplayer';
+            if (filters.format === '1v1' && isMP) return false;
+            if (filters.format === 'multiplayer' && !isMP) return false;
+        }
+
+        // Date Filter (simple)
+        if (filters.date !== 'all') {
+            const tDate = new Date(t.date || '');
+            const now = new Date();
+            if (filters.date === 'today') {
+                if (tDate.toDateString() !== now.toDateString()) return false;
+            } else if (filters.date === 'week') {
+                const weekPlus = new Date(); weekPlus.setDate(now.getDate() + 7);
+                if (tDate < now || tDate > weekPlus) return false;
+            }
+        }
+
+        return true;
     });
 
     const filteredLeagues = publicLeagues.filter(l => {
@@ -65,9 +101,9 @@ const Discover: React.FC = () => {
         if (!matchesSearch) return false;
         if (leagueFilter === 'my') return isJoined;
         if (leagueFilter === 'featured') {
-             // In this version, featured are those with more than 5 members
              return (l.memberIds?.length || 0) > 5;
         }
+        if (filters.hideCompleted && l.status === 'completed') return false;
         return true;
     });
 
@@ -130,11 +166,12 @@ const Discover: React.FC = () => {
                             />
                         </div>
                         <button
-                            onClick={() => toast.success('Filtros avançados em breve!')}
-                            className="flex items-center gap-2 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest
-                                       bg-white/5 border border-white/10
-                                       text-muted hover:border-primary/50
-                                       hover:text-primary transition-all"
+                            onClick={() => setIsFilterOpen(true)}
+                            className={`flex items-center gap-2 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest
+                                       bg-white/5 border border-white/10 transition-all
+                                       ${(filters.status !== 'all' || filters.format !== 'all' || filters.date !== 'all') 
+                                            ? 'text-primary border-primary/40 bg-primary/5' 
+                                            : 'text-muted hover:border-primary/50 hover:text-primary'}`}
                         >
                             <Filter size={16} /> Filtros
                         </button>
@@ -149,7 +186,7 @@ const Discover: React.FC = () => {
                                     <button
                                         key={f.id}
                                         onClick={() => setLeagueFilter(f.id as any)}
-                                        className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${leagueFilter === f.id ? 'bg-amber-500 text-white shadow-lg' : 'text-muted hover:text-white'}`}
+                                        className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${leagueFilter === f.id ? 'bg-primary text-white shadow-lg' : 'text-muted hover:text-white'}`}
                                     >
                                         {f.label}
                                     </button>
@@ -158,6 +195,106 @@ const Discover: React.FC = () => {
                         )}
                     </div>
                 </div>
+
+                {/* Filter Modal */}
+                <Modal 
+                    isOpen={isFilterOpen} 
+                    onClose={() => setIsFilterOpen(false)}
+                    title="Filtros Avançados"
+                >
+                    <div className="flex flex-col gap-6 p-2">
+                        <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-muted mb-3 block">Status do Torneio</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {[
+                                    { id: 'all', label: 'Todos' },
+                                    { id: 'registration', label: 'Inscrições' },
+                                    { id: 'ongoing', label: 'Em Andamento' },
+                                    { id: 'completed', label: 'Finalizado' }
+                                ].map(s => (
+                                    <button
+                                        key={s.id}
+                                        onClick={() => setFilters({ ...filters, status: s.id })}
+                                        className={`px-4 py-3 rounded-xl text-xs font-bold transition-all border ${filters.status === s.id ? 'bg-primary/20 border-primary text-primary' : 'bg-white/5 border-white/10 text-muted hover:border-white/20'}`}
+                                    >
+                                        {s.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-muted mb-3 block">Formato</label>
+                            <div className="grid grid-cols-3 gap-2">
+                                {[
+                                    { id: 'all', label: 'Todos' },
+                                    { id: '1v1', label: '1 vs 1' },
+                                    { id: 'multiplayer', label: 'Multi' }
+                                ].map(f => (
+                                    <button
+                                        key={f.id}
+                                        onClick={() => setFilters({ ...filters, format: f.id })}
+                                        className={`px-4 py-3 rounded-xl text-xs font-bold transition-all border ${filters.format === f.id ? 'bg-primary/20 border-primary text-primary' : 'bg-white/5 border-white/10 text-muted hover:border-white/20'}`}
+                                    >
+                                        {f.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-muted mb-3 block">Data do Evento</label>
+                            <div className="grid grid-cols-1 gap-2">
+                                {[
+                                    { id: 'all', label: 'Qualquer data' },
+                                    { id: 'today', label: 'Hoje' },
+                                    { id: 'week', label: 'Esta Semana' }
+                                ].map(d => (
+                                    <button
+                                        key={d.id}
+                                        onClick={() => setFilters({ ...filters, date: d.id })}
+                                        className={`px-4 py-3 rounded-xl text-xs font-bold transition-all border ${filters.date === d.id ? 'bg-primary/20 border-primary text-primary' : 'bg-white/5 border-white/10 text-muted hover:border-white/20'}`}
+                                    >
+                                        {d.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                                <div className="relative">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only" 
+                                        checked={filters.hideCompleted}
+                                        onChange={e => setFilters({ ...filters, hideCompleted: e.target.checked })}
+                                    />
+                                    <div className={`w-12 h-6 rounded-full transition-colors border ${filters.hideCompleted ? 'bg-primary border-primary shadow-glow-primary' : 'bg-white/5 border-white/10'}`} />
+                                    <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${filters.hideCompleted ? 'translate-x-6' : 'translate-x-0'}`} />
+                                </div>
+                                <span className="text-xs font-bold text-white group-hover:text-primary transition-colors">Esconder Finalizados</span>
+                            </label>
+                        </div>
+
+                        <div className="flex gap-3 mt-4">
+                            <button
+                                onClick={() => {
+                                    setFilters({ status: 'all', format: 'all', date: 'all', hideCompleted: false });
+                                }}
+                                className="flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted bg-white/5 hover:bg-white/10 transition-all"
+                            >
+                                Limpar
+                            </button>
+                            <button
+                                onClick={() => setIsFilterOpen(false)}
+                                className="flex-[2] py-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-primary shadow-glow-primary hover:scale-[1.02] transition-all"
+                            >
+                                Aplicar Filtros
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
 
                 {/* ── GRID ── */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

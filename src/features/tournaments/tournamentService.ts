@@ -1,10 +1,10 @@
-import type { Tournament, Participant, Round, Table, TableResult } from '../../types';
+import type { Tournament, Participant, Round, Table, TableResult, ResultStatus } from '../../types';
 import { storage } from '../../utils/storage';
 import { syncService } from './syncService';
 import { v4 as uuidv4 } from 'uuid';
 import { generateSwissPairings, generateMultiplayerTables } from './pairingEngine';
 import { db } from '../../lib/firebase';
-import { doc, getDoc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, updateDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 
 const STORAGE_KEY = 'tournaments';
 
@@ -13,9 +13,24 @@ export const tournamentService = {
         return await storage.get<Tournament[]>(STORAGE_KEY, []);
     },
 
+    getPublicTournaments: async (): Promise<Tournament[]> => {
+        try {
+            const q = query(
+                collection(db, 'tournaments'),
+                where('status', 'in', ['registration', 'ongoing', 'completed']),
+                limit(30)
+            );
+            const snap = await getDocs(q);
+            return snap.docs.map(d => d.data() as Tournament);
+        } catch (err) {
+            console.error('Error fetching public tournaments:', err);
+            return [];
+        }
+    },
+
     getTournamentById: async (id: string): Promise<Tournament | undefined> => {
         const tournaments = await tournamentService.getTournaments();
-        let localTournament = tournaments.find(t => t.id === id);
+        const localTournament = tournaments.find(t => t.id === id);
 
         // Sync from Firestore to ensure we have latest participants (if someone joined from another device)
         try {
@@ -242,6 +257,27 @@ export const tournamentService = {
         }
     },
 
+    reactivateParticipant: async (tournamentId: string, playerId: string): Promise<void> => {
+        const tournament = await tournamentService.getTournamentById(tournamentId);
+        if (!tournament) throw new Error('Tournament not found');
+
+        const participant = tournament.participants.find(p => p.playerId === playerId);
+        if (participant) {
+            participant.status = 'active';
+
+            try {
+                await updateDoc(doc(db, 'tournaments', tournamentId), {
+                    participants: tournament.participants
+                });
+            } catch (err) {
+                console.error('Failed to update public DB on reactivate:', err);
+                throw new Error('Erro ao atualizar reativação no servidor.');
+            }
+
+            await tournamentService.saveTournament(tournament);
+        }
+    },
+
     removeParticipant: async (tournamentId: string, playerId: string): Promise<void> => {
         const tournament = await tournamentService.getTournamentById(tournamentId);
         if (!tournament) throw new Error('Tournament not found');
@@ -258,6 +294,26 @@ export const tournamentService = {
         }
 
         await tournamentService.saveTournament(tournament);
+    },
+
+    updateParticipantStatus: async (tournamentId: string, playerId: string, status: Participant['status']): Promise<void> => {
+        const tournament = await tournamentService.getTournamentById(tournamentId);
+        if (!tournament) throw new Error('Tournament not found');
+
+        const participant = tournament.participants.find(p => p.playerId === playerId);
+        if (participant) {
+            participant.status = status;
+            try {
+                await updateDoc(doc(db, 'tournaments', tournamentId), {
+                    participants: tournament.participants
+                });
+            } catch (err) {
+                console.error('Failed to update public DB on status change:', err);
+                throw new Error('Erro ao atualizar status no servidor.');
+            }
+
+            await tournamentService.saveTournament(tournament);
+        }
     },
 
     generateNextRound: async (tournamentId: string): Promise<Round> => {
@@ -362,6 +418,11 @@ export const tournamentService = {
             tournament.currentRound = 0;
             tournament.currentRoundData = undefined;
         }
+
+        // CRITICAL: Save BEFORE calling generateNextRound, because generateNextRound
+        // re-fetches from DB. Without this save, the old round is still in DB
+        // and generateNextRound creates a DUPLICATE round instead of replacing it.
+        await tournamentService.saveTournament(tournament);
 
         return await tournamentService.generateNextRound(tournamentId);
     },
@@ -598,6 +659,31 @@ export const tournamentService = {
             console.warn('Error calculating global rank:', err);
             return 999;
         }
+    },
+
+    reportPlayerResult: async (tournamentId: string, roundNumber: number, tableId: string, playerId: string, status: ResultStatus): Promise<void> => {
+        const tournament = await tournamentService.getTournamentById(tournamentId);
+        if (!tournament) throw new Error('Tournament not found');
+
+        const round = tournament.rounds.find(r => r.number === roundNumber);
+        if (!round) throw new Error('Round not found');
+
+        const table = round.tables.find(t => t.id === tableId);
+        if (!table) throw new Error('Table not found');
+
+        if (!table.playerReports) table.playerReports = [];
+
+        // Update or add report
+        const existingIdx = table.playerReports.findIndex(r => r.playerId === playerId);
+        const report = { playerId, status, reportedAt: new Date().toISOString() };
+
+        if (existingIdx !== -1) {
+            table.playerReports[existingIdx] = report;
+        } else {
+            table.playerReports.push(report);
+        }
+
+        await tournamentService.saveTournament(tournament);
     },
 
     /**

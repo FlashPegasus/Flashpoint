@@ -1,0 +1,1952 @@
+[
+  {
+    "id": "TC001",
+    "title": "Successful login redirects user to /new-area",
+    "description": "Verifies that a user can log in with valid email/password and is redirected to the authenticated dashboard.",
+    "category": "User Authentication",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/login\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"New Area\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Invalid password shows authentication error on login page",
+    "description": "Verifies that incorrect credentials do not log the user in and an error message is shown.",
+    "category": "User Authentication",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/login\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"validuser@example.com\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"WrongPassword123!\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/login\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"error\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Empty email shows validation or blocks login submission",
+    "description": "Verifies that the login form does not successfully submit when email is empty.",
+    "category": "User Authentication",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/login\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/login\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"email\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Empty password shows validation or blocks login submission",
+    "description": "Verifies that the login form does not successfully submit when password is empty.",
+    "category": "User Authentication",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/login\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/login\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"password\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Whitespace-only inputs do not allow successful login",
+    "description": "Verifies that whitespace-only email/password do not authenticate and an error/validation is shown.",
+    "category": "User Authentication",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/login\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"   \" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"   \" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/login\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"error\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Create a new tournament (happy path) and land on the tournament dashboard",
+    "description": "Verifies an organizer can create a tournament with valid details and is taken to the tournament dashboard.",
+    "category": "Tournament Creation & Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Tournament\" button or link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/tournament/create"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Friday Night Cup\" into the tournament name field"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Pokémon\" from the game dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Swiss\" from the tournament type dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create\" or \"Submit\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/tournament/\""
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Create tournament with Single Elimination type",
+    "description": "Verifies tournament creation works when the organizer selects Single Elimination as the type.",
+    "category": "Tournament Creation & Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Tournament\" button or link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/tournament/create"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Weekend Knockout\" into the tournament name field"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Yu-Gi-Oh!\" from the game dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Single Elimination\" from the tournament type dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create\" or \"Submit\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/tournament/\""
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Tournament creation validation: missing required tournament name",
+    "description": "Verifies submitting the create tournament form with a missing required field shows a validation error message.",
+    "category": "Tournament Creation & Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Tournament\" button or link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/tournament/create"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Magic: The Gathering\" from the game dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Swiss\" from the tournament type dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create\" or \"Submit\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"required\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Tournament creation validation: missing required game",
+    "description": "Verifies the create tournament form prevents submission when the game is not selected and shows a validation error.",
+    "category": "Tournament Creation & Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Tournament\" button or link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/tournament/create"
+      },
+      {
+        "type": "action",
+        "description": "Type \"No Game Selected Event\" into the tournament name field"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Swiss\" from the tournament type dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create\" or \"Submit\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"game\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Tournament creation validation: missing required tournament type",
+    "description": "Verifies the create tournament form prevents submission when the tournament type is not selected and shows a validation error.",
+    "category": "Tournament Creation & Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Tournament\" button or link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/tournament/create"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Type Missing Event\" into the tournament name field"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Pokémon\" from the game dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create\" or \"Submit\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"type\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Add a new round to a tournament from the tournament dashboard (happy path)",
+    "description": "Verifies an organizer can add a round from the tournament dashboard and sees it listed afterward.",
+    "category": "Tournament Creation & Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Tournament\" button or link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/tournament/create"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Rounds Test Tournament\" into the tournament name field"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Pokémon\" from the game dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Swiss\" from the tournament type dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create\" or \"Submit\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/tournament/\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Add rounds\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Round\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Round 1\" (or \"1\") from the round number dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Type \"50\" into the round duration/minutes field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Round\" or \"Save\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Round 1\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Round creation validation: invalid round configuration shows an error",
+    "description": "Verifies adding rounds with an invalid configuration is blocked and an error message is shown.",
+    "category": "Tournament Creation & Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Tournament\" button or link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/tournament/create"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Invalid Round Config Tournament\" into the tournament name field"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Yu-Gi-Oh!\" from the game dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Swiss\" from the tournament type dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create\" or \"Submit\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/tournament/\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Add rounds\" button"
+      },
+      {
+        "type": "action",
+        "description": "Type \"0\" into the round duration/minutes field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Round\" or \"Save\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"error\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Round creation validation: missing required round fields shows an error",
+    "description": "Verifies round creation requires required fields and shows a validation message when they are missing.",
+    "category": "Tournament Creation & Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Tournament\" button or link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/tournament/create"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Missing Round Fields Tournament\" into the tournament name field"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Magic: The Gathering\" from the game dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Single Elimination\" from the tournament type dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create\" or \"Submit\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/tournament/\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Add rounds\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Round\" or \"Save\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"required\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Advance round successfully and view newly generated pairings",
+    "description": "Verifies an organizer can advance the tournament to the next round and the UI shows the new round and its generated pairings.",
+    "category": "Tournament Pairing and Round Advancement",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click on a tournament in the dashboard list to open its tournament dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Advance Round\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Round 2\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Advance round shows pairings section for the new round",
+    "description": "Verifies that after advancing a round, the page displays a visible pairings area/list for the newly created round.",
+    "category": "Tournament Pairing and Round Advancement",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click on a tournament in the dashboard list to open its tournament dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Advance Round\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Pairings\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Round list updates to include the newly advanced round",
+    "description": "Verifies advancing a round adds the next round to the visible rounds list/navigation on the tournament dashboard.",
+    "category": "Tournament Pairing and Round Advancement",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click on a tournament in the dashboard list to open its tournament dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Round 1\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Advance Round\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Round 2\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Prevent advancing round when insufficient players are registered",
+    "description": "Verifies the UI blocks round advancement and shows an error when there are not enough registered players.",
+    "category": "Tournament Pairing and Round Advancement",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click on a tournament in the dashboard list that has insufficient registered players"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Advance Round\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"insufficient\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Insufficient players error does not advance the round",
+    "description": "Verifies that after the insufficient players error appears, the visible current round does not change.",
+    "category": "Tournament Pairing and Round Advancement",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click on a tournament in the dashboard list that has insufficient registered players"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Round 1\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Advance Round\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Round 2\" is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "Show conflict/warning when trying to advance a round with existing pairings",
+    "description": "Verifies the UI shows a conflict or warning message when pairings already exist for the next round (or current round) and advancement is attempted again.",
+    "category": "Tournament Pairing and Round Advancement",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click on a tournament in the dashboard list that already has pairings generated for the current/next round"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Advance Round\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"already\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "Conflict/warning message is visible and round does not duplicate",
+    "description": "Verifies that when the conflict/warning is shown, the UI does not create an extra duplicate round entry.",
+    "category": "Tournament Pairing and Round Advancement",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click on a tournament in the dashboard list that already has pairings generated for the current/next round"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Round 2\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Advance Round\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Round 3\" is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC021",
+    "title": "Join a public tournament from Discover as an authenticated user",
+    "description": "Verifies an authenticated player can join a tournament from Discover and sees a join confirmation.",
+    "category": "Player Participation (Join Tournament)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Discover\" in the main navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Participar\" button on a visible tournament card"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Confirmación\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC022",
+    "title": "Cancel join from the join-required path",
+    "description": "Verifies a player can open the join confirmation modal and cancel without completing the join.",
+    "category": "Player Participation (Join Tournament)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Discover\" in the main navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Participar\" button on a visible tournament card"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Cancelar\" button in the confirmation modal"
+      }
+    ]
+  },
+  {
+    "id": "TC023",
+    "title": "Join confirmation modal can be dismissed via close control",
+    "description": "Verifies the join confirmation modal can be dismissed using a close control without proceeding.",
+    "category": "Player Participation (Join Tournament)",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Discover\" in the main navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Participar\" button on a visible tournament card"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Cerrar\" (X) control on the confirmation modal"
+      }
+    ]
+  },
+  {
+    "id": "TC024",
+    "title": "Attempting to join from Discover when logged out triggers login requirement messaging",
+    "description": "Verifies the user is prompted to log in when attempting to join, by confirming login page prompt is shown after a join attempt flow begins.",
+    "category": "Player Participation (Join Tournament)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Logout\" in the main navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Discover\" in the main navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Participar\" button on a visible tournament card"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Login\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC025",
+    "title": "Discover page is accessible and shows tournament cards with participation actions",
+    "description": "Verifies the Discover page loads and presents join actions for public tournaments after login.",
+    "category": "Player Participation (Join Tournament)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Discover\" in the main navigation/menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Participar\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC026",
+    "title": "Login with invalid credentials from the join-required path shows an error",
+    "description": "Verifies invalid login attempt shows an error message, supporting the join flow that requires authentication.",
+    "category": "Player Participation (Join Tournament)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"not.a.user@example.invalid\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"WrongPassword123!\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"error\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC027",
+    "title": "Player reports a valid match result from 'Minha Mesa' and sees confirmation",
+    "description": "Verifies a logged-in player can report a valid match result from the New Area dashboard and receives a visible confirmation.",
+    "category": "Match Result Reporting (Player and Organizer)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Login\" or \"Entrar\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the \"Minha Mesa\" section"
+      },
+      {
+        "type": "action",
+        "description": "Click the button/link to report match results in \"Minha Mesa\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Resultado\" or \"Result\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC028",
+    "title": "Player submits match result and sees standings/dashboard update indicator",
+    "description": "Verifies that after submitting a result from 'Minha Mesa', the dashboard shows a visible success state and some visible updated match status indicator.",
+    "category": "Match Result Reporting (Player and Organizer)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Login\" or \"Entrar\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the \"Minha Mesa\" section"
+      },
+      {
+        "type": "action",
+        "description": "Click the button/link labeled \"Reportar Resultado\" / \"Report Result\" (or equivalent) for the current match"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Confirmado\" / \"Confirmed\" or \"Enviado\" / \"Submitted\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC029",
+    "title": "Player attempts to report invalid scores and sees validation error",
+    "description": "Verifies score validation prevents submitting an invalid match result from 'Minha Mesa' and shows a visible error message.",
+    "category": "Match Result Reporting (Player and Organizer)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Login\" or \"Entrar\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the \"Minha Mesa\" section"
+      },
+      {
+        "type": "action",
+        "description": "Click the button/link to report match results in \"Minha Mesa\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Erro\" / \"Error\" or \"Pontuação inválida\" / \"Invalid score\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC030",
+    "title": "Player attempts to submit empty result fields and sees required-field message",
+    "description": "Verifies that submitting without providing required score fields shows a visible required/validation message.",
+    "category": "Match Result Reporting (Player and Organizer)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Login\" or \"Entrar\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the \"Minha Mesa\" section"
+      },
+      {
+        "type": "action",
+        "description": "Click the button/link to report match results in \"Minha Mesa\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Obrigatório\" / \"Required\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC031",
+    "title": "Filter Discover list to Active tournaments",
+    "description": "Verifies that selecting the Active status filter updates the tournament list accordingly.",
+    "category": "Discovery & Filters",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /discover"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/discover\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Discover\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Status\" filter control"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Active\" from the status options"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Active\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"tournament list\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC032",
+    "title": "Filter Discover list to Concluded tournaments",
+    "description": "Verifies that selecting the Concluded status filter updates the tournament list accordingly.",
+    "category": "Discovery & Filters",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /discover"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/discover\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Status\" filter control"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Concluded\" from the status options"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Concluded\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"tournament list\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC033",
+    "title": "Apply filters that yield no results shows empty state",
+    "description": "Verifies that when filters match zero tournaments, an empty state message is displayed.",
+    "category": "Discovery & Filters",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /discover"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/discover\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Status\" filter control"
+      },
+      {
+        "type": "action",
+        "description": "Select an option that is unlikely to have results (for example, \"Concluded\")"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Game\" filter control"
+      },
+      {
+        "type": "action",
+        "description": "Select a game option that results in zero matches (choose any available game option that empties the list)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"No tournaments found\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC034",
+    "title": "Clear filters restores tournament list",
+    "description": "Verifies that clearing applied filters returns the discover list to an unfiltered state.",
+    "category": "Discovery & Filters",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /discover"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/discover\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Status\" filter control"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Active\" from the status options"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Active\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Clear filters\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"tournament list\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Active\" is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC035",
+    "title": "Combine Status and Game filters narrows results",
+    "description": "Verifies that using multiple filters together refines the list of discoverable tournaments.",
+    "category": "Discovery & Filters",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /discover"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/discover\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Status\" filter control"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Active\" from the status options"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Game\" filter control"
+      },
+      {
+        "type": "action",
+        "description": "Select any available game option from the game options list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"tournament list\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC036",
+    "title": "Filters persist while staying on Discover page",
+    "description": "Verifies that selected filters remain applied after interacting with the page content (without leaving the route).",
+    "category": "Discovery & Filters",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /discover"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/discover\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Status\" filter control"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Active\" from the status options"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Active\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the bottom of the tournament list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Active\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC037",
+    "title": "Access Unified Dashboard and open a tournament card (authenticated)",
+    "description": "Verifies an authenticated user can reach the unified dashboard and open a tournament card to enter a tournament dashboard.",
+    "category": "Unified Dashboard (NewArea / MyArea)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" / \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Participations\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first visible tournament card in the dashboard list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/tournament/\""
+      }
+    ]
+  },
+  {
+    "id": "TC038",
+    "title": "Unified Dashboard shows both organizer and participant sections (authenticated)",
+    "description": "Verifies the unified dashboard renders key sections for organized events and participations for an authenticated user.",
+    "category": "Unified Dashboard (NewArea / MyArea)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" / \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Organized\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Participations\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"dashboard\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC039",
+    "title": "Access My Area and verify matches/tournaments list is visible (authenticated)",
+    "description": "Verifies an authenticated user can view the My Area page and see their matches and tournaments list.",
+    "category": "Unified Dashboard (NewArea / MyArea)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" / \"Sign in\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"My Area\" / \"Minha Área\" navigation item"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/my-area\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Matches\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Tournaments\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC040",
+    "title": "My Area: click a match item (if present)",
+    "description": "Verifies a user can click a match from My Area to attempt navigation to match details (presence-based).",
+    "category": "Unified Dashboard (NewArea / MyArea)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" / \"Sign in\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"My Area\" / \"Minha Área\" navigation item"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/my-area\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the first visible match item in the matches list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify page title contains \"Match\""
+      }
+    ]
+  },
+  {
+    "id": "TC041",
+    "title": "New Area: quick access to \"Minha Mesa\" is visible (authenticated)",
+    "description": "Verifies the unified dashboard exposes a quick action entry point for \"Minha Mesa\".",
+    "category": "Unified Dashboard (NewArea / MyArea)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" / \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/new-area\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Minha Mesa\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"quick actions\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC042",
+    "title": "Login validation: invalid credentials show an error and stay on login",
+    "description": "Verifies invalid login attempts do not grant access and display a visible error on the login page.",
+    "category": "Unified Dashboard (NewArea / MyArea)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"fakeuser@example.com\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"WrongPassword123!\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" / \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/login\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Invalid\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC043",
+    "title": "View global rankings list on the Rankings page",
+    "description": "Verifies that the global rankings page loads and displays a visible rankings list.",
+    "category": "Rankings & Leaderboards",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /ranking"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/ranking\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify page title contains \"Ranking\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Global\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Rankings list\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC044",
+    "title": "Change game filter updates the global rankings list",
+    "description": "Verifies that changing the game filter updates the visible rankings list content/state.",
+    "category": "Rankings & Leaderboards",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /ranking"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Game filter\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Game filter\""
+      },
+      {
+        "type": "action",
+        "description": "Select a different game option from dropdown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Rankings list\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Loading\" is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC045",
+    "title": "Filter selections persist while staying on the Rankings page",
+    "description": "Verifies that after changing the game filter, the selection remains visible without leaving the page.",
+    "category": "Rankings & Leaderboards",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /ranking"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Game filter\""
+      },
+      {
+        "type": "action",
+        "description": "Select a different game option from dropdown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Selected game\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to \"Rankings list\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Rankings list\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC046",
+    "title": "Empty-state handling when filters yield no rankings",
+    "description": "Verifies that the page shows a clear empty-state message when no rankings are available for a selected game.",
+    "category": "Rankings & Leaderboards",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /ranking"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Game filter\""
+      },
+      {
+        "type": "action",
+        "description": "Select a game option that is likely to have no results from dropdown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"No rankings\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Try another filter\" is visible"
+      }
+    ]
+  }
+]

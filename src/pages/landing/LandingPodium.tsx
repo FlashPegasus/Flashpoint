@@ -138,6 +138,21 @@ const LandingPodium: React.FC = () => {
                     })}
                 </div>
             )}
+
+            {/* View Full Ranking Link */}
+            {!loading && players.length > 0 && (
+                <div className="flex justify-center mt-12 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+                    <a 
+                        href="/ranking" 
+                        className="lp-podium-link flex items-center gap-2 px-8 py-3 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-secondary hover:text-white hover:bg-white/10 hover:border-primary/50 transition-all group shadow-glow-sm"
+                    >
+                        <span>Ver Ranking Completo</span>
+                        <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center group-hover:bg-primary transition-colors">
+                            <span className="text-[10px] text-white">→</span>
+                        </div>
+                    </a>
+                </div>
+            )}
         </section>
     );
 };

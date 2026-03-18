@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Tournament, Participant, TableResult } from '../../types';
+import type { Tournament, Participant, TableResult, ResultStatus } from '../../types';
 import { tournamentService } from './tournamentService';
 
 interface TournamentState {
@@ -12,12 +12,14 @@ interface TournamentState {
     createTournament: (data: Partial<Tournament>) => Promise<Tournament>;
     addParticipant: (tournamentId: string, player: Partial<Participant>) => Promise<void>;
     withdrawParticipant: (tournamentId: string, playerId: string) => Promise<void>;
+    reactivateParticipant: (tournamentId: string, playerId: string) => Promise<void>;
     generateRound: (tournamentId: string) => Promise<void>;
     regenerateRound: (tournamentId: string) => Promise<void>;
     submitResult: (tournamentId: string, roundNumber: number, tableId: string, results: TableResult[]) => Promise<void>;
     completeTournament: (tournamentId: string) => Promise<void>;
     publishTournament: (tournamentId: string) => Promise<void>;
     toggleCheckIn: (tournamentId: string, playerId: string, status: boolean) => Promise<void>;
+    reportPlayerResult: (tournamentId: string, roundNumber: number, tableId: string, playerId: string, status: ResultStatus) => Promise<void>;
 }
 
 export const useTournamentStore = create<TournamentState>((set, get) => ({
@@ -26,8 +28,23 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
     isLoading: false,
 
     loadTournaments: async () => {
-        const tournaments = await tournamentService.getTournaments();
-        set({ tournaments });
+        set({ isLoading: true });
+        try {
+            const local = await tournamentService.getTournaments();
+            const publicTournaments = await tournamentService.getPublicTournaments();
+            
+            // Merge and de-duplicate
+            const combined = [...local];
+            publicTournaments.forEach(pt => {
+                if (!combined.find(t => t.id === pt.id)) {
+                    combined.push(pt);
+                }
+            });
+            
+            set({ tournaments: combined, isLoading: false });
+        } catch (err) {
+            set({ isLoading: false });
+        }
     },
 
     loadTournament: async (id: string) => {
@@ -54,6 +71,11 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
 
     withdrawParticipant: async (id, playerId) => {
         await tournamentService.withdrawParticipant(id, playerId);
+        await get().loadTournament(id);
+    },
+
+    reactivateParticipant: async (id, playerId) => {
+        await tournamentService.reactivateParticipant(id, playerId);
         await get().loadTournament(id);
     },
 
@@ -86,6 +108,11 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
 
     toggleCheckIn: async (id, playerId, status) => {
         await tournamentService.toggleCheckIn(id, playerId, status);
+        await get().loadTournament(id);
+    },
+
+    reportPlayerResult: async (id, roundNum, tableId, playerId, status) => {
+        await tournamentService.reportPlayerResult(id, roundNum, tableId, playerId, status);
         await get().loadTournament(id);
     },
 }));

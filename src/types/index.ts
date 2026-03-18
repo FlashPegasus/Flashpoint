@@ -42,7 +42,7 @@ export interface Participant {
     playerId: string;
     name: string;
     avatar?: string;
-    status: 'active' | 'withdrawn' | 'late';
+    status: 'active' | 'withdrawn' | 'late' | 'dropped';
     isAnonymous?: boolean;
     checkedIn?: boolean;
     joinedRound: number;
@@ -67,11 +67,18 @@ export interface TableResult {
     position?: number; // Keep for backward compatibility if needed, but primary is status
 }
 
+export interface PlayerReport {
+    playerId: string;
+    status: ResultStatus;
+    reportedAt: string;
+}
+
 export interface Table {
     id: string;
     playerIds: string[];
     results: TableResult[];
     status: 'pending' | 'completed';
+    playerReports?: PlayerReport[];
 }
 
 export interface Round {

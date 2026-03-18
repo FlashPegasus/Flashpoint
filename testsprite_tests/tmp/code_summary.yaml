@@ -1,0 +1,78 @@
+version: "2"
+type: frontend
+tech_stack:
+  - language: TypeScript
+  - framework: React
+  - bundler: Vite
+  - state_management: Zustand
+  - styling: CSS Vanilla
+  - backend: Firebase (Firestore, RTDB, Auth)
+  - mobile: Capacitor
+routes:
+  - path: /
+    file: src/pages/Home.tsx
+    auth_required: false
+    description: Landing page
+  - path: /login
+    file: src/pages/Login.tsx
+    auth_required: false
+    description: User authentication
+  - path: /my-area
+    file: src/pages/MyArea.tsx
+    auth_required: true
+    description: User matches and tournaments
+  - path: /new-area
+    file: src/pages/NewArea.tsx
+    auth_required: true
+    description: Unified dashboard for players and organizers
+  - path: /tournament/create
+    file: src/pages/TournamentCreate.tsx
+    auth_required: true
+    description: Create a new tournament
+  - path: /tournament/:id
+    file: src/pages/TournamentDashboard.tsx
+    auth_required: true
+    description: Management dashboard for a specific tournament
+  - path: /discover
+    file: src/pages/Discover.tsx
+    auth_required: false
+    description: Browse public tournaments and leagues
+  - path: /ranking
+    file: src/pages/RankingGlobal.tsx
+    auth_required: false
+    description: Global rankings
+features:
+  - name: User Authentication
+    description: Login with email and password using Firebase Auth
+    files:
+      - src/pages/Login.tsx
+      - src/features/auth/authStore.ts
+    entry_route: /login
+    user_interactions:
+      - Fill email input
+      - Fill password input
+      - Click Login button
+    auth_required: false
+  - name: Tournament Management
+    description: Create and manage TCG tournaments with Swiss/Single Elimination pairings
+    files:
+      - src/pages/TournamentCreate.tsx
+      - src/pages/TournamentDashboard.tsx
+    entry_route: /tournament/create
+    user_interactions:
+      - Fill tournament details (name, game, type)
+      - Submit creation form
+      - Add rounds to tournament
+      - Report match results
+    auth_required: true
+  - name: Player Participation
+    description: Players join tournaments and report their own scores
+    files:
+      - src/pages/JoinTournament.tsx
+      - src/pages/NewArea.tsx
+    entry_route: /discover
+    user_interactions:
+      - Click "Participar" button
+      - Report match results from "Minha Mesa"
+    auth_required: true
+known_limitations: []

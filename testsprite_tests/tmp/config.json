@@ -1,0 +1,25 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:5173",
+  "executionArgs": {
+    "projectName": "FlashPoint",
+    "projectPath": "c:\\Users\\gabri\\OneDrive\\Documentos\\Antig\\Antig\\FlashPoint",
+    "testIds": [
+      "TC001",
+      "TC002",
+      "TC003",
+      "TC004",
+      "TC005",
+      "TC006"
+    ],
+    "additionalInstruction": "Execute somente os testes de login (TC001 a TC005) e criação de torneio (TC006) para validar o ambiente inicial. Use as credenciais de teste appropriadas se necessário, ou tente o fluxo de login básico. Se falhar por falta de conta, apenas reporte.",
+    "serverMode": "development",
+    "envs": {
+      "API_KEY": "sk-user-JEVhRcga4Yf7bDsxL9hNd0lPj967a1Q2MafrVrKtjO2_hF2E6KQJqQSAuZ1x5KFsgq0FOIFnACXZL0ZSrnpPoNWIvWPmAQao9G7sxSjRK5pcc1lcZq3Hy0D3uQ_ltw1M4ik"
+    }
+  },
+  "serverPort": 50063,
+  "proxy": "http://eb45a3cf-f433-4eed-b9d7-0fec3294a334:yDKSsRCvCTwiesagn30RS1o0JcaJn8GB@tun.testsprite.com:8080"
+}

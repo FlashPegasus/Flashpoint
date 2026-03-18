@@ -78,7 +78,9 @@ const JoinTournament: React.FC = () => {
     const participantCount = tournament.participants.length;
     const maxParticipants  = tournament.maxParticipants;
     const isFull  = maxParticipants ? participantCount >= maxParticipants : false;
-    const isOpen  = tournament.status === 'registration' || tournament.status === 'draft';
+    const isOpen  = tournament.status === 'registration' || 
+                    tournament.status === 'draft' || 
+                    (tournament.status === 'ongoing' && tournament.allowLateRegistration);
 
     const metaItems = [
         { icon: <Calendar size={14} />, text: new Date(tournament.date).toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) },

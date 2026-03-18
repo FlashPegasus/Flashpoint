@@ -41,7 +41,7 @@ const LeagueListItem: React.FC<{ league: League; navigate: (path: string) => voi
 
 const Leagues: React.FC = () => {
     const navigate = useNavigate();
-    const { user, uiMode } = useAuthStore();
+    const { user } = useAuthStore();
     const { publicLeagues, loadPublicLeagues, isLoading } = useLeagueStore();
 
     useEffect(() => {
@@ -56,14 +56,8 @@ const Leagues: React.FC = () => {
             <div className="container py-8 animate-fade-in">
                 <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
                     <div>
-                        <h1 className="text-4xl font-outfit mb-1">
-                            {uiMode === 'organizer' ? 'Minhas Ligas' : 'Descobrir Ligas'}
-                        </h1>
-                        <p className="text-secondary">
-                            {uiMode === 'organizer' 
-                                ? 'Gerencie suas competições e sistemas de ranking.' 
-                                : 'Participe de competições sazonais e suba no ranking.'}
-                        </p>
+                        <h1 className="text-4xl font-outfit mb-1">Descobrir Ligas</h1>
+                        <p className="text-secondary">Explore competições sazonais, rankings globais e suba no topo da arena.</p>
                     </div>
                     <div className="flex gap-3">
                         <Button variant="secondary" onClick={() => navigate('/join-league')}>
@@ -79,48 +73,33 @@ const Leagues: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Live Leagues List */}
-                    <Card title={uiMode === 'organizer' ? 'Gerenciamento de Ligas' : 'Ligas Públicas'}>
+                    <Card title="Competições Ativas">
                         {isLoading ? (
                             <div className="py-10 text-center opacity-40">Carregando...</div>
                         ) : (
                             <div className="flex flex-col gap-8">
-                                {uiMode === 'organizer' && (
                                     <div className="flex flex-col gap-4">
-                                        <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--fp-purple-hi)]">Minhas Ligas</h3>
-                                        {myOrganizedLeagues.length === 0 ? (
-                                            <div className="p-8 text-center glass rounded-2xl border border-dashed border-white/5 opacity-50 italic text-xs">
-                                                Você ainda não organizou nenhuma liga.
-                                            </div>
-                                        ) : (
-                                            myOrganizedLeagues.map(league => (
-                                                <LeagueListItem key={league.id} league={league} navigate={navigate} isMine={true} />
-                                            ))
-                                        )}
-                                        
-                                        {otherLeagues.length > 0 && (
+                                        {myOrganizedLeagues.length > 0 && (
                                             <>
-                                                <h3 className="text-xs font-bold uppercase tracking-widest text-secondary mt-4">Outras Ligas Públicas</h3>
-                                                {otherLeagues.map(league => (
-                                                    <LeagueListItem key={league.id} league={league} navigate={navigate} isMine={false} />
+                                                <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--fp-purple-hi)]">Minhas Ligas</h3>
+                                                {myOrganizedLeagues.map(league => (
+                                                    <LeagueListItem key={league.id} league={league} navigate={navigate} isMine={true} />
                                                 ))}
+                                                <div className="h-px bg-white/5 my-4"></div>
                                             </>
                                         )}
-                                    </div>
-                                )}
-
-                                {uiMode === 'player' && (
-                                    <div className="flex flex-col gap-4">
-                                        {publicLeagues.length === 0 ? (
+                                        
+                                        <h3 className="text-xs font-bold uppercase tracking-widest text-secondary">Ligas Disponíveis</h3>
+                                        {otherLeagues.length === 0 && myOrganizedLeagues.length === 0 ? (
                                             <div className="p-10 text-center opacity-40 italic text-sm">
                                                 Nenhuma liga pública ainda. Seja o primeiro a criar uma!
                                             </div>
                                         ) : (
-                                            publicLeagues.map(league => (
-                                                <LeagueListItem key={league.id} league={league} navigate={navigate} isMine={league.organizerId === user?.id} />
+                                            otherLeagues.map(league => (
+                                                <LeagueListItem key={league.id} league={league} navigate={navigate} isMine={false} />
                                             ))
                                         )}
                                     </div>
-                                )}
                             </div>
                         )}
                     </Card>

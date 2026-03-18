@@ -48,7 +48,7 @@ const ROTATIONS = [-8, -4, 0, 4, 8];
 
 const LandingHero: React.FC = () => {
     const navigate = useNavigate();
-    const { user, uiMode } = useAuthStore();
+    const { user } = useAuthStore();
     const handRef = useRef<HTMLDivElement>(null);
     const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [activeIdx, setActiveIdx] = useState<number | null>(null);
@@ -167,7 +167,7 @@ const LandingHero: React.FC = () => {
             if (top) top.classList.remove('lp-drawing');
             setIsDrawing(false);
             if (user) {
-                navigate(uiMode === 'organizer' ? '/organizer/dashboard' : '/my-area');
+                navigate('/my-area');
             } else {
                 navigate('/login');
             }
