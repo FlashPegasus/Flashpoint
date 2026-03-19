@@ -183,7 +183,7 @@ export const TournamentParticipantsTab: React.FC<TournamentParticipantsTabProps>
                 <div className="flex flex-col gap-3">
                     {!isOrganizer && !activeTournament.participants.some(p => p.playerId === user?.id) && (
                         (activeTournament.status === 'registration' || 
-                        (activeTournament.status === 'ongoing' && activeTournament.allowLateRegistration))
+                        (activeTournament.status === 'ongoing' && activeTournament.allowLateRegistration !== false))
                     ) && (
                         <button 
                             className="w-full py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold bg-primary/20 border border-primary/50 text-primary-hi hover:bg-primary/30 transition-all shadow-glow-primary animate-pulse"

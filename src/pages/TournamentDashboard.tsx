@@ -433,7 +433,7 @@ const TournamentDashboard: React.FC = () => {
                             {/* JOIN BUTTON (for non-participants) */}
                             {!isOrganizer && !activeTournament.participants.some(p => p.playerId === user?.id) && (
                                 (activeTournament.status === 'registration' || 
-                                (activeTournament.status === 'ongoing' && activeTournament.allowLateRegistration))
+                                (activeTournament.status === 'ongoing' && activeTournament.allowLateRegistration !== false))
                             ) && (
                                 <button 
                                     className="fp-btn-primary px-6 py-2 rounded-xl flex items-center gap-2 text-sm font-bold shadow-glow-primary animate-pulse"

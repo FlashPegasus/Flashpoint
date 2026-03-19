@@ -78,9 +78,10 @@ const JoinTournament: React.FC = () => {
     const participantCount = tournament.participants.length;
     const maxParticipants  = tournament.maxParticipants;
     const isFull  = maxParticipants ? participantCount >= maxParticipants : false;
+    const allowLateReg = tournament.allowLateRegistration !== false; // Default to true if not specified
     const isOpen  = tournament.status === 'registration' || 
                     tournament.status === 'draft' || 
-                    (tournament.status === 'ongoing' && tournament.allowLateRegistration);
+                    (tournament.status === 'ongoing' && allowLateReg);
 
     const metaItems = [
         { icon: <Calendar size={14} />, text: new Date(tournament.date).toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) },
@@ -212,7 +213,7 @@ const JoinTournament: React.FC = () => {
                                         Ver Torneio
                                     </button>
                                 </div>
-                            ) : tournament.status === 'ongoing' && !tournament.allowLateRegistration ? (
+                            ) : tournament.status === 'ongoing' && !allowLateReg ? (
                                 <div className="text-center p-6 rounded-2xl border border-[rgba(231,76,60,0.3)] bg-[rgba(231,76,60,0.05)]">
                                     <div className="flex justify-center mb-3">
                                         <div className="px-3 py-1 bg-[var(--fp-rose-lo)] border border-[var(--fp-rose-hi)] rounded-full text-[10px] font-bold text-[var(--fp-rose-hi)] uppercase tracking-widest animate-pulse">

@@ -93,7 +93,7 @@ export const tournamentService = {
         if (!tournament) throw new Error('Torneio não encontrado.');
         if (tournament.status !== 'registration' && tournament.status !== 'draft') {
             // If tournament is ongoing, check for late registration
-            if (tournament.status === 'ongoing' && tournament.allowLateRegistration) {
+            if (tournament.status === 'ongoing' && tournament.allowLateRegistration !== false) {
                 // Allowed
             } else {
                 throw new Error('As inscrições para este torneio estão encerradas.');
@@ -121,7 +121,7 @@ export const tournamentService = {
                 avatar: userAvatar || '',
                 status: 'active',
                 isAnonymous: userId.startsWith('guest_') || (userAvatar === '' && userName === 'Convidado'), // Simple heuristic if not passed
-                joinedRound: 0,
+                joinedRound: (tournament.rounds?.length || 0) + 1,
                 totalPoints: 0,
                 ...commanderInfo
             };

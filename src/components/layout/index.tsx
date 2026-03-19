@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Trophy, Users, LayoutDashboard, LogOut, Search, Menu, X, User as UserIcon, Plus, ChevronDown, Home, Compass } from 'lucide-react';
 import { useAuthStore } from '../../features/auth/authStore';
-import AdPlaceholder from '../ui/AdPlaceholder';
+import AdBanner from '../ui/AdBanner';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useNavBump } from '../../hooks/useNavBump';
 import { NotificationBell } from './NotificationBell';
@@ -338,7 +338,7 @@ const PageShell: React.FC<PageShellProps> = ({ children, showAd = true, showBack
 
                 {showAd && (
                     <div className="container mt-8">
-                        <AdPlaceholder className="ad-shell-banner" />
+                        <AdBanner className="ad-shell-banner" />
                     </div>
                 )}
             </main>

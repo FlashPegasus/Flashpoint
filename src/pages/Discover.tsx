@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Calendar, Users as UsersIcon, Trophy, LayoutGrid } from 'lucide-react';
 import PageShell from '../components/layout';
-import { LoadingScreen, Modal } from '../components/ui';
+import { LoadingScreen, Modal, AdBanner } from '../components/ui';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { useLeagueStore } from '../features/leagues/leagueStore';
 import { useAuthStore } from '../features/auth/authStore';
@@ -429,9 +429,8 @@ const Discover: React.FC = () => {
                     )}
                 </div>
 
-                {/* Propaganda re-styled */}
-                <div className="mt-20 p-10 border border-white/5 bg-[radial-gradient(circle_at_50%_0%,rgba(192,57,43,0.05),transparent_70%)] rounded-[2.5rem] text-center relative overflow-hidden group">
-                    <p className="text-[10px] font-black uppercase tracking-[0.5em] text-muted/20 group-hover:text-primary/40 transition-colors">Portal FlashPoint v2.0</p>
+                <div className="mt-12 text-center">
+                    <AdBanner />
                 </div>
             </div>
         </PageShell>
