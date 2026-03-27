@@ -3,7 +3,8 @@ import { db, rtdb } from '../../lib/firebase';
 import { onValue, ref, set, serverTimestamp } from 'firebase/database';
 import {
     doc, getDoc, setDoc, updateDoc, deleteDoc,
-    collection, getDocs, query, where, arrayUnion, arrayRemove, orderBy, limit, addDoc
+    collection, getDocs, query, where, arrayUnion, arrayRemove, orderBy, limit, addDoc,
+    documentId
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { tournamentService } from '../tournaments/tournamentService';
@@ -96,6 +97,18 @@ export const leagueService = {
         );
 
         await setDoc(doc(db, LEAGUES_COLLECTION, league.id), sanitizedLeague);
+        
+        // 1.1 Inserir Organizador na subcoleção de membros como 'active'
+        // Isso resolve a falha de visualização do organizador e permite seu ranking
+        const memberRef = doc(db, LEAGUES_COLLECTION, league.id, 'members', league.organizerId);
+        const member: LeagueMember = {
+            playerId: league.organizerId,
+            playerName: 'Organizador', // Nome temporário, será atualizado no login/perfil se necessário
+            joinedAt: new Date().toISOString(),
+            status: 'active'
+        };
+        await setDoc(memberRef, member);
+
         leagueService._notifyUpdate(league.id); // fire-and-forget: não bloqueia a criação
         return league;
     },
@@ -116,25 +129,34 @@ export const leagueService = {
     },
 
     getPublicLeagues: async (lastDoc?: any): Promise<{ leagues: League[], lastVisible: any }> => {
-        const leaguesRef = collection(db, LEAGUES_COLLECTION);
-        let q = query(
-            leaguesRef,
-            where('visibility', '==', 'public'),
-            where('status', '==', 'active'),
-            orderBy('createdAt', 'desc'),
-            limit(10)
-        );
+        try {
+            const leaguesRef = collection(db, LEAGUES_COLLECTION);
+            // Simplificando a query principal para evitar erros de composite index faltante no Firestore
+            let q = query(
+                leaguesRef,
+                where('status', '==', 'active'),
+                limit(30)
+            );
 
-        if (lastDoc) {
-            const { startAfter } = await import('firebase/firestore');
-            q = query(q, startAfter(lastDoc));
+            if (lastDoc) {
+                const { startAfter } = await import('firebase/firestore');
+                q = query(q, startAfter(lastDoc));
+            }
+
+            const snap = await getDocs(q);
+            
+            // Filtra e ordena client-side para ser mais tolerante a dados legados
+            let leagues = snap.docs.map(d => d.data() as League);
+            leagues = leagues.filter(l => l.visibility !== 'private');
+            leagues.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+            const lastVisible = snap.docs[snap.docs.length - 1];
+
+            return { leagues, lastVisible };
+        } catch (err) {
+            console.error('Error fetching public leagues:', err);
+            return { leagues: [], lastVisible: null };
         }
-
-        const snap = await getDocs(q);
-        const leagues = snap.docs.map(d => d.data() as League);
-        const lastVisible = snap.docs[snap.docs.length - 1];
-
-        return { leagues, lastVisible };
     },
 
     getUserLeagues: async (userId: string): Promise<League[]> => {
@@ -423,17 +445,48 @@ export const leagueService = {
 
         // Apply "Best X of Y" rule if configured
         const bestX = league.bestXof;
-        const standings: LeagueStanding[] = Object.entries(playerScores).map(([playerId, data]) => {
+        const playerIds = Object.keys(playerScores);
+
+        // Fetch user profiles in batches to get level and glow info
+        const userProfiles: Record<string, { level?: number, activeGlow?: string, glowUntil?: string, chosenGuildId?: string }> = {};
+        for (let i = 0; i < playerIds.length; i += 30) {
+            const batchIds = playerIds.slice(i, i + 30);
+            const userQ = query(collection(db, 'users'), where(documentId(), 'in', batchIds));
+            const userSnap = await getDocs(userQ);
+            userSnap.forEach(d => {
+                const data = d.data() as any;
+                userProfiles[d.id] = {
+                    level: data.stats?.level,
+                    activeGlow: data.stats?.activeGlow,
+                    glowUntil: data.stats?.glowUntil,
+                    chosenGuildId: data.stats?.chosenGuildId
+                };
+            });
+        }
+
+        const standings: LeagueStanding[] = playerIds.map(playerId => {
+            const data = playerScores[playerId];
             let sorted = [...data.pointsList].sort((a, b) => b - a);
             if (bestX && sorted.length > bestX) sorted = sorted.slice(0, bestX);
             const total = sorted.reduce((sum, v) => sum + v, 0);
+
+            // Check if glow is still valid
+            const profile = userProfiles[playerId];
+            let activeGlow = profile?.activeGlow;
+            if (profile?.glowUntil && new Date(profile.glowUntil) < new Date()) {
+                activeGlow = undefined;
+            }
+
             return {
                 playerId,
                 playerName: data.name,
                 totalPoints: total,
                 tournamentsPlayed: data.pointsList.length,
+                rank: 0, // Placeholder
                 currentStreak: data.currentStreak,
-                rank: 0
+                level: profile?.level || 1,
+                activeGlow: activeGlow,
+                chosenGuildId: profile?.chosenGuildId
             };
         }).sort((a, b) => b.totalPoints - a.totalPoints);
 
@@ -444,6 +497,27 @@ export const leagueService = {
 
         await updateDoc(doc(db, LEAGUES_COLLECTION, leagueId), { standings, cachedTopRanking });
         leagueService._notifyUpdate(leagueId);
+    },
+
+    /**
+     * Reparo emergencial de integridade: Garante que o organizador exista na subcoleção de membros.
+     * Útil para ligas criadas antes da correção.
+     */
+    repairLeagueIntegrity: async (leagueId: string, organizerId: string, organizerName?: string): Promise<void> => {
+        const memberRef = doc(db, LEAGUES_COLLECTION, leagueId, 'members', organizerId);
+        const memberSnap = await getDoc(memberRef);
+
+        if (!memberSnap.exists()) {
+            console.log(`[Reparo] Adicionando organizador ${organizerId} à subcoleção de membros da liga ${leagueId}`);
+            const member: LeagueMember = {
+                playerId: organizerId,
+                playerName: organizerName || 'Organizador',
+                joinedAt: new Date().toISOString(),
+                status: 'active'
+            };
+            await setDoc(memberRef, member);
+            leagueService._notifyUpdate(leagueId);
+        }
     },
 
     updateLeague: async (leagueId: string, data: Partial<League>, userId?: string): Promise<void> => {

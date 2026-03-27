@@ -1,7 +1,7 @@
 import React from 'react';
 import { Play, RefreshCw, CheckCircle2, ChevronRight } from 'lucide-react';
 import { MatchCard } from './MatchCard';
-import type { Tournament } from '../../../types';
+import type { Tournament, Table } from '../../../types';
 
 interface TournamentRoundsTabProps {
     id: string | undefined;
@@ -13,7 +13,7 @@ interface TournamentRoundsTabProps {
     setSwapSource: (val: { tableId: string, playerId: string } | null) => void;
     isShuffleAnimating: boolean;
     generateRound: (id: string) => Promise<void>;
-    handleOpenResultModal: (roundNum: number, table: any) => void;
+    handleOpenResultModal: (roundNum: number, table: Table) => void;
     handleSwapSelection: (tableId: string, playerId: string) => void;
     setIsResortModalOpen: (val: boolean) => void;
 }
@@ -49,7 +49,7 @@ export const TournamentRoundsTab: React.FC<TournamentRoundsTabProps> = ({
                     )}
                 </div>
             ) : (
-                [...activeTournament.rounds].reverse().map(round => (
+                [...activeTournament.rounds].sort((a, b) => b.number - a.number).map(round => (
                     <div key={round.number} className="flex flex-col gap-4">
                         {/* Cabeçalho da rodada */}
                         <div className="flex items-center justify-between px-1">

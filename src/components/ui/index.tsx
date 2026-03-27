@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom';
 import { Link } from 'react-router-dom';
 import { X, ChevronRight, Home } from 'lucide-react';
 export * from './DynamicIcon';
-export { default as AdBanner } from './AdBanner';
+export * from './GlowAvatar';
+export { default as AdsterraBanner } from './AdsterraBanner';
 
 // ─────────────────────────────────────────────
 // Button
@@ -123,9 +124,10 @@ interface ModalProps {
     title: string;
     children: React.ReactNode;
     footer?: React.ReactNode;
+    className?: string;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer, className = '' }) => {
     useEffect(() => {
         const handleEsc = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
@@ -154,7 +156,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
             />
             {/* Modal card */}
             <div
-                className="glass-card w-full max-w-lg shadow-2xl border-white/10 animate-scale-in"
+                className={`glass-card w-full max-w-lg shadow-2xl border-white/10 ${!className ? 'animate-scale-in' : ''} ${className}`}
                 style={{
                     position: 'relative',
                     zIndex: 1,
@@ -164,15 +166,25 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
                 }}
             >
                 {/* Header */}
-                <div className="flex justify-between items-center px-5 py-4 border-b border-white/5" style={{ flexShrink: 0 }}>
-                    <h2 className="text-xl font-outfit font-bold">{title}</h2>
+                {title && (
+                    <div className="flex justify-between items-center px-5 py-4 border-b border-white/5" style={{ flexShrink: 0 }}>
+                        <h2 className="text-xl font-outfit font-bold">{title}</h2>
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-white/5 rounded-full transition-colors text-secondary hover:text-primary"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
+                )}
+                {!title && (
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-white/5 rounded-full transition-colors text-secondary hover:text-primary"
+                        className="absolute top-4 right-4 z-50 p-2 hover:bg-white/5 rounded-full transition-colors text-secondary hover:text-primary"
                     >
                         <X size={20} />
                     </button>
-                </div>
+                )}
                 {/* Scrollable body */}
                 <div
                     className="px-5 py-4 custom-scrollbar"

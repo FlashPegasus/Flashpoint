@@ -17,6 +17,12 @@ export interface User {
         losses: number;
         leaguesJoined: number;
         accumulatedPoints: number;
+        xp: number;
+        level: number;
+        activeGlow?: string;    // color hex or 'rainbow'
+        glowUntil?: string;     // ISO date
+        chosenGuildId?: string; // MTG combination id (e.g. 'azorius', 'jund'…)
+        achievements?: { id: string; unlockedAt: string }[];
     };
 }
 
@@ -139,6 +145,9 @@ export interface LeagueStanding {
     tournamentsPlayed: number;
     rank: number;
     currentStreak?: number;
+    level?: number;
+    activeGlow?: string;
+    chosenGuildId?: string;
 }
 
 export interface LeagueMember {
@@ -147,6 +156,9 @@ export interface LeagueMember {
     joinedAt: string;
     status: 'active' | 'pending' | 'rejected' | 'banned';
     nickname?: string;
+    level?: number;
+    activeGlow?: string;
+    chosenGuildId?: string;
 }
 
 export interface TournamentTemplate {

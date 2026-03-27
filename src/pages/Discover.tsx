@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Calendar, Users as UsersIcon, Trophy, LayoutGrid } from 'lucide-react';
 import PageShell from '../components/layout';
-import { LoadingScreen, Modal, AdBanner } from '../components/ui';
+import { LoadingScreen, Modal, AdsterraBanner } from '../components/ui';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { useLeagueStore } from '../features/leagues/leagueStore';
 import { useAuthStore } from '../features/auth/authStore';
@@ -364,10 +364,16 @@ const Discover: React.FC = () => {
                         )
                     ) : (
                         filteredLeagues.length === 0 ? (
-                            <div className="col-span-full py-24 text-center fp-card border-dashed">
-                                <LayoutGrid size={48} className="mx-auto mb-5 text-muted opacity-20" />
+                            <div className="col-span-full py-24 text-center fp-card border-dashed flex flex-col items-center">
+                                <LayoutGrid size={48} className="mb-5 text-muted opacity-20" />
                                 <h3 className="text-xl font-bold text-white mb-2 uppercase">Nenhuma liga encontrada</h3>
-                                <p className="text-muted text-sm">Tente ajustar seus filtros ou buscar por outro termo.</p>
+                                <p className="text-muted text-sm mb-6">Tente ajustar seus filtros ou seja o primeiro a criar uma!</p>
+                                <button
+                                    onClick={() => navigate('/league/create')}
+                                    className="fp-btn-primary px-6 py-2.5 rounded-xl text-sm"
+                                >
+                                    Criar Nova Liga
+                                </button>
                             </div>
                         ) : (
                             filteredLeagues.map((l, i) => {
@@ -430,7 +436,7 @@ const Discover: React.FC = () => {
                 </div>
 
                 <div className="mt-12 text-center">
-                    <AdBanner />
+                    <AdsterraBanner />
                 </div>
             </div>
         </PageShell>

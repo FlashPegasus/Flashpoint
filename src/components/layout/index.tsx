@@ -2,10 +2,13 @@ import React from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Trophy, Users, LayoutDashboard, LogOut, Search, Menu, X, User as UserIcon, Plus, ChevronDown, Home, Compass } from 'lucide-react';
 import { useAuthStore } from '../../features/auth/authStore';
-import AdBanner from '../ui/AdBanner';
+import AdsterraBanner from '../ui/AdsterraBanner';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useNavBump } from '../../hooks/useNavBump';
 import { NotificationBell } from './NotificationBell';
+import { RewardCenter } from '../RewardCenter';
+import { GlowAvatar } from '../ui';
+import { Star } from 'lucide-react';
 
 // ——————————————————————————————————————————————————————————————————————————
 // Navbar Sub-components
@@ -34,6 +37,7 @@ export const Navbar: React.FC = () => {
     const location = useLocation();
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
     const [isCreateOpen, setIsCreateOpen] = React.useState(false);
+    const [isRewardsOpen, setIsRewardsOpen] = React.useState(false);
 
     // Detect mobile for the SVG bump position
     const isMobile = useMediaQuery('(max-width: 768px)');
@@ -67,13 +71,6 @@ export const Navbar: React.FC = () => {
                     <div className="nav-content">
                         {/* LEFT ITEMS */}
                         <div className="nav-left-items">
-                        </div>
-
-                        {/* CENTRAL SPACER (SVG BUMP AREA) */}
-                        <div ref={spacerRef} className="nav-logo-spacer" />
-
-                        {/* RIGHT ITEMS */}
-                        <div className="nav-right-items gap-2 md:gap-4 lg:gap-6">
                             <div className="hidden md:flex items-center gap-4 lg:gap-6">
                                 <Link to="/discover" className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${location.pathname === '/discover' ? 'text-primary' : 'text-secondary hover:text-primary'}`}>
                                     <Search size={14} /><span>Descobrir</span>
@@ -84,7 +81,15 @@ export const Navbar: React.FC = () => {
                                 <Link to="/ranking" className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${location.pathname === '/ranking' ? 'text-primary' : 'text-secondary hover:text-primary'}`}>
                                     <Trophy size={14} /><span>Ranking</span>
                                 </Link>
-                                
+                            </div>
+                        </div>
+
+                        {/* CENTRAL SPACER (SVG BUMP AREA) */}
+                        <div ref={spacerRef} className="nav-logo-spacer" />
+
+                        {/* RIGHT ITEMS */}
+                        <div className="nav-right-items gap-2 md:gap-4 lg:gap-6">
+                            <div className="hidden md:flex items-center gap-4 lg:gap-6">
                                 {user && (
                                     <div className="relative">
                                         <button
@@ -130,15 +135,25 @@ export const Navbar: React.FC = () => {
 
                                 {user ? (
                                     <>
-                                        <div className="nav-user-profile relative">
+                                        <div className="nav-user-profile flex items-center gap-2">
+                                            <button
+                                                onClick={() => setIsRewardsOpen(true)}
+                                                className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-lg hover:bg-yellow-500/20 transition-all"
+                                            >
+                                                <Star size={14} fill="currentColor" />
+                                                <span className="text-[9px] font-black tracking-tighter uppercase">Recompensas</span>
+                                            </button>
                                             <button
                                                 onClick={() => navigate('/profile')}
-                                                className="w-8 h-8 rounded-full border border-white/10 p-0.5 hover:border-accent-primary transition-all overflow-hidden"
+                                                className="relative group"
                                             >
-                                                <img
-                                                    src={user.avatar || `https://ui-avatars.com/api/?name=${user.name || 'User'}&background=random`}
-                                                    alt="Profile"
-                                                    className="w-full h-full rounded-full object-cover"
+                                                <GlowAvatar 
+                                                    seed={user.name || 'User'} 
+                                                    size={32} 
+                                                    glowColor={user.stats?.activeGlow}
+                                                    chosenGuildId={user.stats?.chosenGuildId}
+                                                    level={user.stats?.level}
+                                                    className="border border-white/10 p-0.5 hover:border-accent-primary transition-all"
                                                 />
                                             </button>
                                         </div>
@@ -226,6 +241,8 @@ export const Navbar: React.FC = () => {
                     </div>
                 </div>
             )}
+            {/* REWARDS MODAL */}
+            {user && <RewardCenter isOpen={isRewardsOpen} onClose={() => setIsRewardsOpen(false)} />}
         </div>
     );
 };
@@ -338,7 +355,7 @@ const PageShell: React.FC<PageShellProps> = ({ children, showAd = true, showBack
 
                 {showAd && (
                     <div className="container mt-8">
-                        <AdBanner className="ad-shell-banner" />
+                        <AdsterraBanner className="ad-shell-banner" />
                     </div>
                 )}
             </main>

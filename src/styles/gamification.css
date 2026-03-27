@@ -1,0 +1,18 @@
+@keyframes glow-rainbow {
+  0% { box-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000; border-color: #ff0000; }
+  20% { box-shadow: 0 0 10px #ffff00, 0 0 20px #ffff00; border-color: #ffff00; }
+  40% { box-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00; border-color: #00ff00; }
+  60% { box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff; border-color: #00ffff; }
+  80% { box-shadow: 0 0 10px #0000ff, 0 0 20px #0000ff; border-color: #0000ff; }
+  100% { box-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff; border-color: #ff00ff; }
+}
+
+.animate-glow-rainbow {
+  animation: glow-rainbow 4s linear infinite;
+}
+
+.glow-mono-w { box-shadow: 0 0 15px #ffffff, 0 0 5px #ffffff; border: 2px solid #ffffff; }
+.glow-mono-u { box-shadow: 0 0 15px #3b82f6, 0 0 5px #3b82f6; border: 2px solid #3b82f6; }
+.glow-mono-b { box-shadow: 0 0 15px #1f1f1f, 0 0 5px #1f1f1f; border: 2px solid #1f1f1f; }
+.glow-mono-r { box-shadow: 0 0 15px #ef4444, 0 0 5px #ef4444; border: 2px solid #ef4444; }
+.glow-mono-g { box-shadow: 0 0 15px #10b981, 0 0 5px #10b981; border: 2px solid #10b981; }

@@ -28,11 +28,19 @@ const ProtectedRoute = ({ children, user }: { children: React.ReactNode, user: a
   return <>{children}</>;
 };
 
+import { AdMob } from '@capacitor-community/admob';
+
 const App: React.FC = () => {
   const { initialize, user, isLoading } = useAuthStore();
 
   useEffect(() => {
     initialize();
+    
+    // Initialize AdMob
+    AdMob.initialize({
+      initializeForTesting: true,
+    }).catch(console.error);
+    
   }, [initialize]);
 
   if (isLoading) {

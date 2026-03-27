@@ -4,6 +4,7 @@ import { syncService } from './syncService';
 import { v4 as uuidv4 } from 'uuid';
 import { generateSwissPairings, generateMultiplayerTables } from './pairingEngine';
 import { db } from '../../lib/firebase';
+import { rewardService } from '../gamification/rewardService';
 import { doc, getDoc, setDoc, deleteDoc, updateDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 
 const STORAGE_KEY = 'tournaments';
@@ -152,9 +153,7 @@ export const tournamentService = {
         await storage.set(STORAGE_KEY, tournaments);
         // Mirror to public Firestore collection so invite links work cross-device
         try {
-            // Firestore does not accept `undefined` values — strip them recursively
-            const sanitized = JSON.parse(JSON.stringify(tournament));
-            await setDoc(doc(db, 'tournaments', tournament.id), sanitized, { merge: true });
+            await setDoc(doc(db, 'tournaments', tournament.id), tournament, { merge: true });
             // Signal update via RTDB (low cost sync)
             await syncService.notifyUpdate(tournament.id);
         } catch (err) {
@@ -243,16 +242,6 @@ export const tournamentService = {
         const participant = tournament.participants.find(p => p.playerId === playerId);
         if (participant) {
             participant.status = 'withdrawn';
-
-            try {
-                await updateDoc(doc(db, 'tournaments', tournamentId), {
-                    participants: tournament.participants
-                });
-            } catch (err) {
-                console.error('Failed to update public DB on withdraw:', err);
-                throw new Error('Erro ao atualizar desistência no servidor.');
-            }
-
             await tournamentService.saveTournament(tournament);
         }
     },
@@ -264,16 +253,6 @@ export const tournamentService = {
         const participant = tournament.participants.find(p => p.playerId === playerId);
         if (participant) {
             participant.status = 'active';
-
-            try {
-                await updateDoc(doc(db, 'tournaments', tournamentId), {
-                    participants: tournament.participants
-                });
-            } catch (err) {
-                console.error('Failed to update public DB on reactivate:', err);
-                throw new Error('Erro ao atualizar reativação no servidor.');
-            }
-
             await tournamentService.saveTournament(tournament);
         }
     },
@@ -283,16 +262,6 @@ export const tournamentService = {
         if (!tournament) throw new Error('Tournament not found');
 
         tournament.participants = tournament.participants.filter(p => p.playerId !== playerId);
-
-        try {
-            await updateDoc(doc(db, 'tournaments', tournamentId), {
-                participants: tournament.participants
-            });
-        } catch (err) {
-            console.error('Failed to update public DB on remove:', err);
-            throw new Error('Erro ao atualizar exclusão no servidor.');
-        }
-
         await tournamentService.saveTournament(tournament);
     },
 
@@ -303,15 +272,6 @@ export const tournamentService = {
         const participant = tournament.participants.find(p => p.playerId === playerId);
         if (participant) {
             participant.status = status;
-            try {
-                await updateDoc(doc(db, 'tournaments', tournamentId), {
-                    participants: tournament.participants
-                });
-            } catch (err) {
-                console.error('Failed to update public DB on status change:', err);
-                throw new Error('Erro ao atualizar status no servidor.');
-            }
-
             await tournamentService.saveTournament(tournament);
         }
     },
@@ -552,6 +512,21 @@ export const tournamentService = {
         const tournament = await tournamentService.getTournamentById(tournamentId);
         if (!tournament) throw new Error('Tournament not found');
 
+        // Only reward if not already completed (avoid double XP)
+        if (tournament.status !== 'completed') {
+            const numPlayers = tournament.participants.filter(p => p.status === 'active').length;
+            
+            // Parallel reward processing
+            const rewardPromises = tournament.participants
+                .filter(p => !p.isAnonymous && p.playerId && !p.playerId.startsWith('guest_'))
+                .map(p => {
+                    const xp = rewardService.calculateTournamentXP(numPlayers, p.rank || 99);
+                    return rewardService.addXP(p.playerId, xp, `Torneio: ${tournament.name}`);
+                });
+            
+            await Promise.allSettled(rewardPromises);
+        }
+
         tournament.status = 'completed';
         await tournamentService.saveTournament(tournament);
     },
@@ -591,7 +566,7 @@ export const tournamentService = {
                         if (table.status === 'completed' && table.playerIds.includes(userId)) {
                             totalMatches++;
                             const result = table.results.find(res => res.playerId === userId);
-                            if (result && result.position === 1) {
+                            if (result && result.status === 'WINNER') {
                                 matchesWon++;
                             }
                         }

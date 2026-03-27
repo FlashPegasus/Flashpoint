@@ -47,7 +47,9 @@ const syncUserProfile = async (firebaseUser: FirebaseUser): Promise<User> => {
                 draws: 0,
                 losses: 0,
                 leaguesJoined: 0,
-                accumulatedPoints: 0
+                accumulatedPoints: 0,
+                xp: 0,
+                level: 1
             }
         };
         await setDoc(userDocRef, userData);
@@ -61,6 +63,12 @@ const syncUserProfile = async (firebaseUser: FirebaseUser): Promise<User> => {
 export const authService = {
     getCurrentUser: async (): Promise<User | null> => {
         return await storage.get<User | null>(STORAGE_KEY, null);
+    },
+
+    refreshUser: async (): Promise<User | null> => {
+        const firebaseUser = auth.currentUser;
+        if (!firebaseUser) return null;
+        return await syncUserProfile(firebaseUser);
     },
 
     login: async (email: string, password: string): Promise<User> => {
@@ -93,7 +101,7 @@ export const authService = {
                 avatar: '',
                 role: 'organizer',
                 isPublic: false,
-                stats: { tournamentsPlayed: 0, wins: 0, draws: 0, losses: 0, leaguesJoined: 0, accumulatedPoints: 0 }
+                stats: { tournamentsPlayed: 0, wins: 0, draws: 0, losses: 0, leaguesJoined: 0, accumulatedPoints: 0, xp: 0, level: 1 }
             };
             await setDoc(userDocRef, userData);
             await storage.set(STORAGE_KEY, userData);

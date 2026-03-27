@@ -7,6 +7,7 @@ import { useAuthStore } from '../features/auth/authStore';
 import { useLeagueStore } from '../features/leagues/leagueStore';
 import { TCG_PRESETS, type ScoringPreset } from '../utils/tcgPresets';
 import toast from 'react-hot-toast';
+import AdsterraBanner from '../components/ui/AdsterraBanner';
 
 /* ── helpers ── */
 const inputCls = `w-full px-4 py-3 rounded-xl text-sm text-white
@@ -228,14 +229,8 @@ const LeagueCreate: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* Espaço Publicitário */}
                     <div className="mt-4 mx-auto w-full">
-                        <div className="rounded-2xl border border-dashed border-[rgba(255,255,255,0.06)]
-                                        bg-[rgba(255,255,255,0.02)] py-6 text-center">
-                            <p className="text-[10px] font-bold uppercase tracking-[3px] text-[rgba(122,92,92,0.4)]">
-                                Espaço Publicitário
-                            </p>
-                        </div>
+                        <AdsterraBanner />
                     </div>
                 </div>
             </div>

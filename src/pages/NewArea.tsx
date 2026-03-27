@@ -12,6 +12,7 @@ import { useAuthStore } from '../features/auth/authStore';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { useLeagueStore } from '../features/leagues/leagueStore';
 import { tournamentService } from '../features/tournaments/tournamentService';
+import AdsterraBanner from '../components/ui/AdsterraBanner';
 
 /* ─────────────────────────────────────────
    HELPERS
@@ -677,14 +678,8 @@ const NewArea: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Espaço Publicitário */}
                 <div className="mt-10 mx-auto max-w-2xl">
-                    <div className="rounded-2xl border border-dashed border-[rgba(255,255,255,0.06)]
-                                    bg-[rgba(255,255,255,0.02)] py-6 text-center">
-                        <p className="text-[10px] font-bold uppercase tracking-[3px] text-[rgba(122,92,92,0.4)]">
-                            Espaço Publicitário
-                        </p>
-                    </div>
+                    <AdsterraBanner />
                 </div>
             </div>
 

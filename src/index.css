@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./styles/tokens.css";
+@import "./styles/gamification.css";
 @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
 @theme {
@@ -318,6 +319,38 @@ body::after {
   }
 
   .fp-bottom-safe { padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px); }
+
+  @keyframes rotate-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .animate-rotate-slow { animation: rotate-slow 8s linear infinite; }
+
+  @keyframes glowBorder {
+    0%, 100% { filter: brightness(1) blur(12px); transform: scale(1); }
+    50% { filter: brightness(1.5) blur(16px); transform: scale(1.05); }
+  }
+  .animate-glow-intense { animation: glowBorder 2s ease-in-out infinite; }
+
+  @keyframes foil-shine {
+    0%   { background-position: -200% 0; opacity: 0; }
+    30%  { opacity: 0.3; }
+    50%  { opacity: 0.5; background-position: 200% 0; }
+    70%  { opacity: 0.3; }
+    100% { background-position: 200% 0; opacity: 0; }
+  }
+  .animate-foil-shine {
+    background: linear-gradient(
+      115deg, 
+      transparent 30%, 
+      rgba(255,255,255,0.4) 45%, 
+      rgba(255,255,255,0.6) 50%, 
+      rgba(255,255,255,0.4) 55%, 
+      transparent 70%
+    );
+    background-size: 200% 100%;
+    animation: foil-shine 4s ease-in-out infinite;
+  }
 }
 
 /* Utilitários legados (mantidos para compatibilidade) */

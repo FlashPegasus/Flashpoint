@@ -167,13 +167,11 @@
 }
 
 .nav-left-items {
-    justify-content: flex-end;
-    padding-right: 24px; /* Balanced space */
+    justify-content: flex-start;
 }
 
 .nav-right-items {
-    justify-content: flex-start;
-    padding-left: 60px; /* Further increased to balance the longer 'ORGANIZADOR' block on the left */
+    justify-content: flex-end;
 }
 
 /* Central spacer that reserves space for the logo */

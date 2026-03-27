@@ -17,6 +17,14 @@
   --lp-muted:        #64748b;
   --lp-glass:        rgba(255,255,255,0.04);
   --lp-glass-border: rgba(255,255,255,0.08);
+  
+  /* ── Feature Card Fan (mobile) ── */
+  --fan-card-w: 200px;
+  --fan-card-h: 280px;
+  --fan-angle-side: 22deg;
+  --fan-rise-active: -18px;
+  --fan-scale-side: 0.88;
+  --fan-transition: 0.45s cubic-bezier(0.4, 0, 0.2, 1);
 
   position: relative;
   overflow-x: hidden;
@@ -518,4 +526,319 @@
  
 @media(max-width: 680px) {
   .ad-placeholder { height: 50px; max-width: 320px; font-size: 0.6rem; }
+}
+
+/* ════════════════════════════════════════
+   FAN CARDS — Mobile Feature Section
+   Only active in mobile (max-width: 767px).
+   Desktop keeps current LandingHero hand.
+════════════════════════════════════════ */
+
+@media (max-width: 767px) {
+  .fan-root {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    margin-top: 40px;
+  }
+
+  /* ── DECK PHASE ── */
+  .fan-deck-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2.5rem 1rem 3rem;
+    transition: opacity .35s ease, transform .4s ease;
+  }
+  .fan-deck-wrap.fan-deck-gone {
+    opacity: 0;
+    transform: scale(.88);
+    pointer-events: none;
+    position: absolute;
+    width: 100%;
+  }
+
+  .fan-deck {
+    position: relative;
+    width: 155px; height: 215px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    margin-bottom: 1.4rem;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .fan-deck:active { transform: scale(.97); }
+
+  .fan-dlayer {
+    position: absolute; inset: 0;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #0d0d20 0%, #1a1640 40%, #0d0d20 100%);
+    border: 2px solid rgba(139,92,246,.35);
+  }
+  .fan-dlayer:nth-child(1) { transform: translate(-7px,-7px) rotate(-5deg); opacity:.7; }
+  .fan-dlayer:nth-child(2) { transform: translate(-3px,-3px) rotate(-2deg); opacity:.85; }
+  .fan-dlayer:nth-child(3) { transform: none; }
+
+  .fan-dlayer::before {
+    content: '';
+    position: absolute; inset: 6px;
+    border-radius: 8px;
+    border: 1px solid rgba(139,92,246,.25);
+  }
+  .fan-dlayer::after {
+    content: '';
+    position: absolute; inset: 10px;
+    border-radius: 5px;
+    background:
+      repeating-linear-gradient(45deg,  rgba(139,92,246,.08) 0,rgba(139,92,246,.08) 1px, transparent 1px, transparent 9px),
+      repeating-linear-gradient(-45deg, rgba(6,182,212,.06) 0,rgba(6,182,212,.06) 1px, transparent 1px, transparent 9px);
+  }
+
+  .fan-dface {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 2; gap: .35rem;
+  }
+  .fan-dlogo  { font-family: 'Cinzel Decorative', serif; font-size: 1.6rem; font-weight: 900;    color: var(--lp-purple-bright) !important;
+    letter-spacing: .2em;
+    text-shadow: 0 0 10px rgba(139,92,246,0.3) !important;
+    opacity: 0.8;
+  }
+
+  /* ── AUTH CARD MODAL — Draw from Deck ── */
+  .auth-card-modal {
+    background: linear-gradient(160deg, #0d0d20 0%, #1a1640 55%, #0d0d20 100%) !important;
+    border: 2px solid rgba(139,92,246,.5) !important;
+    border-radius: 20px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    animation: auth-draw-card 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(139,92,246,0.2) !important;
+  }
+
+  @keyframes auth-draw-card {
+    0% {
+      opacity: 0;
+      transform: translateY(150px) scale(0.6) rotate(10deg);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1) rotate(0);
+    }
+  }
+
+  .auth-card-header {
+    height: 140px;
+    background: radial-gradient(circle at center, rgba(139,92,246,0.2) 0%, transparent 70%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid rgba(139,92,246,0.1);
+  }
+
+  .auth-card-body {
+    padding: 2rem 1.5rem 2.5rem;
+  }
+  .fan-dsub   { font-size: .65rem; color: var(--lp-purple-bright); letter-spacing: .2em; font-weight: 700; opacity: 0.9; }
+  .fan-dhint  { font-size: .65rem; color: rgba(139,92,246,.65); letter-spacing: .1em; margin-top: .5rem; animation: fan-pulse 2s ease-in-out infinite; }
+  .fan-deck-sub { font-size: .85rem; padding-bottom: 1px; color: var(--lp-text); text-transform: uppercase; letter-spacing: 2px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+  .fan-sparkle { font-size: 1.1rem; animation: fan-blink 1.2s ease-in-out infinite; }
+
+  @keyframes fan-blink { 0%,100%{opacity:.4; transform: scale(0.8);} 50%{opacity:1; transform: scale(1.2);} }
+  @keyframes fan-pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+  /* ── FAN PHASE ── */
+  .fan-stage-wrap {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity .5s ease, transform .5s ease;
+    padding-bottom: 2.5rem;
+  }
+  .fan-stage-wrap.fan-stage-visible {
+    display: flex;
+    opacity: 1;
+    transform: none;
+  }
+
+  .fan-stage {
+    position: relative;
+    width: 100%;
+    height: 380px;
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+
+  /* Cards — pivot at bottom center */
+  .fan-card {
+    position: absolute;
+    width: 200px; height: 280px;
+    border-radius: 14px;
+    transform-origin: 50% 100%;
+    left: calc(50% - 100px);
+    bottom: 20px;
+    will-change: transform;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  /* VERSO */
+  .fan-card-back {
+    position: absolute; inset: 0;
+    border-radius: 14px;
+    background: linear-gradient(150deg, #0d0d20 0%, #1a1640 45%, #0d0d20 100%);
+    border: 2px solid rgba(139,92,246,.35);
+    transition: opacity .35s ease;
+    z-index: 2;
+  }
+  .fan-card-back::before {
+    content: '';
+    position: absolute; inset: 7px;
+    border-radius: 10px;
+    border: 1px solid rgba(139,92,246,.22);
+  }
+  .fan-card-back::after {
+    content: '';
+    position: absolute; inset: 12px;
+    border-radius: 7px;
+    background:
+      repeating-linear-gradient(45deg,  rgba(139,92,246,.05) 0,rgba(139,92,246,.05) 1px, transparent 1px, transparent 10px),
+      repeating-linear-gradient(-45deg, rgba(6,182,212,.05) 0,rgba(6,182,212,.05) 1px, transparent 1px, transparent 10px);
+  }
+
+  /* FRENTE */
+  .fan-card-front {
+    position: absolute; inset: 0;
+    border-radius: 14px;
+    background: linear-gradient(160deg, #0d0d20 0%, #1a1640 55%, #0d0d20 100%);
+    border: 2px solid rgba(139,92,246,.5);
+    opacity: 0;
+    transition: opacity .35s ease;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    z-index: 1;
+  }
+  .fan-card-front::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(115deg,
+      transparent 20%,
+      rgba(212,172,13,.07) 38%,
+      rgba(231,76,60,.13) 47%,
+      rgba(212,172,13,.07) 56%,
+      transparent 72%);
+    pointer-events: none;
+  }
+
+  /* Flip frente/verso */
+  .fan-card-active .fan-card-front { opacity: 1; z-index: 3; }
+  .fan-card-active .fan-card-back  { opacity: 0; z-index: 1; }
+
+  /* Pips */
+  .fan-pip { position: absolute; display: flex; flex-direction: column; align-items: center; line-height: 1; }
+  .fan-pip-tl { top: 9px; left: 11px; }
+  .fan-pip-br { bottom: 9px; right: 11px; transform: rotate(180deg); }
+  .fan-pip-num  { font-family: 'Cinzel Decorative', serif; font-size: .8rem; font-weight: 900; color: #e74c3c; }
+  .fan-pip-suit { font-size: .72rem; color: #e74c3c; margin-top: -.1rem; }
+
+  /* Hero */
+  .fan-hero {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    border-bottom: 1px solid rgba(139,92,246,.1);
+    background: radial-gradient(ellipse 55% 60% at 50% 50%, rgba(139,92,246,.12) 0%, transparent 70%);
+    position: relative; overflow: hidden;
+  }
+  .fan-hero::after {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(45deg,  rgba(139,92,246,.02) 0,rgba(139,92,246,.02) 1px, transparent 1px, transparent 14px),
+      repeating-linear-gradient(-45deg, rgba(6,182,212,.02) 0,rgba(6,182,212,.02) 1px, transparent 1px, transparent 14px);
+  }
+  .fan-icon { font-size: 3rem; z-index: 1; }
+
+  /* Body */
+  .fan-body  { padding: .9rem 0.8rem 1rem; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .fan-tag   { font-size: .5rem; letter-spacing: .16em; color: rgba(212,172,13,.55); font-family: 'Cinzel Decorative', serif; text-transform: uppercase; }
+  .fan-title { font-family: 'Cinzel Decorative', serif; font-size: 0.9rem; font-weight: 900; color: var(--lp-purple-bright); letter-spacing: .05em; margin-top: .1rem; text-shadow: 0 0 14px rgba(139,92,246,0.35); text-wrap: balance; }
+  .fan-line  { height: 1px; width: 60%; background: linear-gradient(to right, transparent, rgba(139,92,246,0.4), transparent); margin: 0.6rem 0; }
+  .fan-text  { font-size: .7rem; color: var(--lp-muted); line-height: 1.4; }
+
+  /* Dots */
+  .fan-dots { display: flex; gap: .6rem; margin-top: .8rem; }
+  .fan-dot  {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: rgba(139,92,246,.22);
+    border: none; cursor: pointer; padding: 0;
+    transition: background .25s, transform .25s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .fan-dot-on { background: var(--lp-purple); transform: scale(1.4); }
+
+  /* Hints & reset */
+  .fan-swipe-hint {
+    margin-top: .5rem;
+    font-size: .62rem; letter-spacing: .12em;
+    color: rgba(240,230,230,.18);
+    animation: fan-pulse 3.5s ease-in-out infinite;
+  }
+  .fan-reset-btn {
+    margin-top: 1.2rem;
+    background: transparent;
+    border: 1px solid rgba(139,92,246,.28);
+    border-radius: 999px;
+    padding: .5rem 1.6rem;
+    color: rgba(167,139,250,.5);
+    font-family: 'Cinzel Decorative', serif;
+    font-size: .63rem; letter-spacing: .12em;
+    cursor: pointer;
+    transition: background .2s, color .2s, border-color .2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .fan-reset-btn:active {
+    background: rgba(139,92,246,.1);
+    color: var(--lp-purple-bright);
+    border-color: var(--lp-purple-bright);
+  }
+
+  /* ── COLORS — Matching Desktop ── */
+  .fan-card.lp-card-0 .fan-card-front { border-color: #a78bfa; }
+  .fan-card.lp-card-0.fan-card-active { box-shadow: 0 10px 40px rgba(139,92,246,.5); }
+  .fan-card.lp-card-0 .fan-title { color: #c4b5fd; text-shadow: 0 0 12px rgba(167,139,250,.6); }
+
+  .fan-card.lp-card-1 .fan-card-front { border-color: #fbbf24; }
+  .fan-card.lp-card-1.fan-card-active { box-shadow: 0 10px 40px rgba(245,158,11,.5); }
+  .fan-card.lp-card-1 .fan-title { color: #fbbf24; text-shadow: 0 0 12px rgba(245,158,11,.6); }
+
+  .fan-card.lp-card-2 .fan-card-front { border-color: #22d3ee; }
+  .fan-card.lp-card-2.fan-card-active { box-shadow: 0 10px 40px rgba(6,182,212,.5); }
+  .fan-card.lp-card-2 .fan-title { color: #22d3ee; text-shadow: 0 0 12px rgba(6,182,212,.6); }
+
+  .fan-card.lp-card-3 .fan-card-front { border-color: #34d399; }
+  .fan-card.lp-card-3.fan-card-active { box-shadow: 0 10px 40px rgba(16,185,129,.5); }
+  .fan-card.lp-card-3 .fan-title { color: #34d399; text-shadow: 0 0 12px rgba(16,185,129,.6); }
+
+  .fan-card.lp-card-4 .fan-card-front { border-color: #fb7185; }
+  .fan-card.lp-card-4.fan-card-active { box-shadow: 0 10px 40px rgba(244,63,94,.5); }
+  .fan-card.lp-card-4 .fan-title { color: #fb7185; text-shadow: 0 0 12px rgba(244,63,94,.6); }
+
+  /* ── FLYING ANIMATION ── */
+  .fan-fly-zone {
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 999;
+  }
+  .fan-fly-card {
+    position: absolute;
+    width: 155px; height: 215px;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #0d0d20, #1a1640, #0d0d20);
+    border: 2px solid rgba(139,92,246,.5);
+    opacity: 0;
+    will-change: transform, opacity;
+  }
 }

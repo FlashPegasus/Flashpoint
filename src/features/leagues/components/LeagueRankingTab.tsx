@@ -1,10 +1,9 @@
 import React from 'react';
 import { Trophy, RefreshCw } from 'lucide-react';
 import type { LeagueStanding } from '../../../types';
+import { GlowAvatar } from '../../../components/ui';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
-const dicebear = (seed: string, size = 32) =>
-    `https://api.dicebear.com/7.x/rings/svg?seed=${encodeURIComponent(seed)}&size=${size}`;
 
 interface LeagueRankingTabProps {
     standings: LeagueStanding[];
@@ -65,9 +64,14 @@ export const LeagueRankingTab: React.FC<LeagueRankingTabProps> = ({
                                 <div className="text-xl w-10 text-center flex-shrink-0">
                                     {i < 3 ? MEDALS[i] : <span className="text-[#7a5c5c] text-sm font-bold">#{s.rank}</span>}
                                 </div>
-                                <div className="w-8 h-8 rounded-full overflow-hidden border border-[rgba(255,255,255,0.1)] flex-shrink-0">
-                                    <img src={dicebear(s.playerId || s.playerName, 32)} alt="" className="w-full h-full" />
-                                </div>
+                                <GlowAvatar 
+                                    seed={s.playerId || s.playerName} 
+                                    size={32} 
+                                    glowColor={s.activeGlow}
+                                    chosenGuildId={s.chosenGuildId}
+                                    level={s.level}
+                                    className="border border-[rgba(255,255,255,0.1)] flex-shrink-0"
+                                />
                                 <div className="flex-1 min-w-0">
                                     <p className="font-semibold text-white text-sm flex items-center gap-2 flex-wrap">
                                         {s.playerName}

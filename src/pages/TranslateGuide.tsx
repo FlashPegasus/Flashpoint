@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Globe, ArrowLeft, Chrome, MonitorSmartphone } from 'lucide-react';
 import PageShell from '../components/layout';

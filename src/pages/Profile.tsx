@@ -2,12 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../features/auth/authStore';
 import { tournamentService } from '../features/tournaments/tournamentService';
 import PageShell from '../components/layout';
-import { Trophy, Star, Target, Calendar, LogOut, RefreshCw, Eye, EyeOff, ShieldCheck, Mail, ArrowRight, Crown, Medal } from 'lucide-react';
+import { Trophy, Star, Target, Calendar, LogOut, RefreshCw, Eye, EyeOff, ShieldCheck, Mail, ArrowRight, Crown, Medal, Palette } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { GuildPicker } from '../features/gamification/GuildPicker';
+import { rewardService } from '../features/gamification/rewardService';
+import { getUnlockedTier, buildGlowStyle, buildConicGradient } from '../features/gamification/mtgTiers';
+import { ACHIEVEMENTS } from '../features/gamification/achievements';
+import { GlowAvatar } from '../components/ui';
+import AdsterraBanner from '../components/ui/AdsterraBanner';
 
 /* ── helpers ── */
-const dicebear = (seed: string, size = 96) =>
-    `https://api.dicebear.com/7.x/rings/svg?seed=${encodeURIComponent(seed)}&size=${size}`;
 
 const StatCard: React.FC<{ icon: React.ReactNode; label: string; value: number | string; color: string }> = ({ icon, label, value, color }) => (
     <div className="relative overflow-hidden rounded-2xl p-5
@@ -35,6 +39,9 @@ const Profile: React.FC = () => {
     const [upgradePassword, setUpgradePassword] = useState('');
     const [showUpgradePw, setShowUpgradePw]     = useState(false);
     const [upgradeSuccess, setUpgradeSuccess]   = useState(false);
+    const [showGuildPicker, setShowGuildPicker] = useState(false);
+    const [devPassword, setDevPassword]         = useState('');
+    const [isDevMode, setIsDevMode]             = useState(false);
 
     const [hideCompleted, setHideCompleted] = useState(false);
 
@@ -89,14 +96,14 @@ const Profile: React.FC = () => {
 
                             {/* Avatar */}
                             <div className="relative w-24 h-24 mx-auto mb-4">
-                                <div className="w-24 h-24 rounded-full overflow-hidden border-2
-                                                border-[rgba(192,57,43,0.5)]
-                                                shadow-[0_0_24px_rgba(192,57,43,0.3)]">
-                                    {user.avatar
-                                        ? <img src={user.avatar} alt={user.name} className="w-full h-full object-cover rounded-full" />
-                                        : <img src={dicebear(user.id || 'default', 96)} className="w-full h-full" alt="" />
-                                    }
-                                </div>
+                                <GlowAvatar 
+                                    seed={user.id || 'default'} 
+                                    size={96} 
+                                    glowColor={user.stats?.activeGlow}
+                                    chosenGuildId={user.stats?.chosenGuildId}
+                                    level={user.stats?.level}
+                                    className="border-2 border-[rgba(255,255,255,0.1)] shadow-xl"
+                                />
                             </div>
 
                             <h2 className="text-xl font-bold text-white mb-1 leading-tight">
@@ -142,11 +149,205 @@ const Profile: React.FC = () => {
                             </div>
                         )}
 
+                        {/* ── SOU DEV (Testing Tool) ── */}
+                        <div className="mt-8 pt-6 border-t border-white/5">
+                            {!isDevMode ? (
+                                <div className="flex flex-col gap-2">
+                                    <input 
+                                        type="password" 
+                                        placeholder="Senha Dev"
+                                        value={devPassword}
+                                        onChange={(e) => setDevPassword(e.target.value)}
+                                        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs text-center focus:outline-none focus:border-red-500/50 transition-all"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            if (devPassword === '0707') {
+                                                setIsDevMode(true);
+                                            } else {
+                                                alert('Senha incorreta');
+                                            }
+                                        }}
+                                        className="w-full py-2 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all"
+                                    >
+                                        SOU DEV
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-2xl">
+                                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-3 text-center">Dev Panel</p>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[1, 12, 32, 52, 72, 92].map(lvl => (
+                                            <button
+                                                key={lvl}
+                                                onClick={async () => {
+                                                    await rewardService.setDevLevel(user.id, lvl);
+                                                    window.location.reload();
+                                                }}
+                                                className="py-1.5 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold text-white hover:bg-red-500/20 hover:border-red-500/30 transition-all"
+                                            >
+                                                Lvl {lvl}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <button 
+                                        onClick={async () => {
+                                            const randomAch = ACHIEVEMENTS[Math.floor(Math.random() * ACHIEVEMENTS.length)];
+                                            await rewardService.unlockAchievement(user.id, randomAch.id);
+                                            window.location.reload();
+                                        }}
+                                        className="w-full mt-2 py-1.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-lg text-[10px] font-bold hover:bg-emerald-500/20 transition-all"
+                                    >
+                                        + Desbloquear Aleatório
+                                    </button>
+                                    <button 
+                                        onClick={() => setIsDevMode(false)}
+                                        className="w-full mt-3 text-[9px] text-muted hover:text-white transition-colors"
+                                    >
+                                        Sair do modo Dev
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
                         {upgradeSuccess && (
                             <div className="rounded-2xl p-4 bg-[rgba(30,132,73,0.08)] border border-[rgba(39,174,96,0.3)]">
                                 <p className="text-[#27ae60] font-bold text-sm text-center">Conta criada com sucesso!</p>
                             </div>
                         )}
+
+                        {/* ── Identidade de Cor ── */}
+                        {!isGuest && (() => {
+                            const level = user.stats?.level ?? 1;
+                            const chosenGuildId = user.stats?.chosenGuildId;
+                            
+                            const tier = getUnlockedTier(level);
+                            const combo = rewardService.resolveGlow(level, chosenGuildId);
+                            
+                            const isRainbow = combo?.glowMode === 'rainbow';
+                             const style = buildGlowStyle(combo);
+                             const gradientColor = combo.glowColors.length > 1
+                                 ? buildConicGradient(combo.glowColors)
+                                 : combo.glowColors[0] || '#6b7280';
+
+                            return (
+                                <div
+                                    className="rounded-2xl p-5 border"
+                                    style={{
+                                        background: 'rgba(255,255,255,0.02)',
+                                        borderColor: combo ? `${combo.glowColors[0]}50` : 'rgba(255,255,255,0.06)',
+                                        boxShadow: combo ? style.boxShadow : 'none',
+                                    }}
+                                >
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <Palette size={14} style={{ color: combo?.glowColors[0] ?? '#6b7280' }} />
+                                            <h4 className="font-bold text-sm text-white">Identidade de Cor</h4>
+                                        </div>
+                                        <span
+                                            className="text-[10px] font-bold px-2 py-0.5 rounded-full border"
+                                            style={{
+                                                color: combo?.glowColors[0] ?? '#6b7280',
+                                                borderColor: `${combo?.glowColors[0] ?? '#6b7280'}50`,
+                                                background: `${combo?.glowColors[0] ?? '#6b7280'}15`,
+                                            }}
+                                        >
+                                            Tier {tier.tier} — {tier.label}
+                                        </span>
+                                    </div>
+
+                                    {/* Color pips */}
+                                    <div className="flex items-center gap-2 mb-3">
+                                        {(combo?.glowColors ?? ['#6b7280']).map((hex, i) => (
+                                            <span
+                                                key={i}
+                                                style={{
+                                                    width: 14, height: 14, borderRadius: '50%',
+                                                    background: hex,
+                                                    boxShadow: `0 0 8px ${hex}`,
+                                                    display: 'inline-block',
+                                                    flexShrink: 0,
+                                                }}
+                                            />
+                                        ))}
+                                        <span
+                                            className="text-sm font-bold ml-1"
+                                            style={{
+                                                background: isRainbow
+                                                    ? 'linear-gradient(135deg, #f9f3e3, #0e68ab, #d3202a, #00733e)'
+                                                    : gradientColor,
+                                                WebkitBackgroundClip: 'text',
+                                                WebkitTextFillColor: 'transparent',
+                                                backgroundClip: 'text',
+                                            }}
+                                        >
+                                            {combo?.symbol ?? ''} {combo?.name ?? 'Sem Cor'}
+                                        </span>
+                                    </div>
+
+                                    <button
+                                        onClick={() => setShowGuildPicker(true)}
+                                        className="w-full py-2 rounded-xl text-xs font-bold transition-all hover:opacity-90"
+                                        style={{
+                                            background: combo
+                                                ? `linear-gradient(135deg, ${combo.glowColors.join(', ')})`
+                                                : '#6b7280',
+                                            color: '#fff',
+                                            boxShadow: combo ? `0 0 14px ${combo.glowColors[0]}50` : 'none',
+                                        }}
+                                    >
+                                        Trocar Identidade
+                                    </button>
+                                </div>
+                            );
+                        })()}
+
+                        {/* Achievements Section */}
+                        <div className="mt-8">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <Medal size={18} className="text-[#e74c3c]" />
+                                    <h3 className="font-bold text-white text-base">Conquistas</h3>
+                                </div>
+                                <span className="text-[10px] text-[#7a5c5c] font-bold uppercase tracking-wider">
+                                    {user.stats?.achievements?.length || 0} / {ACHIEVEMENTS.length} Desbloqueadas
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+                                {ACHIEVEMENTS.map(ach => {
+                                    const isUnlocked = user.stats?.achievements?.some(a => a.id === ach.id);
+                                    const Icon = ach.icon;
+                                    
+                                    return (
+                                        <div 
+                                            key={ach.id}
+                                            className={`aspect-square rounded-2xl flex flex-col items-center justify-center gap-1 border transition-all relative group
+                                                ${isUnlocked 
+                                                    ? 'bg-white/5 border-white/10 hover:bg-white/10 hover:scale-105 shadow-[0_0_15px_rgba(255,255,255,0.05)]' 
+                                                    : 'bg-black/20 border-white/5 grayscale opacity-40'}`}
+                                        >
+                                            <div 
+                                                className="w-10 h-10 rounded-full flex items-center justify-center mb-1"
+                                                style={{ 
+                                                    background: isUnlocked ? `${ach.color}20` : 'transparent',
+                                                    color: isUnlocked ? ach.color : '#4a4a4a'
+                                                }}
+                                            >
+                                                <Icon size={20} />
+                                            </div>
+                                            
+                                            {/* Tooltip on hover */}
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 rounded-xl bg-black/95 backdrop-blur-md border border-white/10 text-center opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-2xl">
+                                                <div className="font-bold text-xs mb-1" style={{ color: ach.color }}>{ach.name}</div>
+                                                <div className="text-[10px] text-white/70 leading-relaxed">{ach.description}</div>
+                                                <div className="mt-2 text-[9px] font-bold text-white/40 uppercase tracking-widest">{ach.rarity} • {ach.xpReward} XP</div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
                     </div>
 
                     {/* ══════════════════════════════════
@@ -242,14 +443,8 @@ const Profile: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Espaço Publicitário */}
                 <div className="mt-12 mx-auto max-w-2xl">
-                    <div className="rounded-2xl border border-dashed border-[rgba(255,255,255,0.06)]
-                                    bg-[rgba(255,255,255,0.02)] py-6 text-center">
-                        <p className="text-[10px] font-bold uppercase tracking-[3px] text-[rgba(122,92,92,0.4)]">
-                            Espaço Publicitário
-                        </p>
-                    </div>
+                    <AdsterraBanner />
                 </div>
             </div>
 
@@ -339,6 +534,21 @@ const Profile: React.FC = () => {
                         </button>
                     </div>
                 </div>
+            )}
+
+            {/* ── Guild Picker Modal ── */}
+            {showGuildPicker && (
+                <GuildPicker
+                    level={user.stats?.level ?? 1}
+                    currentGuildId={user.stats?.chosenGuildId}
+                    onSelect={async (combinationId) => {
+                        await rewardService.chooseGuild(user.id, combinationId, user.stats?.level ?? 1);
+                        setShowGuildPicker(false);
+                        // Force auth store re-read so the glow updates everywhere
+                        window.location.reload();
+                    }}
+                    onClose={() => setShowGuildPicker(false)}
+                />
             )}
         </PageShell>
     );

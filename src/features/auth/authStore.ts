@@ -16,6 +16,7 @@ interface AuthState {
     linkGoogle: () => Promise<void>;
     logout: () => Promise<void>;
     updateProfile: (updates: Partial<import('../../types').User>) => Promise<void>;
+    refreshUser: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -29,7 +30,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
         onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
-                const user = await authService.getCurrentUser();
+                const user = await authService.refreshUser();
                 set({ user, isLoading: false });
             } else {
                 set({ user: null, isLoading: false });
@@ -37,6 +38,12 @@ export const useAuthStore = create<AuthState>((set) => ({
         });
     },
 
+    refreshUser: async () => {
+        const user = await authService.refreshUser();
+        if (user) {
+            set({ user });
+        }
+    },
 
     login: async (email: string, password: string) => {
         set({ isLoading: true, error: null });

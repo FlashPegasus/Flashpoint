@@ -15,6 +15,7 @@ import { LeagueTournamentsTab } from '../features/leagues/components/LeagueTourn
 import { LeagueDetailsTab } from '../features/leagues/components/LeagueDetailsTab';
 import { LeagueManagersTab } from '../features/leagues/components/LeagueManagersTab';
 import { getInviteLink, copyToClipboard } from '../utils/inviteHelper';
+import AdsterraBanner from '../components/ui/AdsterraBanner';
 
 import toast from 'react-hot-toast';
 
@@ -55,8 +56,14 @@ const LeagueDashboard: React.FC = () => {
     const [isSeasonModalOpen, setIsSeasonModalOpen] = useState(false);
     const [seasonName, setSeasonName]               = useState('');
     const [linkedTournaments, setLinkedTournaments] = useState<Record<string, import('../types').Tournament>>({});
+    const [isMembersLoading, setIsMembersLoading]   = useState(false);
 
-    const handleLoadMembers = useCallback(async () => { if (id) setMembers(await getMembers(id)); }, [id, getMembers]);
+    const handleLoadMembers = useCallback(async () => { 
+        if (!id) return;
+        setIsMembersLoading(true);
+        setMembers(await getMembers(id)); 
+        setIsMembersLoading(false);
+    }, [id, getMembers]);
     const handleLoadSeasons = useCallback(async () => { if (id) setSeasons(await getSeasons(id)); }, [id, getSeasons]);
     const handleLoadOrganizers = useCallback(async () => { if (id) setOrganizers(await getOrganizers(id)); }, [id, getOrganizers]);
 
@@ -68,6 +75,13 @@ const LeagueDashboard: React.FC = () => {
             loadTournaments(); // Load tournaments to show their names
         }
     }, [id, loadLeague, loadTournaments, handleLoadOrganizers]);
+
+    // Executa reparo de integridade se o organizador não estiver na lista de membros
+    useEffect(() => {
+        if (activeLeague && user?.id === activeLeague.organizerId) {
+            leagueService.repairLeagueIntegrity(activeLeague.id, user.id, user.name);
+        }
+    }, [activeLeague?.id, user?.id]);
 
     useEffect(() => {
         if (tab === 'membros')    handleLoadMembers();
@@ -384,7 +398,7 @@ const LeagueDashboard: React.FC = () => {
                     />
                 )}
                 {tab === 'membros' && (
-                    <LeagueMembersTab members={members} isOrganizer={isAnyOrganizer} userId={user?.id} onUpdateMember={handleUpdateMember} />
+                    <LeagueMembersTab members={members} isOrganizer={isAnyOrganizer} isLoading={isMembersLoading} userId={user?.id} onUpdateMember={handleUpdateMember} />
                 )}
                 {tab === 'equipe' && isAnyOrganizer && (
                     <LeagueManagersTab
@@ -398,14 +412,8 @@ const LeagueDashboard: React.FC = () => {
                 )}
                 {tab === 'temporadas' && <LeagueSeasonsTab seasons={seasons} />}
 
-                {/* Espaço Publicitário */}
                 <div className="mt-4 mx-auto max-w-2xl w-full">
-                    <div className="rounded-2xl border border-dashed border-[rgba(255,255,255,0.06)]
-                                    bg-[rgba(255,255,255,0.02)] py-6 text-center">
-                        <p className="text-[10px] font-bold uppercase tracking-[3px] text-[rgba(122,92,92,0.4)]">
-                            Espaço Publicitário
-                        </p>
-                    </div>
+                    <AdsterraBanner />
                 </div>
             </div>
 
