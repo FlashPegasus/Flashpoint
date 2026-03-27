@@ -3,6 +3,8 @@ import { Trophy, Star, Zap, Play } from 'lucide-react';
 import { Modal, Button, Card } from './ui';
 import { useAuthStore } from '../features/auth/authStore';
 import { rewardService, XP_CONFIG } from '../features/gamification/rewardService';
+import { AdMob } from '@capacitor-community/admob';
+import { Capacitor } from '@capacitor/core';
 
 interface RewardCenterProps {
     isOpen: boolean;
@@ -24,20 +26,47 @@ export const RewardCenter: React.FC<RewardCenterProps> = ({ isOpen, onClose }) =
     const handleWatchAd = async () => {
         setLoading(true);
         
-        // Open Adsterra Smartlink (will open in new tab to not interrupt user flow)
-        window.open('https://www.profitablecpmratenetwork.com/mdsxthjg?key=5498e6b6546d13480734d4739f9cd052', '_blank');
+        if (Capacitor.isNativePlatform()) {
+            try {
+                // Use Native AdMob Reward Video
+                await AdMob.prepareRewardVideoAd({
+                    adId: 'ca-app-pub-3940256099942544/5224354917', // Test Reward Ad Unit ID
+                });
 
-        setTimeout(async () => {
-            await rewardService.addXP(user.id, XP_CONFIG.BASE_XP_AD, 'WATCH_AD');
-            // Give 24h glow
-            await rewardService.activateGlow(user.id, '#8b5cf6'); // Purple
-            
-            // Sync new XP and glow to local store
+                const reward = await AdMob.showRewardVideoAd();
+                
+                if (reward) {
+                    await awardReward();
+                } else {
+                    setLoading(false);
+                }
+            } catch (error) {
+                console.error('AdMob Error:', error);
+                // Fallback to Smartlink on error even on mobile
+                window.open('https://www.profitablecpmratenetwork.com/mdsxthjg?key=5498e6b6546d13480734d4739f9cd052', '_blank');
+                await awardReward(true); // Delay award for fallback
+            }
+        } else {
+            // Web: Use Adsterra Smartlink
+            window.open('https://www.profitablecpmratenetwork.com/mdsxthjg?key=5498e6b6546d13480734d4739f9cd052', '_blank');
+            await awardReward(true);
+        }
+    };
+
+    const awardReward = async (delayed = false) => {
+        const process = async () => {
+            await rewardService.addXP(user!.id, XP_CONFIG.BASE_XP_AD, 'WATCH_AD');
+            await rewardService.activateGlow(user!.id, '#8b5cf6'); // Purple
             if (refreshUser) await refreshUser();
-
             setLoading(false);
             alert('Recompensa recebida! +50 XP e Brilho Ativo por 24h!');
-        }, 3000);
+        };
+
+        if (delayed) {
+            setTimeout(process, 3000);
+        } else {
+            await process();
+        }
     };
 
     return (
