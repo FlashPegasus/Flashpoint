@@ -21,6 +21,7 @@ import JoinTournament from './pages/JoinTournament';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TranslateGuide from './pages/TranslateGuide';
 import Tracker from './pages/Tracker';
+import CommanderVault from './pages/CommanderVault';
 import { BottomNav } from './components/layout';
 import CookieBanner from './components/modals/CookieBanner';
 import WelcomeTutorialModal from './components/modals/WelcomeTutorialModal';
@@ -69,6 +70,7 @@ const App: React.FC = () => {
         <Route path="/my-area" element={<ProtectedRoute><MyArea /></ProtectedRoute>} />
         <Route path="/organizer/dashboard" element={<ProtectedRoute><MyArea /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/estante" element={<ProtectedRoute><CommanderVault /></ProtectedRoute>} />
         <Route path="/tournament/create" element={<ProtectedRoute><TournamentCreate /></ProtectedRoute>} />
         <Route path="/tournament/:id" element={<ProtectedRoute><TournamentDashboard /></ProtectedRoute>} />
 

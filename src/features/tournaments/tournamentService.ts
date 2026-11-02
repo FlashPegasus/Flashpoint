@@ -77,7 +77,7 @@ export const tournamentService = {
         userId: string,
         userName: string,
         userAvatar?: string,
-        commanderInfo?: { commanderName?: string, commanderImageUrl?: string, decklistUrl?: string }
+        commanderInfo?: { commanderName?: string, commanderImageUrl?: string, decklistUrl?: string, deckName?: string }
     ): Promise<void> => {
         // Prefer reading the tournament from Firestore public collection (cross-device)
         let tournament: Tournament | undefined;

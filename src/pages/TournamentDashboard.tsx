@@ -125,6 +125,7 @@ const TournamentDashboard: React.FC = () => {
     const [isQRModalOpen, setIsQRModalOpen] = useState(false);
     const [selectedTable, setSelectedTable] = useState<{ round: number; table: any } | null>(null);
     const [participantSearch, setParticipantSearch] = useState('');
+    const [deckView, setDeckView] = useState<'list' | 'covers'>('list');
     const [tempResults, setTempResults] = useState<Record<string, string>>({});
     const [winnerSelectorOpen, setWinnerSelectorOpen] = useState(false);
     const [isReviewPhase, setIsReviewPhase] = useState(false);
@@ -908,13 +909,43 @@ const TournamentDashboard: React.FC = () => {
                                     </div>
                                 </div>
 
+                                <div className="flex gap-1 p-1 rounded-xl bg-white/5 mb-3 w-max">
+                                    {([['list', 'Lista'], ['covers', 'Capas']] as const).map(([v, label]) => (
+                                        <button
+                                            key={v}
+                                            onClick={() => setDeckView(v)}
+                                            className={`px-4 py-1 rounded-lg text-xs font-bold ${deckView === v ? 'bg-[var(--fp-purple)] text-white' : 'text-[var(--fp-muted)]'}`}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {deckView === 'covers' && activeTournament.participants.length > 0 && (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                                        {activeTournament.participants.map(p => (
+                                            <div key={p.playerId} className={`rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.05] ${p.status === 'withdrawn' ? 'opacity-50' : ''}`}>
+                                                <div className="aspect-[4/3] bg-white/5 flex items-center justify-center">
+                                                    {p.commanderImageUrl
+                                                        ? <img src={p.commanderImageUrl} className="w-full h-full object-cover" alt="" />
+                                                        : <span className="text-2xl font-bold text-[var(--fp-muted)]">{p.name.charAt(0)}</span>}
+                                                </div>
+                                                <div className="p-2">
+                                                    <p className="text-xs font-bold truncate">{p.name}</p>
+                                                    {p.commanderName && <p className="text-[10px] text-[var(--fp-muted)] truncate">{p.commanderName}</p>}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
                                 {activeTournament.participants.length === 0 ? (
                                     <div className="py-12 text-center text-[var(--fp-muted)]">
                                         <Users size={36} className="mx-auto mb-3 opacity-20" />
                                         <p className="text-sm">Nenhum jogador inscrito ainda.</p>
                                     </div>
                                 ) : (
-                                    <div className="flex flex-col gap-1.5">
+                                    <div className={`flex flex-col gap-1.5 ${deckView === 'covers' ? 'hidden' : ''}`}>
                                         {activeTournament.participants
                                             .filter(p => p.name.toLowerCase().includes(participantSearch.toLowerCase()) || p.commanderName?.toLowerCase().includes(participantSearch.toLowerCase()))
                                             .map((p, _i) => (
@@ -946,6 +977,9 @@ const TournamentDashboard: React.FC = () => {
                                                             )}
                                                         </div>
                                                         <div className="flex items-center gap-2 mt-0.5">
+                                                            {p.deckName && (
+                                                                <span className="text-[10px] text-[var(--fp-muted)] font-bold uppercase tracking-tight">{p.deckName}</span>
+                                                            )}
                                                             {p.commanderName && (
                                                                 <span className="text-[10px] text-[var(--fp-purple-hi)] font-bold uppercase tracking-tight">
                                                                     ⚔️ {p.commanderName}

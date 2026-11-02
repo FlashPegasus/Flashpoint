@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Trophy, Users, LayoutDashboard, LogOut, Search, Menu, X, User, Plus, ChevronDown, QrCode, Activity } from 'lucide-react';
+import { Trophy, Users, LayoutDashboard, LogOut, Search, Menu, X, User, Plus, ChevronDown, QrCode, Activity, Library } from 'lucide-react';
 import CheckInModal from '../modals/CheckInModal';
 import { useAuthStore } from '../../features/auth/authStore';
 import { IconCreatePlus } from '../../assets/icons';
@@ -8,6 +8,7 @@ import AdPlaceholder from '../ui/AdPlaceholder';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useNavBump } from '../../hooks/useNavBump';
 import { NotificationBell } from './NotificationBell';
+import { hasSeenEstanteWelcome } from '../../services/vault/onboarding';
 
 // ——————————————————————————————————————————————————————————————————————————
 // Navbar Sub-components
@@ -99,6 +100,15 @@ export const Navbar: React.FC = () => {
                                         <span>Tracker</span>
                                         <span className="text-[8px] bg-[var(--fp-purple)]/20 text-[var(--fp-purple-hi)] px-1.5 py-0.5 rounded-full font-black">BETA</span>
                                     </Link>
+                                    {user && (
+                                        <Link to="/estante" className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${location.pathname === '/estante' ? 'text-primary' : 'text-secondary hover:text-primary'}`}>
+                                            <Library size={14} className="text-[var(--fp-purple)]" />
+                                            <span>Estante</span>
+                                            {!hasSeenEstanteWelcome(user.id) && (
+                                                <span className="text-[8px] bg-[var(--fp-purple)]/20 text-[var(--fp-purple-hi)] px-1.5 py-0.5 rounded-full font-black">NOVO</span>
+                                            )}
+                                        </Link>
+                                    )}
                                 </>
                             ) : (
                                 <div className="relative">
@@ -234,6 +244,11 @@ export const Navbar: React.FC = () => {
                                 </div>
                                 <span className="text-[9px] bg-[var(--fp-purple)]/20 text-[var(--fp-purple-hi)] px-2 py-0.5 rounded-full font-black">BETA</span>
                             </Link>
+                            {user && (
+                                <Link to="/estante" onClick={closeAll} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
+                                    <Library size={18} className="text-[var(--fp-purple)]" /> <span>Estante de Decks</span>
+                                </Link>
+                            )}
                             {user && (
                                 <Link to="/my-area" onClick={closeAll} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
                                     <LayoutDashboard size={18} /> <span>Minha Área</span>

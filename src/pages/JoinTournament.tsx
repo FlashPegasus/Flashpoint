@@ -6,6 +6,8 @@ import type { Tournament } from '../types';
 import PageShell from '../components/layout';
 import { Calendar, MapPin, Users, Trophy, LogIn, CheckCircle } from 'lucide-react';
 import { LoadingScreen } from '../components/ui';
+import { getAllDecks } from '../services/vault/db';
+import type { DeckSlotData } from '../types/vault';
 import { JoinConfirmationModal } from '../components/modals/JoinConfirmationModal';
 
 // const dicebear = (seed: string) =>
@@ -25,6 +27,26 @@ const JoinTournament: React.FC = () => {
     const [commanderName, setCommanderName]     = useState('');
     const [commanderImageUrl, setCommanderImageUrl] = useState('');
     const [decklistUrl, setDecklistUrl]         = useState('');
+    const [deckName, setDeckName]               = useState('');
+    const [estanteDecks, setEstanteDecks]       = useState<DeckSlotData[]>([]);
+    const [selectedEstanteId, setSelectedEstanteId] = useState('');
+
+    useEffect(() => {
+        if (!user) return;
+        getAllDecks()
+            .then(all => setEstanteDecks(all.filter(d => d.commander_name)))
+            .catch(() => setEstanteDecks([]));
+    }, [user]);
+
+    const handleSelectEstanteDeck = (slotId: string) => {
+        setSelectedEstanteId(slotId);
+        const deck = estanteDecks.find(d => d.color_combination === slotId);
+        if (!deck) return;
+        setCommanderName(deck.partner_name ? `${deck.commander_name} / ${deck.partner_name}` : deck.commander_name);
+        setCommanderImageUrl(deck.commander_image_url || '');
+        setDecklistUrl(deck.moxfield_url || deck.archidekt_url || deck.manabox_url || '');
+        setDeckName(deck.nickname || '');
+    };
 
     useEffect(() => {
         if (!id) return;
@@ -52,7 +74,8 @@ const JoinTournament: React.FC = () => {
         setJoining(true); setError('');
         try {
             await tournamentService.joinTournament(id, user.id, user.name, user.avatar, {
-                commanderName, commanderImageUrl, decklistUrl
+                commanderName, commanderImageUrl, decklistUrl,
+                ...(deckName ? { deckName } : {})
             });
             setJoined(true);
             setShowConfirmModal(false);
@@ -155,6 +178,26 @@ const JoinTournament: React.FC = () => {
                                         Informações de Deck
                                     </h3>
                                     <div className="flex flex-col gap-3">
+                                        {user && estanteDecks.length > 0 && (
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-[10px] uppercase font-bold text-[#7a5c5c] ml-1">
+                                                    Escolher da Estante de Decks
+                                                </label>
+                                                <select
+                                                    value={selectedEstanteId}
+                                                    onChange={e => handleSelectEstanteDeck(e.target.value)}
+                                                    className="w-full px-4 py-3 rounded-xl text-sm text-white"
+                                                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(192,57,43,0.2)' }}
+                                                >
+                                                    <option value="" style={{ color: '#000' }}>Selecione um deck...</option>
+                                                    {estanteDecks.map(d => (
+                                                        <option key={d.color_combination} value={d.color_combination} style={{ color: '#000' }}>
+                                                            {d.nickname ? `${d.nickname} — ` : ''}{d.commander_name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
                                         {[
                                             { label: 'Comandante / Deck (Opcional)', placeholder: "Ex: Atraxa, Praetors' Voice", value: commanderName, onChange: setCommanderName, type: 'text' },
                                             { label: 'URL da Imagem (Opcional)', placeholder: 'Link direto da imagem (ex: do Scryfall)', value: commanderImageUrl, onChange: setCommanderImageUrl, type: 'text' },
