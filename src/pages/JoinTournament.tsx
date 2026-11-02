@@ -6,6 +6,7 @@ import type { Tournament } from '../types';
 import PageShell from '../components/layout';
 import { Calendar, MapPin, Users, Trophy, LogIn, CheckCircle } from 'lucide-react';
 import { LoadingScreen } from '../components/ui';
+import { JoinConfirmationModal } from '../components/modals/JoinConfirmationModal';
 
 // const dicebear = (seed: string) =>
 //     `https://api.dicebear.com/7.x/rings/svg?seed=${encodeURIComponent(seed)}&size=64`;
@@ -19,6 +20,7 @@ const JoinTournament: React.FC = () => {
     const [loading, setLoading]                 = useState(true);
     const [joining, setJoining]                 = useState(false);
     const [joined, setJoined]                   = useState(false);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [error, setError]                     = useState('');
     const [commanderName, setCommanderName]     = useState('');
     const [commanderImageUrl, setCommanderImageUrl] = useState('');
@@ -36,19 +38,24 @@ const JoinTournament: React.FC = () => {
         }).catch(() => setLoading(false));
     }, [id, user]);
 
-    const handleJoin = async () => {
+    const handleJoinClick = () => {
         if (!user) {
             sessionStorage.setItem('joinAfterLogin', `/join/${id}`);
             navigate('/login');
             return;
         }
-        if (!tournament || !id || joining) return;
+        setShowConfirmModal(true);
+    };
+
+    const handleConfirmJoin = async () => {
+        if (!tournament || !id || joining || !user) return;
         setJoining(true); setError('');
         try {
             await tournamentService.joinTournament(id, user.id, user.name, user.avatar, {
                 commanderName, commanderImageUrl, decklistUrl
             });
             setJoined(true);
+            setShowConfirmModal(false);
         } catch (e: any) {
             setError(e.message || 'Erro ao entrar no torneio.');
         } finally { setJoining(false); }
@@ -78,7 +85,7 @@ const JoinTournament: React.FC = () => {
     const participantCount = tournament.participants.length;
     const maxParticipants  = tournament.maxParticipants;
     const isFull  = maxParticipants ? participantCount >= maxParticipants : false;
-    const isOpen  = tournament.status === 'registration' || tournament.status === 'draft';
+    const isOpen  = tournament.status === 'registration' || tournament.status === 'draft' || (tournament.status === 'ongoing' && tournament.allowLateRegistration);
 
     const metaItems = [
         { icon: <Calendar size={14} />, text: new Date(tournament.date).toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) },
@@ -239,7 +246,7 @@ const JoinTournament: React.FC = () => {
                                     <p className="text-xs text-[#7a5c5c] mt-1">Todas as vagas foram preenchidas.</p>
                                 </div>
                             ) : (
-                                <button onClick={handleJoin} disabled={joining}
+                                <button onClick={handleJoinClick} disabled={joining}
                                         className="w-full py-3.5 rounded-xl font-bold text-sm text-white
                                                    flex items-center justify-center gap-2
                                                    bg-gradient-to-r from-[#c0392b] to-[#e67e22]
@@ -258,6 +265,26 @@ const JoinTournament: React.FC = () => {
 
                 </div>
             </div>
+
+            {/* Join Confirmation Modal */}
+            {tournament && (
+                <JoinConfirmationModal
+                    isOpen={showConfirmModal}
+                    onClose={() => setShowConfirmModal(false)}
+                    onConfirm={handleConfirmJoin}
+                    isLoading={joining}
+                    title="Confirmar Entrada no Torneio"
+                    type="tournament"
+                    eventName={tournament.name}
+                    organizerName={tournament.ownerName}
+                    isAlreadyParticipant={joined}
+                    extraInfo={
+                        commanderName
+                            ? `Você entrará com o comandante "${commanderName}". Confirmar inscrição?`
+                            : `Você está prestes a entrar no torneio "${tournament.name}". Confirmar sua participação?`
+                    }
+                />
+            )}
         </PageShell>
     );
 };

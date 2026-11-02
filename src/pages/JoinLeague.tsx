@@ -4,6 +4,9 @@ import { Trophy, ArrowRight } from 'lucide-react';
 import PageShell from '../components/layout';
 import { useAuthStore } from '../features/auth/authStore';
 import { useLeagueStore } from '../features/leagues/leagueStore';
+import { leagueService } from '../features/leagues/leagueService';
+import { JoinConfirmationModal } from '../components/modals/JoinConfirmationModal';
+import type { League } from '../types';
 import toast from 'react-hot-toast';
 
 const JoinLeague: React.FC = () => {
@@ -14,17 +17,38 @@ const JoinLeague: React.FC = () => {
 
     const [code, setCode]         = useState(codeFromUrl?.toUpperCase() || '');
     const [isJoining, setIsJoining] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+    const [previewLeague, setPreviewLeague] = useState<League | null>(null);
+    const [isAlreadyMember, setIsAlreadyMember] = useState(false);
 
-    const handleJoin = async () => {
+    const handleJoinClick = async () => {
         if (!user) { navigate('/login'); return; }
         if (!code.trim()) { toast.error('Digite o código de convite!'); return; }
+
+        try {
+            const league = await leagueService.getLeagueByInviteCode(code.trim().toUpperCase());
+            if (!league) {
+                toast.error('Código de convite inválido ou liga não encontrada.');
+                return;
+            }
+            setPreviewLeague(league);
+            setIsAlreadyMember(league.memberIds?.includes(user.id) || league.organizerId === user.id);
+            setShowModal(true);
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao buscar liga.');
+        }
+    };
+
+    const handleConfirmJoin = async () => {
+        if (!user || !previewLeague) return;
         setIsJoining(true);
         try {
             const league = await joinLeagueByCode(code.trim().toUpperCase(), user.id, user.name);
             toast.success(`Bem-vindo à liga "${league.name}"!`);
+            setShowModal(false);
             navigate(`/league/${league.id}`);
         } catch (err: any) {
-            toast.error(err.message || 'Código inválido ou liga não encontrada.');
+            toast.error(err.message || 'Código inválido ou erro ao entrar na liga.');
         } finally { setIsJoining(false); }
     };
 
@@ -81,7 +105,7 @@ const JoinLeague: React.FC = () => {
 
                             {/* CTA */}
                             <button
-                                onClick={handleJoin}
+                                onClick={handleJoinClick}
                                 disabled={isJoining}
                                 className="w-full py-3.5 rounded-xl font-bold text-sm text-white
                                            flex items-center justify-center gap-2
@@ -93,13 +117,29 @@ const JoinLeague: React.FC = () => {
                                     ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                                     : <ArrowRight size={16} />
                                 }
-                                {isJoining ? 'Entrando...' : 'Entrar na Liga'}
+                                {isJoining ? 'Verificando...' : 'Entrar na Liga'}
                             </button>
                         </div>
                     </div>
 
                 </div>
             </div>
+
+            {/* Join Confirmation Modal */}
+            {previewLeague && (
+                <JoinConfirmationModal
+                    isOpen={showModal}
+                    onClose={() => setShowModal(false)}
+                    onConfirm={handleConfirmJoin}
+                    isLoading={isJoining}
+                    title="Confirmar Entrada na Liga"
+                    type="league"
+                    eventName={previewLeague.name}
+                    organizerName={previewLeague.ownerName}
+                    isAlreadyParticipant={isAlreadyMember}
+                    extraInfo={`Você está prestes a ingressar na liga "${previewLeague.name}". Deseja confirmar?`}
+                />
+            )}
         </PageShell>
     );
 };

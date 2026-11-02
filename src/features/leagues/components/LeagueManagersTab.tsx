@@ -14,7 +14,7 @@ interface LeagueManagersTabProps {
 
 const ROLE_LABELS = {
     master: { label: 'Proprietário', color: 'text-[#d4ac0d]', bg: 'bg-[rgba(212,172,13,0.1)]', border: 'border-[rgba(212,172,13,0.3)]', icon: ShieldAlert },
-    admin: { label: 'Administrador', color: 'text-[#e74c3c]', bg: 'bg-[rgba(192,57,43,0.1)]', border: 'border-[rgba(192,57,43,0.3)]', icon: Shield },
+    admin: { label: 'Administrador', color: 'text-[var(--fp-primary-hi)]', bg: 'bg-[rgba(var(--fp-primary-rgb),0.1)]', border: 'border-[rgba(var(--fp-primary-rgb),0.3)]', icon: Shield },
     moderator: { label: 'Moderador', color: 'text-[#3498db]', bg: 'bg-[rgba(52,152,219,0.1)]', border: 'border-[rgba(52,152,219,0.3)]', icon: ShieldCheck },
 };
 
@@ -37,14 +37,14 @@ export const LeagueManagersTab: React.FC<LeagueManagersTabProps> = ({ organizers
     return (
         <div className="flex flex-col gap-4 animate-fade-in">
             {isMaster && (
-                <div className="flex justify-between items-center bg-[rgba(255,255,255,0.02)] p-4 rounded-2xl border border-[rgba(192,57,43,0.15)]">
+                <div className="flex justify-between items-center bg-[rgba(255,255,255,0.02)] p-4 rounded-2xl border border-[rgba(var(--fp-primary-rgb),0.15)]">
                     <div>
                         <h3 className="text-white font-semibold">Equipe de Organização</h3>
                         <p className="text-sm text-[#7a5c5c]">Delegue permissões para ajudar a administrar a liga.</p>
                     </div>
                     <button onClick={() => setIsAddModalOpen(true)}
                             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white
-                                       bg-gradient-to-r from-[#c0392b] to-[#e67e22] hover:opacity-90 transition-opacity">
+                                       bg-gradient-to-r from-[var(--fp-primary)] to-[#e67e22] hover:opacity-90 transition-opacity">
                         <UserPlus size={16} /> Adicionar
                     </button>
                 </div>
@@ -81,7 +81,7 @@ export const LeagueManagersTab: React.FC<LeagueManagersTabProps> = ({ organizers
                                         <Settings size={14} /> {org.role === 'admin' ? 'Rebaixar p/ Moderador' : 'Promover p/ Admin'}
                                     </button>
                                     <button onClick={() => { if (window.confirm('Remover organizador da equipe?')) onRemoveOrganizer(org.userId); }}
-                                            className="p-1.5 rounded-lg text-[#7a5c5c] hover:bg-[rgba(192,57,43,0.15)] hover:text-[#e74c3c] transition-all"
+                                            className="p-1.5 rounded-lg text-[#7a5c5c] hover:bg-[rgba(var(--fp-primary-rgb),0.15)] hover:text-[var(--fp-primary-hi)] transition-all"
                                             title="Remover Equipe">
                                         <Trash2 size={16} />
                                     </button>
@@ -96,8 +96,8 @@ export const LeagueManagersTab: React.FC<LeagueManagersTabProps> = ({ organizers
                 <div className="p-6 flex flex-col gap-4">
                     <p className="text-sm text-[#a07070]">Selecione um membro ativo da liga para promover à equipe.</p>
                     <input type="text" placeholder="Buscar membro..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                           className="w-full bg-[rgba(0,0,0,0.3)] border border-[rgba(192,57,43,0.3)] rounded-xl px-4 py-2.5 text-white
-                                      focus:outline-none focus:border-[#e74c3c] transition-colors" />
+                           className="w-full bg-[rgba(0,0,0,0.3)] border border-[rgba(var(--fp-primary-rgb),0.3)] rounded-xl px-4 py-2.5 text-white
+                                      focus:outline-none focus:border-[var(--fp-primary-hi)] transition-colors" />
                     
                     <div className="max-h-[40vh] overflow-y-auto flex flex-col gap-2 pr-2">
                         {filteredMembers.length === 0 ? (
@@ -107,7 +107,7 @@ export const LeagueManagersTab: React.FC<LeagueManagersTabProps> = ({ organizers
                                 <div key={m.playerId} className="flex justify-between items-center p-3 rounded-xl border border-[rgba(255,255,255,0.05)] bg-[rgba(255,255,255,0.02)]">
                                     <span className="text-sm font-semibold text-white">{m.playerName}</span>
                                     <button onClick={() => handlePromote(m.playerId)}
-                                            className="px-3 py-1 text-xs font-bold rounded-lg text-[#e74c3c] bg-[rgba(192,57,43,0.1)] hover:bg-[rgba(192,57,43,0.2)]">
+                                            className="px-3 py-1 text-xs font-bold rounded-lg text-[var(--fp-primary-hi)] bg-[rgba(var(--fp-primary-rgb),0.1)] hover:bg-[rgba(var(--fp-primary-rgb),0.2)]">
                                         Promover
                                     </button>
                                 </div>

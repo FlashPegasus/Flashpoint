@@ -4,13 +4,29 @@ import { syncService } from './syncService';
 import { v4 as uuidv4 } from 'uuid';
 import { generateSwissPairings, generateMultiplayerTables } from './pairingEngine';
 import { db } from '../../lib/firebase';
-import { doc, getDoc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, updateDoc, collection, getDocs } from 'firebase/firestore';
 
 const STORAGE_KEY = 'tournaments';
 
 export const tournamentService = {
     getTournaments: async (): Promise<Tournament[]> => {
-        return await storage.get<Tournament[]>(STORAGE_KEY, []);
+        const local = await storage.get<Tournament[]>(STORAGE_KEY, []);
+        try {
+            const querySnap = await getDocs(collection(db, 'tournaments'));
+            if (!querySnap.empty) {
+                const cloudTournaments = querySnap.docs.map(d => d.data() as Tournament);
+                // Merge by id (cloud data takes precedence for cross-device consistency)
+                const map = new Map<string, Tournament>();
+                local.forEach(t => map.set(t.id, t));
+                cloudTournaments.forEach(t => map.set(t.id, t));
+                const merged = Array.from(map.values());
+                await storage.set(STORAGE_KEY, merged);
+                return merged;
+            }
+        } catch (err) {
+            console.warn('Could not sync cloud tournaments in getTournaments (using local cache):', err);
+        }
+        return local;
     },
 
     getTournamentById: async (id: string): Promise<Tournament | undefined> => {
@@ -124,6 +140,19 @@ export const tournamentService = {
         }
         // Also persist to organizer's local/user storage if they're on the same device
         await tournamentService.saveTournament(tournament);
+
+        // Auto-enroll participant in linked League if tournament belongs to one
+        if (tournament.leagueId) {
+            try {
+                const { leagueService } = await import('../leagues/leagueService');
+                await leagueService.autoEnrollTournamentParticipants(tournament.leagueId, [{
+                    playerId: userId,
+                    name: userName
+                }]);
+            } catch (enrollErr) {
+                console.warn('Auto-enroll in league skipped or failed (non-critical):', enrollErr);
+            }
+        }
     },
 
     saveTournament: async (tournament: Tournament): Promise<void> => {
@@ -149,15 +178,32 @@ export const tournamentService = {
     },
 
     deleteTournament: async (tournamentId: string): Promise<void> => {
-        const tournaments = await tournamentService.getTournaments();
-        const filtered = tournaments.filter(t => t.id !== tournamentId);
-        await storage.set(STORAGE_KEY, filtered);
-
         try {
             await deleteDoc(doc(db, 'tournaments', tournamentId));
-        } catch (err) {
-            console.warn('Could not delete from Firestore:', err);
+        } catch (err: any) {
+            // Se o erro for de permissão, bloqueia a exclusão local
+            if (err.code === 'permission-denied') {
+                throw new Error('Permissão negada. Apenas o organizador pode excluir o torneio.');
+            }
+            console.warn('Could not delete from Firestore (might be offline or local only):', err);
         }
+
+        const tournaments = await tournamentService.getTournaments();
+        const tournamentToDelete = tournaments.find(t => t.id === tournamentId);
+
+        // If tournament was linked to a league, unlink and recalculate
+        if (tournamentToDelete?.leagueId) {
+            try {
+                const { leagueService } = await import('../leagues/leagueService');
+                await leagueService.unlinkTournament(tournamentToDelete.leagueId, tournamentId, tournamentToDelete.organizerId);
+                await leagueService.recalculateStandings(tournamentToDelete.leagueId);
+            } catch (unlinkErr) {
+                console.warn('Could not automatically unlink tournament from league on deletion:', unlinkErr);
+            }
+        }
+
+        const filtered = tournaments.filter(t => t.id !== tournamentId);
+        await storage.set(STORAGE_KEY, filtered);
     },
 
     createTournament: async (data: Partial<Tournament>): Promise<Tournament> => {
@@ -218,6 +264,20 @@ export const tournamentService = {
 
         tournament.participants.push(participant);
         await tournamentService.saveTournament(tournament);
+
+        // Auto-enroll in linked league if exists
+        if (tournament.leagueId) {
+            try {
+                const { leagueService } = await import('../leagues/leagueService');
+                await leagueService.autoEnrollTournamentParticipants(tournament.leagueId, [{
+                    playerId: participant.playerId,
+                    name: participant.name
+                }]);
+            } catch (err) {
+                console.warn('Auto-enroll in league failed (non-blocking):', err);
+            }
+        }
+
         return participant;
     },
 
@@ -493,6 +553,21 @@ export const tournamentService = {
 
         tournament.status = 'completed';
         await tournamentService.saveTournament(tournament);
+
+        // If part of a league, auto-enroll any participants that joined during the tournament and recalculate standings
+        if (tournament.leagueId) {
+            try {
+                const { leagueService } = await import('../leagues/leagueService');
+                const participantsToEnroll = tournament.participants
+                    .filter(p => p.status === 'active' || p.totalPoints > 0)
+                    .map(p => ({ playerId: p.playerId, name: p.name }));
+                
+                await leagueService.autoEnrollTournamentParticipants(tournament.leagueId, participantsToEnroll);
+                await leagueService.recalculateStandings(tournament.leagueId);
+            } catch (leagueErr) {
+                console.warn('Could not auto-sync league on tournament completion:', leagueErr);
+            }
+        }
     },
 
     publishTournament: async (tournamentId: string): Promise<void> => {

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { ResultStatus } from '../types';
-import { Play, CheckCircle2, Trophy, Plus, UserMinus, ChevronRight, Copy, Check, Clock, RefreshCw, Globe, Settings, Users, Swords, BarChart3, Crown, Medal, Search, UserPlus } from 'lucide-react';
+import { Play, CheckCircle2, Trophy, Plus, UserMinus, ChevronRight, Copy, Check, Clock, RefreshCw, Globe, Settings, Users, Swords, BarChart3, Crown, Medal, Search, UserPlus, QrCode, Award, Edit2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import PageShell from '../components/layout';
 import { Button, Input, Modal, LoadingScreen } from '../components/ui';
@@ -96,9 +96,29 @@ const TournamentDashboard: React.FC = () => {
         }
     };
 
+    const [linkedLeagueName, setLinkedLeagueName] = useState<string | null>(null);
+
     useEffect(() => {
         if (user?.id && !user.isAnonymous) loadMyLeagues(user.id);
     }, [user, loadMyLeagues]);
+
+    useEffect(() => {
+        const fetchLeague = async () => {
+            if (activeTournament?.leagueId) {
+                const found = myLeagues.find(l => l.id === activeTournament.leagueId);
+                if (found) {
+                    setLinkedLeagueName(found.name);
+                } else {
+                    const { leagueService } = await import('../features/leagues/leagueService');
+                    const league = await leagueService.getLeagueById(activeTournament.leagueId);
+                    if (league) setLinkedLeagueName(league.name);
+                }
+            } else {
+                setLinkedLeagueName(null);
+            }
+        };
+        fetchLeague();
+    }, [activeTournament?.leagueId, myLeagues]);
 
     const [newPlayerName, setNewPlayerName] = useState('');
     const [linkCopied, setLinkCopied] = useState(false);
@@ -110,6 +130,49 @@ const TournamentDashboard: React.FC = () => {
     const [isReviewPhase, setIsReviewPhase] = useState(false);
     const [isEditingTables, setIsEditingTables] = useState(false);
     const [swapSource, setSwapSource] = useState<{ tableId: string, playerId: string } | null>(null);
+
+    // Edit Deck modal state
+    const [editDeckModalOpen, setEditDeckModalOpen] = useState(false);
+    const [editingParticipantId, setEditingParticipantId] = useState<string | null>(null);
+    const [editCommanderName, setEditCommanderName] = useState('');
+    const [editCommanderImageUrl, setEditCommanderImageUrl] = useState('');
+    const [editDecklistUrl, setEditDecklistUrl] = useState('');
+    const [savingDeck, setSavingDeck] = useState(false);
+
+    const handleOpenEditDeck = (p: any) => {
+        setEditingParticipantId(p.playerId);
+        setEditCommanderName(p.commanderName || '');
+        setEditCommanderImageUrl(p.commanderImageUrl || '');
+        setEditDecklistUrl(p.decklistUrl || '');
+        setEditDeckModalOpen(true);
+    };
+
+    const handleSaveDeck = async () => {
+        if (!id || !activeTournament || !editingParticipantId) return;
+        setSavingDeck(true);
+        try {
+            const updatedParticipants = activeTournament.participants.map(p => {
+                if (p.playerId === editingParticipantId) {
+                    return {
+                        ...p,
+                        commanderName: editCommanderName,
+                        commanderImageUrl: editCommanderImageUrl,
+                        decklistUrl: editDecklistUrl
+                    };
+                }
+                return p;
+            });
+            const updated = { ...activeTournament, participants: updatedParticipants };
+            await tournamentService.saveTournament(updated);
+            await loadTournament(id);
+            toast.success('Informações do deck atualizadas!');
+            setEditDeckModalOpen(false);
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao atualizar deck.');
+        } finally {
+            setSavingDeck(false);
+        }
+    };
 
     const handleSwapSelection = async (tableId: string, playerId: string) => {
         if (!swapSource) {
@@ -178,6 +241,8 @@ const TournamentDashboard: React.FC = () => {
 
     const isOrganizer = activeTournament.organizerId === user?.id;
     const inviteUrl   = id ? getInviteLink('tournament', id) : '';
+    const myParticipant = user ? activeTournament.participants.find(p => p.playerId === user.id) : undefined;
+    const isActiveParticipant = myParticipant?.status === 'active';
 
     /* ── handlers ── */
     const handleAddPlayer = async () => {
@@ -188,6 +253,35 @@ const TournamentDashboard: React.FC = () => {
             toast.success('Jogador adicionado!');
         } catch (err: any) {
             toast.error(err.message || 'Erro ao adicionar jogador.');
+        }
+    };
+
+    const handleToggleParticipation = async (playerId: string, currentVal: boolean | undefined, status: string) => {
+        if (!id || !activeTournament || !isOrganizer) return;
+        const currentEffective = typeof currentVal === 'boolean' ? currentVal : (status !== 'withdrawn');
+        const nextVal = !currentEffective;
+        
+        try {
+            const updatedParticipants = activeTournament.participants.map(p => {
+                if (p.playerId === playerId) {
+                    return { ...p, earnedParticipation: nextVal };
+                }
+                return p;
+            });
+            
+            const updated = { ...activeTournament, participants: updatedParticipants };
+            await tournamentService.saveTournament(updated);
+            
+            // If linked to a league, trigger recalculation so league reflects the change
+            if (activeTournament.leagueId) {
+                const { leagueService } = await import('../features/leagues/leagueService');
+                await leagueService.recalculateStandings(activeTournament.leagueId);
+            }
+            
+            await loadTournament(id);
+            toast.success(nextVal ? 'Ponto de participação CONCEDIDO!' : 'Ponto de participação REMOVIDO!');
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao ajustar ponto de participação.');
         }
     };
 
@@ -250,14 +344,29 @@ const TournamentDashboard: React.FC = () => {
     };
 
     const handleCancelTournament = async () => {
-        if (!window.confirm('Tem certeza que deseja cancelar e excluir este torneio permanentemente?')) return;
+        if (!window.confirm('Tem certeza que deseja cancelar e excluir este torneio permanentemente? Esta ação não pode ser desfeita.')) return;
         if (!id) return;
         try {
             await tournamentService.deleteTournament(id);
             toast.success('Torneio cancelado.');
             navigate('/my-area');
-        } catch {
-            toast.error('Erro ao excluir torneio.');
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao excluir torneio.');
+        }
+    };
+
+    const handleVoluntaryDrop = async () => {
+        if (!myParticipant || !id) return;
+        const confirmed = window.confirm(
+            '⚠️ Tem certeza que deseja se retirar deste torneio?\n\nIsso irá remover você da competição. Esta ação não pode ser desfeita.'
+        );
+        if (!confirmed) return;
+        try {
+            await withdrawParticipant(id, myParticipant.playerId);
+            toast.success('Você se retirou do torneio.');
+            navigate('/my-area');
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao se retirar do torneio.');
         }
     };
 
@@ -278,12 +387,19 @@ const TournamentDashboard: React.FC = () => {
                     HEADER
                 ══════════════════════════════════════════ */}
                 <div className="relative overflow-hidden rounded-2xl mb-8 mt-4
-                                bg-[var(--fp-glass-mid)] border border-[var(--fp-border-hi)]
-                                backdrop-blur-[20px] shadow-[var(--fp-shadow-lg)]">
+                                border border-[var(--fp-border-hi)]
+                                backdrop-blur-[20px] shadow-[var(--fp-shadow-lg)]"
+                     style={{ 
+                         background: activeTournament.bannerUrl 
+                             ? `linear-gradient(to bottom, rgba(10,5,5,0.45), rgba(10,5,5,0.9)), url(${activeTournament.bannerUrl}) center/cover` 
+                             : 'var(--fp-glass-mid)',
+                     }}>
 
                     {/* Glow de fundo */}
-                    <div className="absolute inset-0 pointer-events-none"
-                         style={{ background: 'radial-gradient(ellipse at 0% 50%, rgba(139,92,246,0.12) 0%, transparent 60%), radial-gradient(ellipse at 100% 50%, rgba(6,182,212,0.08) 0%, transparent 60%)' }} />
+                    {!activeTournament.bannerUrl && (
+                        <div className="absolute inset-0 pointer-events-none"
+                             style={{ background: 'radial-gradient(ellipse at 0% 50%, rgba(139,92,246,0.12) 0%, transparent 60%), radial-gradient(ellipse at 100% 50%, rgba(6,182,212,0.08) 0%, transparent 60%)' }} />
+                    )}
 
                     <div className="relative flex flex-wrap items-start justify-between gap-6 p-6 md:p-8">
                         {/* Info */}
@@ -296,12 +412,12 @@ const TournamentDashboard: React.FC = () => {
                                 {timeLeft && <RoundTimer timeLeft={timeLeft} />}
                             </div>
 
-                            {activeTournament.leagueId && myLeagues.find(l => l.id === activeTournament.leagueId) && (
+                            {activeTournament.leagueId && (
                                 <div 
                                     onClick={() => navigate(`/league/${activeTournament.leagueId}`)}
                                     className="inline-flex items-center w-max gap-2 mb-3 px-3 py-1.5 bg-[var(--fp-gold-lo)] border border-[rgba(245,158,11,0.3)] rounded-lg text-[var(--fp-gold-hi)] text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-[rgba(245,158,11,0.2)] transition-colors"
                                 >
-                                    <Trophy size={14} /> Liga: {myLeagues.find(l => l.id === activeTournament.leagueId)?.name}
+                                    <Trophy size={14} /> Liga: {linkedLeagueName || 'Carregando liga...'}
                                 </div>
                             )}
 
@@ -425,8 +541,326 @@ const TournamentDashboard: React.FC = () => {
                     </div>
                 )}
 
+                {/* ══════════════════════════════════════════════════════════════
+                    TOURNAMENT CONTROL CENTER (TCC) — ONLY WHEN ONGOING + ORGANIZER
+                ══════════════════════════════════════════════════════════════ */}
+                {activeTournament.status === 'ongoing' && isOrganizer && (
+                    <div className="flex flex-col gap-6 animate-fade-in">
+
+                        {/* ── TCC GRID ── */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                            {/* ════════════════════════════
+                                LEFT COLUMN: CURRENT ROUND (2/3)
+                            ════════════════════════════ */}
+                            <div className="lg:col-span-2 flex flex-col gap-4">
+
+                                {activeTournament.rounds.length === 0 ? (
+                                    <div className="fp-card p-12 text-center">
+                                        <Play size={44} className="mx-auto mb-4 text-[var(--fp-muted)] opacity-20" />
+                                        <h3 className="text-xl font-semibold mb-2">Torneio em andamento</h3>
+                                        <p className="text-[var(--fp-muted)] text-sm mb-6">
+                                            Nenhuma rodada gerada ainda.
+                                        </p>
+                                        <button className="fp-btn-primary px-6 py-2.5 rounded-xl text-sm"
+                                                onClick={() => id && generateRound(id)}>
+                                            Gerar 1ª Rodada
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Current Round Header */}
+                                        {(() => {
+                                            const currentRound = activeTournament.rounds[activeTournament.rounds.length - 1];
+                                            const completedTables = currentRound.tables.filter(t => t.status === 'completed').length;
+                                            const totalTables = currentRound.tables.length;
+                                            const allDone = completedTables === totalTables;
+                                            return (
+                                                <div className="flex flex-col gap-4">
+                                                    <div className="flex items-center justify-between px-2">
+                                                        <div className="flex items-center gap-4">
+                                                            <h2 className="font-[var(--fp-font-display)] text-3xl md:text-4xl font-bold text-[var(--fp-text-hi)] uppercase tracking-widest drop-shadow-lg">
+                                                                Rodada <span className="text-[var(--fp-primary-hi)]">{currentRound.number}</span>
+                                                            </h2>
+                                                            <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase border
+                                                                ${allDone
+                                                                    ? 'bg-[var(--fp-emerald-lo)] text-[var(--fp-emerald-hi)] border-[rgba(16,185,129,0.3)]'
+                                                                    : 'bg-[var(--fp-purple-lo)] text-[var(--fp-purple-hi)] border-[rgba(139,92,246,0.3)]'
+                                                                }`}>
+                                                                {allDone && <CheckCircle2 size={12} />}
+                                                                {completedTables}/{totalTables} Mesas
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            {currentRound.status === 'pending' && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setIsEditingTables(!isEditingTables);
+                                                                        setSwapSource(null);
+                                                                    }}
+                                                                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase border transition-all
+                                                                        ${isEditingTables
+                                                                            ? 'bg-[var(--fp-purple)] text-white border-[var(--fp-purple)] shadow-glow-sm'
+                                                                            : 'bg-white/5 text-[var(--fp-muted)] border-white/10 hover:bg-white/10'}`}>
+                                                                    <RefreshCw size={10} className={isEditingTables ? 'animate-spin-slow' : ''} />
+                                                                    {isEditingTables ? 'Concluir Ajuste' : 'Ajustar Mesas'}
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Match Cards Grid */}
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        {currentRound.tables.map((table, idx) => (
+                                                            <MatchCard
+                                                                key={table.id}
+                                                                idx={idx}
+                                                                table={table}
+                                                                participants={activeTournament.participants}
+                                                                isOrganizer={true}
+                                                                status={table.status === 'completed' ? 'completed' : 'pending'}
+                                                                onEnterResult={() => handleOpenResultModal(currentRound.number, table)}
+                                                                roundNumber={currentRound.number}
+                                                                isEditing={isEditingTables && currentRound.status === 'pending'}
+                                                                onSwapSelect={handleSwapSelection}
+                                                                swapSource={swapSource}
+                                                            />
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Action Buttons: Next Round / Regenerate */}
+                                                    <div className="flex flex-wrap items-center justify-center gap-4 mt-2 pt-4 border-t border-white/5">
+                                                        {allDone ? (
+                                                            <>
+                                                                <button className="fp-btn-primary px-7 py-3 rounded-xl flex items-center gap-2 text-sm"
+                                                                        onClick={() => id && generateRound(id)}>
+                                                                    Próxima Rodada <ChevronRight size={16} />
+                                                                </button>
+                                                                {activeTournament.rounds.every(r => r.status === 'completed') && (
+                                                                    <button className="px-5 py-3 rounded-xl flex items-center gap-2 text-sm font-bold
+                                                                                       bg-[var(--fp-rose-lo)] border border-[rgba(244,63,94,0.4)]
+                                                                                       text-[var(--fp-rose-hi)] hover:bg-[rgba(244,63,94,0.2)] transition-colors"
+                                                                            onClick={() => id && completeTournament(id)}>
+                                                                        <CheckCircle2 size={16} /> Finalizar Torneio
+                                                                    </button>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-[var(--fp-muted)] text-sm flex items-center gap-2">
+                                                                <Clock size={14} className="animate-pulse" />
+                                                                Aguardando resultados de {totalTables - completedTables} mesa{totalTables - completedTables !== 1 ? 's' : ''}...
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Regenerate Round */}
+                                                    {currentRound.status === 'pending' && (
+                                                        <div className="flex justify-center">
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (window.confirm('Regerar esta rodada? Resultados não salvos serão perdidos.'))
+                                                                        id && regenerateRound(id);
+                                                                }}
+                                                                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold
+                                                                           text-yellow-400 border border-yellow-500/20
+                                                                           hover:bg-yellow-500/10 transition-colors">
+                                                                <RefreshCw size={13} /> Regerar Rodada
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
+
+                                        {/* Previous Rounds (collapsed) */}
+                                        {activeTournament.rounds.length > 1 && (
+                                            <details className="mt-4">
+                                                <summary className="text-[10px] font-bold text-[var(--fp-muted)] uppercase tracking-widest cursor-pointer hover:text-[var(--fp-text)] transition-colors px-2 py-2">
+                                                    ▸ Rodadas Anteriores ({activeTournament.rounds.length - 1})
+                                                </summary>
+                                                <div className="flex flex-col gap-6 mt-4">
+                                                    {[...activeTournament.rounds].slice(0, -1).reverse().map(round => (
+                                                        <div key={round.number} className="flex flex-col gap-3 opacity-60">
+                                                            <div className="flex items-center gap-3 px-2">
+                                                                <h3 className="font-[var(--fp-font-display)] text-lg font-bold text-[var(--fp-text)] uppercase tracking-widest">
+                                                                    Rodada {round.number}
+                                                                </h3>
+                                                                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border
+                                                                    bg-[var(--fp-emerald-lo)] text-[var(--fp-emerald-hi)] border-[rgba(16,185,129,0.3)]">
+                                                                    <CheckCircle2 size={10} /> Concluída
+                                                                </span>
+                                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                                {round.tables.map((table, idx) => (
+                                                                    <MatchCard
+                                                                        key={table.id}
+                                                                        idx={idx}
+                                                                        table={table}
+                                                                        participants={activeTournament.participants}
+                                                                        isOrganizer={false}
+                                                                        status={'completed'}
+                                                                        onEnterResult={() => {}}
+                                                                        roundNumber={round.number}
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </details>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+
+                            {/* ════════════════════════════
+                                RIGHT COLUMN: SIDEBAR (1/3)
+                            ════════════════════════════ */}
+                            <div className="flex flex-col gap-5">
+
+                                {/* Mini Standings Widget */}
+                                <div className="fp-card p-5">
+                                    <h3 className="text-sm font-semibold text-[var(--fp-text)] mb-4 flex items-center gap-2">
+                                        <Trophy size={14} className="text-[var(--fp-gold)]" /> Classificação
+                                    </h3>
+                                    <div className="flex flex-col gap-1.5">
+                                        {[...activeTournament.participants]
+                                            .sort((a, b) => {
+                                                if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+                                                if ((b.omw || 0) !== (a.omw || 0)) return (b.omw || 0) - (a.omw || 0);
+                                                return (b.wins || 0) - (a.wins || 0);
+                                            })
+                                            .slice(0, 8)
+                                            .map((p, idx) => (
+                                            <div key={p.playerId}
+                                                 className={`flex items-center justify-between p-2 rounded-lg transition-colors
+                                                    ${idx === 0 ? 'bg-[var(--fp-gold-lo)] border border-[rgba(245,158,11,0.15)]' : 'hover:bg-white/5'}`}>
+                                                <div className="flex items-center gap-2.5">
+                                                    {idx === 0 && <Crown size={14} className="text-[var(--fp-gold)]" />}
+                                                    {idx === 1 && <Medal size={14} className="text-[#94a3b8]" />}
+                                                    {idx === 2 && <Medal size={14} className="text-[#cd7c3a]" />}
+                                                    {idx > 2 && <span className="w-[14px] text-center text-[10px] font-bold text-[var(--fp-muted)]">#{idx + 1}</span>}
+                                                    <img src={dicebearUrl(p.playerId || p.name, 24)}
+                                                         className="w-6 h-6 rounded-full border border-white/10" alt="" />
+                                                    <span className={`text-xs font-semibold truncate max-w-[100px]
+                                                        ${p.status === 'withdrawn' ? 'text-[var(--fp-muted)] line-through' : 'text-[var(--fp-text)]'}`}>
+                                                        {p.name}
+                                                    </span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-sm font-bold text-[var(--fp-text-hi)]">{p.totalPoints}</span>
+                                                    <span className="text-[9px] text-[var(--fp-muted)] ml-0.5">pts</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {activeTournament.participants.length > 8 && (
+                                        <p className="text-[10px] text-[var(--fp-muted)] text-center mt-3 font-bold uppercase tracking-widest">
+                                            +{activeTournament.participants.length - 8} jogadores
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Quick Tools Widget */}
+                                <div className="fp-card p-5">
+                                    <h3 className="text-sm font-semibold text-[var(--fp-text)] mb-4 flex items-center gap-2">
+                                        <Settings size={14} /> Ferramentas Rápidas
+                                    </h3>
+                                    <div className="flex flex-col gap-2">
+                                        {/* Timer */}
+                                        {!activeTournament.currentRoundEndTime ? (
+                                            <button className="p-3 text-sm text-left rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 text-[var(--fp-text)] flex items-center gap-3 transition-colors"
+                                                    onClick={async () => {
+                                                        const dur = prompt('Duração do round em minutos:', '50');
+                                                        if (dur && id) {
+                                                            const t = await tournamentService.getTournamentById(id);
+                                                            if (t) {
+                                                                await tournamentService.saveTournament({
+                                                                    ...t,
+                                                                    currentRoundEndTime: new Date(Date.now() + parseInt(dur) * 60000).toISOString()
+                                                                });
+                                                                loadTournament(id);
+                                                            }
+                                                        }
+                                                    }}>
+                                                <Clock size={16} className="text-[var(--fp-purple)]" /> Iniciar Timer
+                                            </button>
+                                        ) : (
+                                            <div className="p-3 rounded-xl bg-[var(--fp-purple-lo)] border border-[rgba(139,92,246,0.3)] flex items-center justify-between">
+                                                <div className="flex items-center gap-2 text-[var(--fp-purple-hi)]">
+                                                    <Clock size={16} />
+                                                    <span className="text-xs font-bold uppercase tracking-wider">Timer</span>
+                                                </div>
+                                                <span className="font-mono font-bold text-lg text-[var(--fp-text-hi)]">{timeLeft || '--:--'}</span>
+                                            </div>
+                                        )}
+
+                                        {/* Public Link */}
+                                        <button className="p-3 text-sm text-left rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 text-[var(--fp-text)] flex items-center gap-3 transition-colors"
+                                                onClick={() => navigate(`/tournament/${id}/public`)}>
+                                            <Globe size={16} className="text-[var(--fp-cyan)]" /> Visão Pública
+                                        </button>
+
+                                        {/* Copy Link */}
+                                        <button className="p-3 text-sm text-left rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 text-[var(--fp-text)] flex items-center gap-3 transition-colors"
+                                                onClick={handleCopyLink}>
+                                            {linkCopied ? <Check size={16} className="text-[var(--fp-emerald)]" /> : <Copy size={16} />}
+                                            {linkCopied ? 'Link Copiado!' : 'Copiar Link do Evento'}
+                                        </button>
+
+                                        {/* Show QR Code */}
+                                        <button className="p-3 text-sm text-left rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 text-[var(--fp-text)] flex items-center gap-3 transition-colors"
+                                                onClick={() => setIsQRModalOpen(true)}>
+                                            <QrCode size={16} className="text-[var(--fp-purple)]" /> Mostrar QR Code
+                                        </button>
+
+                                        {/* Late registration add player */}
+                                        {activeTournament.allowLateRegistration && (
+                                            <div className="mt-2 pt-3 border-t border-white/5">
+                                                <p className="text-[10px] font-bold text-[var(--fp-muted)] uppercase tracking-widest mb-2">Adicionar Jogador Tardio</p>
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        placeholder="Nome do jogador"
+                                                        value={newPlayerName}
+                                                        onChange={e => setNewPlayerName(e.target.value)}
+                                                        onKeyDown={e => e.key === 'Enter' && handleAddPlayer()}
+                                                    />
+                                                    <button className="fp-btn-primary px-3 py-2 rounded-xl flex-shrink-0"
+                                                            onClick={handleAddPlayer}>
+                                                        <Plus size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Danger Zone — Organizer only */}
+                                <div className="fp-card p-5 flex flex-col gap-2">
+                                    {isOrganizer && (
+                                        <button onClick={handleCancelTournament}
+                                                className="w-full py-2.5 rounded-xl text-xs font-bold
+                                                           bg-[var(--fp-rose-lo)] border border-[rgba(244,63,94,0.3)]
+                                                           text-[var(--fp-rose-hi)] hover:bg-[rgba(244,63,94,0.18)] transition-colors">
+                                            Cancelar e Excluir Torneio
+                                        </button>
+                                    )}
+                                    {!isOrganizer && isActiveParticipant && activeTournament.allowWithdrawal && (
+                                        <button onClick={handleVoluntaryDrop}
+                                                className="w-full py-2.5 rounded-xl text-xs font-bold
+                                                           bg-white/5 border border-white/10
+                                                           text-[var(--fp-muted)] hover:bg-[rgba(244,63,94,0.08)] hover:text-[var(--fp-rose-hi)] hover:border-[rgba(244,63,94,0.3)] transition-colors">
+                                            Retirar-me do torneio
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* ══════════════════════════════════════════
-                    TABS
+                    TABS (Always available)
                 ══════════════════════════════════════════ */}
                 <div className="flex gap-1 p-1 mb-8 w-max max-w-full overflow-x-auto
                                 bg-white/[0.03] border border-[var(--fp-border)] rounded-2xl
@@ -533,9 +967,55 @@ const TournamentDashboard: React.FC = () => {
                                                             <img src={p.commanderImageUrl} className="w-full h-full object-cover" alt="" />
                                                         </div>
                                                     )}
+
+                                                    {/* Botão de ajuste manual de Ponto de Participação */}
+                                                    {isOrganizer && (() => {
+                                                        if (!activeTournament.leagueId) {
+                                                            return (
+                                                                <button
+                                                                    onClick={() => setActiveTab('settings')}
+                                                                    className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 border bg-white/5 border-white/10 text-white/30 hover:bg-white/10 hover:text-white/50"
+                                                                    title="Vincular a uma Liga para gerenciar pontos de participação"
+                                                                >
+                                                                    <Award size={12} />
+                                                                    Sem Liga
+                                                                </button>
+                                                            );
+                                                        }
+
+                                                        const hasPoint = typeof p.earnedParticipation === 'boolean'
+                                                            ? p.earnedParticipation
+                                                            : (p.status !== 'withdrawn');
+                                                        return (
+                                                            <button
+                                                                onClick={() => handleToggleParticipation(p.playerId, p.earnedParticipation, p.status)}
+                                                                className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 border
+                                                                    ${hasPoint
+                                                                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25'
+                                                                        : 'bg-red-500/15 border-red-500/30 text-red-400 hover:bg-red-500/25'
+                                                                    }`}
+                                                                title={hasPoint ? 'Clique para retirar ponto de participação' : 'Clique para conceder ponto de participação'}
+                                                            >
+                                                                <Award size={12} />
+                                                                {hasPoint ? 'Pts Partic: SIM' : 'Pts Partic: NÃO'}
+                                                            </button>
+                                                        );
+                                                    })()}
+
+                                                    {(isOrganizer || (user?.id === p.playerId)) && p.status === 'active' && (
+                                                        <button
+                                                            onClick={() => handleOpenEditDeck(p)}
+                                                            className="text-[var(--fp-muted)] hover:text-white transition-colors ml-1"
+                                                            title="Editar informações do Deck"
+                                                        >
+                                                            <Edit2 size={15} />
+                                                        </button>
+                                                    )}
+
                                                     {isOrganizer && p.status === 'active' && (
                                                         <button onClick={() => id && withdrawParticipant(id, p.playerId)}
-                                                                className="text-[var(--fp-muted)] hover:text-[var(--fp-rose)] transition-colors">
+                                                                className="text-[var(--fp-muted)] hover:text-[var(--fp-rose)] transition-colors ml-1"
+                                                                title="Retirar do torneio">
                                                             <UserMinus size={16} />
                                                         </button>
                                                     )}
@@ -587,8 +1067,7 @@ const TournamentDashboard: React.FC = () => {
                                 </div>
                             )}
 
-                            {isOrganizer && (activeTournament.status === 'registration' ||
-                                (activeTournament.status === 'ongoing' && activeTournament.allowLateRegistration)) && (
+                            {isOrganizer && activeTournament.status !== 'completed' && (
                                 <div className="fp-card p-5">
                                     <h4 className="text-sm font-semibold text-[var(--fp-text)] mb-4">Convite Automático</h4>
                                     <div className="flex flex-col items-center gap-4">
@@ -634,10 +1113,11 @@ const TournamentDashboard: React.FC = () => {
                             [...activeTournament.rounds].reverse().map(round => (
                                 <div key={round.number} className="flex flex-col gap-4">
                                     {/* Cabeçalho da rodada */}
-                                    <div className="flex items-center justify-between px-1">
-                                        <h3 className="text-xl font-semibold text-[var(--fp-text)]">
-                                            Rodada {round.number}
-                                        </h3>
+                                    <div className="flex flex-col mb-4">
+                                        <div className="flex items-center justify-between px-2 mb-4">
+                                            <h3 className="font-[var(--fp-font-display)] text-3xl md:text-4xl font-bold text-[var(--fp-text-hi)] uppercase tracking-widest drop-shadow-lg">
+                                                Rodada <span className="text-[var(--fp-primary-hi)]">{round.number}</span>
+                                            </h3>
                                         <div className="flex items-center gap-3">
                                             {isOrganizer && round.status === 'pending' && (
                                                 <button 
@@ -663,8 +1143,9 @@ const TournamentDashboard: React.FC = () => {
                                             </span>
                                         </div>
                                     </div>
+                                </div>
 
-                                    {/* Match cards */}
+                                {/* Match cards */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {round.tables.map((table, idx) => (
                                             <MatchCard
@@ -825,13 +1306,47 @@ const TournamentDashboard: React.FC = () => {
                                                 <td className="py-3 px-3 text-[var(--fp-muted)] text-sm">{p.buchholz || 0}</td>
                                                 <td className="py-3 px-3 text-[var(--fp-muted)] text-[11px] font-bold">{p.wins || 0}</td>
                                                 <td className="py-3 px-5 text-right">
-                                                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full
-                                                        ${p.status === 'active'
-                                                            ? 'bg-[var(--fp-emerald-lo)] text-[var(--fp-emerald-hi)]'
-                                                            : 'bg-[var(--fp-rose-lo)] text-[var(--fp-rose-hi)]'
-                                                        }`}>
-                                                        {p.status === 'active' ? 'Ativo' : 'Retirado'}
-                                                    </span>
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {isOrganizer && (() => {
+                                                            if (!activeTournament.leagueId) {
+                                                                return (
+                                                                    <button
+                                                                        onClick={() => setActiveTab('settings')}
+                                                                        className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase transition-all flex items-center gap-1 border bg-white/5 border-white/10 text-white/30 hover:bg-white/10 hover:text-white/50"
+                                                                        title="Vincular a uma Liga para gerenciar pontos de participação"
+                                                                    >
+                                                                        <Award size={10} />
+                                                                        Sem Liga
+                                                                    </button>
+                                                                );
+                                                            }
+
+                                                            const hasPoint = typeof p.earnedParticipation === 'boolean'
+                                                                ? p.earnedParticipation
+                                                                : (p.status !== 'withdrawn');
+                                                            return (
+                                                                <button
+                                                                    onClick={() => handleToggleParticipation(p.playerId, p.earnedParticipation, p.status)}
+                                                                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase transition-all flex items-center gap-1 border
+                                                                        ${hasPoint
+                                                                            ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30'
+                                                                            : 'bg-red-500/15 border-red-500/30 text-red-400 hover:bg-red-500/30'
+                                                                        }`}
+                                                                    title={hasPoint ? 'Clique para retirar ponto de participação desta liga' : 'Clique para conceder ponto de participação nesta liga'}
+                                                                >
+                                                                    <Award size={10} />
+                                                                    {hasPoint ? 'Partic: SIM' : 'Partic: NÃO'}
+                                                                </button>
+                                                            );
+                                                        })()}
+                                                        <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full
+                                                            ${p.status === 'active'
+                                                                ? 'bg-[var(--fp-emerald-lo)] text-[var(--fp-emerald-hi)]'
+                                                                : 'bg-[var(--fp-rose-lo)] text-[var(--fp-rose-hi)]'
+                                                            }`}>
+                                                            {p.status === 'active' ? 'Ativo' : 'Retirado'}
+                                                        </span>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -847,7 +1362,53 @@ const TournamentDashboard: React.FC = () => {
                 ══════════════════════════════════════════ */}
                 {activeTab === 'settings' && (
                     <div className="max-w-xl animate-fade-in">
-                        <div className="fp-card p-6">
+                        {/* Non-organizer: apenas drop voluntário */}
+                        {!isOrganizer && (
+                            <div className="fp-card p-6 flex flex-col gap-4">
+                                <div className="flex items-start gap-3 p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                                    <span className="text-2xl">ℹ️</span>
+                                    <div>
+                                        <p className="text-sm font-semibold text-[var(--fp-text)] mb-1">Você é um participante</p>
+                                        <p className="text-xs text-[var(--fp-muted)] leading-relaxed">
+                                            As configurações do torneio só podem ser alteradas pelo organizador.
+                                            Você pode, se desejar, se retirar voluntariamente da competição.
+                                        </p>
+                                    </div>
+                                </div>
+                                {isActiveParticipant && activeTournament.allowWithdrawal && (
+                                    <div className="flex flex-col gap-2">
+                                        <div className="flex items-start gap-3 p-4 rounded-xl bg-[var(--fp-rose-lo)] border border-[rgba(244,63,94,0.2)]">
+                                            <span className="text-xl">⚠️</span>
+                                            <div>
+                                                <p className="text-sm font-semibold text-[var(--fp-rose-hi)] mb-1">Zona de risco</p>
+                                                <p className="text-xs text-[var(--fp-muted)] leading-relaxed">
+                                                    Ao se retirar, você será removido de todas as rodadas futuras. Esta ação é permanente e não pode ser desfeita.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button onClick={handleVoluntaryDrop}
+                                                className="w-full py-3 rounded-xl text-sm font-bold
+                                                           bg-[var(--fp-rose-lo)] border border-[rgba(244,63,94,0.3)]
+                                                           text-[var(--fp-rose-hi)] hover:bg-[rgba(244,63,94,0.18)] transition-colors">
+                                            Retirar-me do torneio
+                                        </button>
+                                    </div>
+                                )}
+                                {myParticipant?.status === 'withdrawn' && (
+                                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
+                                        <p className="text-sm text-[var(--fp-muted)]">Você já foi retirado deste torneio.</p>
+                                    </div>
+                                )}
+                                {!isActiveParticipant && myParticipant?.status !== 'withdrawn' && (
+                                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
+                                        <p className="text-sm text-[var(--fp-muted)]">Você não é um participante ativo neste torneio.</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Organizer settings */}
+                        {isOrganizer && (<div className="fp-card p-6">
                             <h3 className="font-semibold text-[var(--fp-text)] mb-1">Configurações do Torneio</h3>
                             <p className="text-[var(--fp-muted)] text-sm mb-6">Gerenciamento administrativo do evento.</p>
 
@@ -905,13 +1466,22 @@ const TournamentDashboard: React.FC = () => {
                             )}
 
                             {/* Danger zone */}
+                            <div className="flex items-start gap-3 p-4 rounded-xl bg-[var(--fp-rose-lo)] border border-[rgba(244,63,94,0.2)] mb-4">
+                                <span className="text-xl">⚠️</span>
+                                <div>
+                                    <p className="text-sm font-semibold text-[var(--fp-rose-hi)] mb-1">Zona de risco — Ação irreversível</p>
+                                    <p className="text-xs text-[var(--fp-muted)] leading-relaxed">
+                                        Excluir o torneio removerá permanentemente todos os dados, rodadas e resultados. Esta ação não pode ser desfeita.
+                                    </p>
+                                </div>
+                            </div>
                             <button onClick={handleCancelTournament}
                                     className="w-full py-2.5 rounded-xl text-sm font-bold
                                                bg-[var(--fp-rose-lo)] border border-[rgba(244,63,94,0.3)]
                                                text-[var(--fp-rose-hi)] hover:bg-[rgba(244,63,94,0.18)] transition-colors">
                                 Cancelar e Excluir Torneio
                             </button>
-                        </div>
+                        </div>)}
                     </div>
                 )}
             </div>
@@ -1121,6 +1691,77 @@ const TournamentDashboard: React.FC = () => {
                                 onClick={handleCopyLink}>Copiar Link</button>
                         <button className="fp-btn-primary flex-1 py-2 rounded-xl text-sm font-bold"
                                 onClick={() => setIsQRModalOpen(false)}>Fechar</button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* ══════════════════════════════════════════
+                MODAL: EDIT DECK
+            ══════════════════════════════════════════ */}
+            <Modal
+                isOpen={editDeckModalOpen}
+                onClose={() => setEditDeckModalOpen(false)}
+                title="Informações do Deck"
+            >
+                <div className="flex flex-col gap-4 p-2">
+                    <p className="text-[var(--fp-muted)] text-sm mb-2">
+                        Atualize as informações do seu comandante e a decklist.
+                    </p>
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[10px] uppercase font-bold text-[#7a5c5c] ml-1">
+                            Comandante / Deck
+                        </label>
+                        <Input
+                            placeholder="Ex: Atraxa, Praetors' Voice"
+                            value={editCommanderName}
+                            onChange={e => setEditCommanderName(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[10px] uppercase font-bold text-[#7a5c5c] ml-1">
+                            URL da Imagem
+                        </label>
+                        <Input
+                            placeholder="Link direto da imagem"
+                            value={editCommanderImageUrl}
+                            onChange={e => setEditCommanderImageUrl(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[10px] uppercase font-bold text-[#7a5c5c] ml-1">
+                            Link da Decklist
+                        </label>
+                        <Input
+                            placeholder="Moxfield, Archidekt, etc."
+                            value={editDecklistUrl}
+                            onChange={e => setEditDecklistUrl(e.target.value)}
+                        />
+                    </div>
+                    
+                    {editCommanderImageUrl && (
+                        <div className="mt-2 flex flex-col items-center gap-2">
+                            <p className="text-[10px] uppercase font-bold text-[#7a5c5c]">Pré-visualização</p>
+                            <div className="w-32 h-44 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                                <img src={editCommanderImageUrl} className="w-full h-full object-cover" alt="Preview"
+                                     onError={e => (e.currentTarget.style.display = 'none')} />
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex justify-end gap-3 mt-4">
+                        <button
+                            onClick={() => setEditDeckModalOpen(false)}
+                            className="fp-btn-ghost px-4 py-2"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            onClick={handleSaveDeck}
+                            disabled={savingDeck}
+                            className="fp-btn-primary px-4 py-2 flex items-center gap-2"
+                        >
+                            {savingDeck ? 'Salvando...' : 'Salvar Alterações'}
+                        </button>
                     </div>
                 </div>
             </Modal>

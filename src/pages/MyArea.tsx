@@ -109,7 +109,7 @@ const MyArea: React.FC = () => {
                             </div>
                             <div>
                                 <h1 className="text-3xl md:text-4xl font-display font-black text-white mb-2 uppercase tracking-tight">
-                                    {uiMode === 'organizer' ? 'Portal do Organizador' : 'Perfil do Jogador'}
+                                    {uiMode === 'organizer' ? 'Portal do Organizador' : 'Painel do Jogador'}
                                 </h1>
                                 <div className="flex items-center gap-3">
                                     <p className="text-muted text-sm capitalize">

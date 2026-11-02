@@ -174,54 +174,58 @@ const RankingGlobal: React.FC = () => {
                     </div>
 
                     <div className="fp-card overflow-hidden">
-                        <div className="grid grid-cols-[60px_1fr_100px_100px_60px] gap-4 p-4 text-[10px] font-bold uppercase tracking-widest text-muted border-b border-white/5 bg-white/[0.02]">
-                            <div className="text-center">Pos</div>
-                            <div>Duelista</div>
-                            <div className="text-center">Pontos</div>
-                            <div className="text-center">Winrate</div>
-                            <div className="text-center">Tend.</div>
-                        </div>
-
-                        <div className="flex flex-col">
-                            {rest.length === 0 && filteredPlayers.length === 0 ? (
-                                <div className="py-20 text-center opacity-40">
-                                    <Search size={48} className="mx-auto mb-4" />
-                                    <p>Nenhum duelista encontrado</p>
+                        <div className="overflow-x-auto scrollbar-none">
+                            <div className="min-w-[500px]">
+                                <div className="grid grid-cols-[60px_1fr_100px_100px_60px] gap-4 p-4 text-[10px] font-bold uppercase tracking-widest text-muted border-b border-white/5 bg-white/[0.02]">
+                                    <div className="text-center">Pos</div>
+                                    <div>Duelista</div>
+                                    <div className="text-center">Pontos</div>
+                                    <div className="text-center">Winrate</div>
+                                    <div className="text-center">Tend.</div>
                                 </div>
-                            ) : (
-                                rest.map((player, _idx) => (
-                                    <div 
-                                        key={player.id} 
-                                        className="grid grid-cols-[60px_1fr_100px_100px_60px] gap-4 p-4 items-center hover:bg-white/[0.03] transition-colors border-b border-white/[0.02]"
-                                    >
-                                        <div className="text-center font-display font-black text-xl opacity-30">#{player.rank}</div>
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden">
-                                                <img 
-                                                    src={player.avatar || `https://ui-avatars.com/api/?name=${player.name}&background=random`} 
-                                                    alt="" 
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-bold text-white">{player.name}</h4>
-                                                <p className="text-[10px] text-muted">{player.wins} vitórias em torneios</p>
-                                            </div>
+
+                                <div className="flex flex-col">
+                                    {rest.length === 0 && filteredPlayers.length === 0 ? (
+                                        <div className="py-20 text-center opacity-40">
+                                            <Search size={48} className="mx-auto mb-4" />
+                                            <p>Nenhum duelista encontrado</p>
                                         </div>
-                                        <div className="text-center font-bold text-primary">{player.points}</div>
-                                        <div className="text-center text-sm font-medium">{player.winRate}</div>
-                                        <div className="flex justify-center">
-                                            {player.trend === 'up' ? (
-                                                <ArrowUp size={16} className="text-emerald-500" />
-                                            ) : player.trend === 'down' ? (
-                                                <ArrowDown size={16} className="text-red-500" />
-                                            ) : (
-                                                <Activity size={16} className="text-muted" />
-                                            )}
-                                        </div>
-                                    </div>
-                                ))
-                            )}
+                                    ) : (
+                                        rest.map((player, _idx) => (
+                                            <div 
+                                                key={player.id} 
+                                                className="grid grid-cols-[60px_1fr_100px_100px_60px] gap-4 p-4 items-center hover:bg-white/[0.03] transition-colors border-b border-white/[0.02]"
+                                            >
+                                                <div className="text-center font-display font-black text-xl opacity-30">#{player.rank}</div>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden">
+                                                        <img 
+                                                            src={player.avatar || `https://ui-avatars.com/api/?name=${player.name}&background=random`} 
+                                                            alt="" 
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-bold text-white">{player.name}</h4>
+                                                        <p className="text-[10px] text-muted">{player.wins} vitórias em torneios</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-center font-bold text-primary">{player.points}</div>
+                                                <div className="text-center text-sm font-medium">{player.winRate}</div>
+                                                <div className="flex justify-center">
+                                                    {player.trend === 'up' ? (
+                                                        <ArrowUp size={16} className="text-emerald-500" />
+                                                    ) : player.trend === 'down' ? (
+                                                        <ArrowDown size={16} className="text-red-500" />
+                                                    ) : (
+                                                        <Activity size={16} className="text-muted" />
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

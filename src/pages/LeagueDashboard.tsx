@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Trophy, Users, Calendar, Copy, Check, RefreshCw, Link } from 'lucide-react';
+import { Trophy, Users, Calendar, Copy, Check, RefreshCw, Link, LogOut, UserCheck } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import PageShell from '../components/layout';
 import { LoadingScreen, Modal, Input } from '../components/ui';
@@ -39,7 +39,7 @@ const LeagueDashboard: React.FC = () => {
     const { 
         activeLeague, loadLeague, isLoading, recalculateStandings, linkTournament, 
         getAuditLogs, getMembers, updateMemberStatus, getSeasons, archiveSeason, 
-        getOrganizers, addOrganizer, removeOrganizer, updateOrganizerRole 
+        getOrganizers, addOrganizer, removeOrganizer, updateOrganizerRole, leaveLeague 
     } = useLeagueStore();
     const { tournaments, loadTournaments } = useTournamentStore();
 
@@ -51,6 +51,8 @@ const LeagueDashboard: React.FC = () => {
     const [editData, setEditData]           = useState<any>({});
     const [isQRModalOpen, setIsQRModalOpen]         = useState(false);
     const [isAuditModalOpen, setIsAuditModalOpen]   = useState(false);
+    const [isLeaveModalOpen, setIsLeaveModalOpen]   = useState(false);
+    const [isLeaving, setIsLeaving]                 = useState(false);
     const [auditLogs, setAuditLogs]                 = useState<any[]>([]);
     const [members, setMembers]                     = useState<any[]>([]);
     const [seasons, setSeasons]                     = useState<any[]>([]);
@@ -94,11 +96,13 @@ const LeagueDashboard: React.FC = () => {
                 const results: Record<string, any> = {};
                 for (const tId of activeLeague.tournamentIds) {
                     const t = await tournamentService.getTournament(tId);
-                    if (t) results[tId] = t;
+                    results[tId] = t || null;
                 }
                 setLinkedTournaments(results);
             };
             fetchLinked();
+        } else {
+            setLinkedTournaments({});
         }
     }, [activeLeague?.tournamentIds]);
 
@@ -122,7 +126,6 @@ const LeagueDashboard: React.FC = () => {
     const visibleTabs = TABS.filter(t => {
         if (t.id === 'equipe') return isAnyOrganizer;
         if (t.id === 'ajustes') return canManageSettings;
-        if (t.id === 'tournaments') return isSuperAdmin;
         return true;
     });
 
@@ -137,7 +140,14 @@ const LeagueDashboard: React.FC = () => {
 
     const handleRecalculate = async () => {
         setRecalcLoading(true);
-        try { await recalculateStandings(activeLeague.id); toast.success('Ranking atualizado!'); }
+        try { 
+            await recalculateStandings(activeLeague.id); 
+            if (id) {
+                await loadLeague(id);
+                setMembers(await getMembers(id));
+            }
+            toast.success('Ranking e membros atualizados!'); 
+        }
         catch (err: any) { toast.error(err.message); }
         finally { setRecalcLoading(false); }
     };
@@ -217,10 +227,40 @@ const LeagueDashboard: React.FC = () => {
         } catch(err:any) { toast.error('Erro ao atualizar permissão'); }
     };
 
+    const handleConfirmLeave = async () => {
+        if (!id || !user) return;
+        setIsLeaving(true);
+        try {
+            await leaveLeague(id, user.id);
+            toast.success('Você saiu da liga com sucesso.');
+            setIsLeaveModalOpen(false);
+            navigate('/my-area');
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao sair da liga.');
+        } finally {
+            setIsLeaving(false);
+        }
+    };
+
+    const isMember = Boolean(user && activeLeague.memberIds.includes(user.id));
+
+    const hexToRgb = (hex: string) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '192, 57, 43';
+    };
+
+    const primaryHex = activeLeague.primaryColor || '#c0392b';
+    const primaryRgb = hexToRgb(primaryHex);
+
     return (
         <PageShell>
             <div className="container py-8 pb-28 flex flex-col gap-6 animate-fade-in"
-                 style={{ '--color-purple': activeLeague.primaryColor || '#c0392b' } as any}>
+                 style={{ 
+                     '--color-purple': primaryHex,
+                     '--fp-primary': primaryHex,
+                     '--fp-primary-hi': primaryHex,
+                     '--fp-primary-rgb': primaryRgb
+                 } as React.CSSProperties}>
 
                 {/* ══════════════════════════════════
                     HEADER
@@ -248,6 +288,13 @@ const LeagueDashboard: React.FC = () => {
                                 </h1>
                             </div>
 
+                            {activeLeague.ownerName && (
+                                <p className="text-xs uppercase tracking-widest text-[#d4ac0d] font-bold mb-3 flex items-center gap-1.5">
+                                    <Users size={12} className="text-[#d4ac0d]" />
+                                    Organizador: <span className="text-white">{activeLeague.ownerName}</span>
+                                </p>
+                            )}
+
                             {activeLeague.description && (
                                 <p className="text-[#7a5c5c] text-sm mb-4 max-w-lg">{activeLeague.description}</p>
                             )}
@@ -265,6 +312,33 @@ const LeagueDashboard: React.FC = () => {
                                                   }`}>
                                     {activeLeague.status === 'active' ? 'Ativa' : 'Concluída'}
                                 </span>
+
+                                {/* Status do usuário atual na liga */}
+                                {user && (
+                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase flex items-center gap-1
+                                                      ${isMaster
+                                                        ? 'bg-[rgba(212,172,13,0.15)] border border-[rgba(212,172,13,0.3)] text-[#d4ac0d]'
+                                                        : isAnyOrganizer
+                                                        ? 'bg-[rgba(139,92,246,0.15)] border border-[rgba(139,92,246,0.3)] text-[#a78bfa]'
+                                                        : isMember
+                                                        ? 'bg-[rgba(39,174,96,0.15)] border border-[rgba(39,174,96,0.3)] text-[#2ecc71]'
+                                                        : 'bg-white/5 border border-white/10 text-[#7a5c5c]'
+                                                      }`}>
+                                        <UserCheck size={10} />
+                                        {isMaster ? 'Criador da Liga' : isAnyOrganizer ? 'Organizador' : isMember ? 'Participando' : 'Visitante'}
+                                    </span>
+                                )}
+
+                                {/* Botão Sair da Liga para membros comuns */}
+                                {isMember && !isMaster && (
+                                    <button
+                                        onClick={() => setIsLeaveModalOpen(true)}
+                                        className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-red-400 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 hover:border-red-500/50 transition-all flex items-center gap-1"
+                                        title="Sair voluntariamente desta liga"
+                                    >
+                                        <LogOut size={10} /> Sair da Liga
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -332,14 +406,14 @@ const LeagueDashboard: React.FC = () => {
                     TABS
                 ══════════════════════════════════ */}
                 <div className="sticky top-20 z-20 flex gap-1 p-1 w-full md:w-fit overflow-x-auto
-                                bg-[rgba(255,255,255,0.025)] border border-[rgba(192,57,43,0.15)]
+                                bg-[rgba(255,255,255,0.025)] border border-[rgba(var(--fp-primary-rgb),0.15)]
                                 rounded-2xl backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
                     {visibleTabs.map(t => (
                         <button key={t.id} onClick={() => setTab(t.id)}
                                 className={`px-5 py-2 rounded-xl text-sm font-semibold
                                             whitespace-nowrap transition-all
                                             ${tab === t.id
-                                                ? 'bg-[rgba(192,57,43,0.2)] border border-[rgba(192,57,43,0.45)] text-[#e74c3c]'
+                                                ? 'bg-[rgba(var(--fp-primary-rgb),0.2)] border border-[rgba(var(--fp-primary-rgb),0.45)] text-[var(--fp-primary-hi)]'
                                                 : 'text-[#7a5c5c] hover:text-[#f0e6e6]'
                                             }`}>
                             {t.label}
@@ -356,8 +430,8 @@ const LeagueDashboard: React.FC = () => {
                             <div className="flex justify-end">
                                 <button onClick={handleRecalculate} disabled={recalcLoading}
                                         className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
-                                                   bg-[rgba(255,255,255,0.04)] border border-[rgba(192,57,43,0.2)]
-                                                   text-[#a07070] hover:text-[#e74c3c] hover:border-[rgba(192,57,43,0.4)]
+                                                   bg-[rgba(255,255,255,0.04)] border border-[rgba(var(--fp-primary-rgb),0.2)]
+                                                   text-[#a07070] hover:text-[var(--fp-primary-hi)] hover:border-[rgba(var(--fp-primary-rgb),0.4)]
                                                    transition-all disabled:opacity-50">
                                     <RefreshCw size={14} className={recalcLoading ? 'animate-spin' : ''} />
                                     Recalcular
@@ -381,13 +455,13 @@ const LeagueDashboard: React.FC = () => {
                                         ? 'border-[rgba(212,172,13,0.4)] bg-[rgba(212,172,13,0.05)]'
                                         : i === 1 ? 'border-[rgba(160,160,160,0.25)]'
                                         : i === 2 ? 'border-[rgba(180,100,60,0.25)]'
-                                        : 'border-[rgba(192,57,43,0.1)]';
+                                        : 'border-[rgba(var(--fp-primary-rgb),0.1)]';
                                     return (
                                         <div key={s.playerId}
                                              className={`flex items-center gap-4 px-5 py-4 rounded-2xl
                                                          bg-[linear-gradient(160deg,#130a0a,#1a0c0c)]
                                                          border transition-all
-                                                         hover:border-[rgba(192,57,43,0.3)] ${borderCls}`}>
+                                                         hover:border-[rgba(var(--fp-primary-rgb),0.3)] ${borderCls}`}>
                                             <div className="text-xl w-10 text-center flex-shrink-0">
                                                 {i < 3 ? MEDALS[i] : <span className="text-[#7a5c5c] text-sm font-bold">#{s.rank}</span>}
                                             </div>
@@ -398,9 +472,9 @@ const LeagueDashboard: React.FC = () => {
                                                 <p className="font-semibold text-white text-sm flex items-center gap-2 flex-wrap">
                                                     {s.playerName}
                                                     {s.currentStreak >= 2 && (
-                                                        <span className="text-[10px] bg-[rgba(192,57,43,0.15)] text-[#e74c3c]
+                                                        <span className="text-[10px] bg-[rgba(var(--fp-primary-rgb),0.15)] text-[var(--fp-primary-hi)]
                                                                          font-bold px-2 py-0.5 rounded-full border
-                                                                         border-[rgba(192,57,43,0.3)] animate-pulse">
+                                                                         border-[rgba(var(--fp-primary-rgb),0.3)] animate-pulse">
                                                             🔥 {s.currentStreak} Top Cut
                                                         </span>
                                                     )}
@@ -410,7 +484,7 @@ const LeagueDashboard: React.FC = () => {
                                                 </p>
                                             </div>
                                             <div className="text-right flex-shrink-0">
-                                                <p className="text-lg font-bold text-[#e74c3c]">{s.totalPoints}</p>
+                                                <p className="text-lg font-bold text-[var(--fp-primary-hi)]">{s.totalPoints}</p>
                                                 <p className="text-[10px] text-[#7a5c5c]">pts</p>
                                             </div>
                                         </div>
@@ -430,8 +504,8 @@ const LeagueDashboard: React.FC = () => {
                             <div className="flex justify-end">
                                 <button onClick={() => setLinkMode(!linkMode)}
                                         className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
-                                                   bg-[rgba(192,57,43,0.1)] border border-[rgba(192,57,43,0.25)]
-                                                   text-[#e74c3c] hover:bg-[rgba(192,57,43,0.18)] transition-all">
+                                                   bg-[rgba(var(--fp-primary-rgb),0.1)] border border-[rgba(var(--fp-primary-rgb),0.25)]
+                                                   text-[var(--fp-primary-hi)] hover:bg-[rgba(var(--fp-primary-rgb),0.18)] transition-all">
                                     {linkMode ? 'Cancelar' : '+ Vincular Torneio'}
                                 </button>
                             </div>
@@ -439,7 +513,7 @@ const LeagueDashboard: React.FC = () => {
 
                         {linkMode && (
                             <div className="rounded-2xl p-5 bg-[linear-gradient(160deg,#130a0a,#1a0c0c)]
-                                            border border-[rgba(192,57,43,0.2)]">
+                                            border border-[rgba(var(--fp-primary-rgb),0.2)]">
                                 <h4 className="text-sm font-semibold text-white mb-4">Seus Torneios Disponíveis</h4>
                                 {myTournaments.length === 0 ? (
                                     <p className="text-[#7a5c5c] text-sm">Nenhum torneio disponível para vincular.</p>
@@ -448,11 +522,11 @@ const LeagueDashboard: React.FC = () => {
                                         {myTournaments.map(t => (
                                             <div key={t.id}
                                                  className="flex justify-between items-center p-3 rounded-xl
-                                                            bg-[rgba(255,255,255,0.02)] border border-[rgba(192,57,43,0.1)]">
+                                                            bg-[rgba(255,255,255,0.02)] border border-[rgba(var(--fp-primary-rgb),0.1)]">
                                                 <span className="text-sm text-white">{t.name}</span>
                                                 <button onClick={() => handleLinkTournament(t.id)}
                                                         className="px-3 py-1.5 rounded-lg text-xs font-bold text-white
-                                                                   bg-gradient-to-r from-[#c0392b] to-[#e67e22]
+                                                                   bg-gradient-to-r from-[var(--fp-primary)] to-[#e67e22]
                                                                    hover:opacity-90 transition-opacity">
                                                     Vincular
                                                 </button>
@@ -465,31 +539,72 @@ const LeagueDashboard: React.FC = () => {
 
                         {activeLeague.tournamentIds.length === 0 ? (
                             <div className="py-16 text-center rounded-2xl
-                                            border border-dashed border-[rgba(192,57,43,0.15)]
-                                            bg-[rgba(192,57,43,0.02)]">
+                                            border border-dashed border-[rgba(var(--fp-primary-rgb),0.15)]
+                                            bg-[rgba(var(--fp-primary-rgb),0.02)]">
                                 <p className="text-[#7a5c5c] text-sm">Nenhum torneio vinculado ainda.</p>
                             </div>
                         ) : (
                             <div className="flex flex-col gap-2">
                                 {activeLeague.tournamentIds.map(tId => {
                                     const tournament = linkedTournaments[tId] || tournaments.find(t => t.id === tId);
+                                    const isDeleted = linkedTournaments[tId] === null;
+
                                     return (
                                         <div key={tId}
                                              className="flex justify-between items-center p-4 rounded-2xl
                                                         bg-[linear-gradient(160deg,#130a0a,#1a0c0c)]
-                                                        border border-[rgba(192,57,43,0.15)]">
+                                                        border border-[rgba(var(--fp-primary-rgb),0.15)]">
                                             <div className="flex flex-col">
-                                                <span className="text-sm text-white font-medium">
-                                                    {tournament?.name || 'Carregando...'}
-                                                </span>
-                                                <span className="text-[10px] text-[#7a5c5c] font-mono">{tId.split('-')[0]}...</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-white font-medium">
+                                                        {tournament?.name || (isDeleted ? 'Torneio Excluído / Inexistente' : 'Carregando...')}
+                                                    </span>
+                                                    {isDeleted && (
+                                                        <span className="text-[9px] uppercase px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 font-bold">
+                                                            Excluído
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {tournament?.date && (
+                                                    <span className="text-[11px] text-[#7a5c5c]">
+                                                        {new Date(tournament.date).toLocaleDateString('pt-BR')}
+                                                    </span>
+                                                )}
                                             </div>
-                                            <button onClick={() => navigate(`/tournament/${tId}`)}
-                                                    className="px-3 py-1.5 rounded-lg text-xs font-semibold
-                                                               bg-[rgba(192,57,43,0.1)] border border-[rgba(192,57,43,0.25)]
-                                                               text-[#e74c3c] hover:bg-[rgba(192,57,43,0.18)] transition-all">
-                                                Ver →
-                                            </button>
+
+                                            <div className="flex items-center gap-2">
+                                                {!isDeleted && (
+                                                    <button onClick={() => navigate(`/tournament/${tId}`)}
+                                                            className="px-3 py-1.5 rounded-lg text-xs font-semibold
+                                                                       bg-[rgba(var(--fp-primary-rgb),0.1)] border border-[rgba(var(--fp-primary-rgb),0.25)]
+                                                                       text-[var(--fp-primary-hi)] hover:bg-[rgba(var(--fp-primary-rgb),0.18)] transition-all">
+                                                        Ver →
+                                                    </button>
+                                                )}
+
+                                                {canManageTournaments && (
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (!user) return;
+                                                            if (!window.confirm(`Deseja desvincular o torneio "${tournament?.name || tId}" desta liga?`)) return;
+                                                            try {
+                                                                await leagueService.unlinkTournament(activeLeague.id, tId, user.id);
+                                                                await recalculateStandings(activeLeague.id);
+                                                                toast.success('Torneio desvinculado da liga!');
+                                                                loadLeague(activeLeague.id);
+                                                            } catch (err: any) {
+                                                                toast.error(err.message || 'Erro ao desvincular torneio.');
+                                                            }
+                                                        }}
+                                                        className="px-3 py-1.5 rounded-lg text-xs font-semibold
+                                                                   bg-red-500/10 border border-red-500/20 text-red-400
+                                                                   hover:bg-red-500/20 hover:border-red-500/40 transition-all"
+                                                        title="Remover torneio da liga"
+                                                    >
+                                                        Desvincular
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     );
                                 })}
@@ -548,7 +663,7 @@ const LeagueDashboard: React.FC = () => {
                                            text-[#a07070] hover:bg-[rgba(255,255,255,0.08)] transition-all"
                                 onClick={handleCopyLink}>Copiar Link</button>
                         <button className="flex-1 py-2 rounded-xl text-sm font-bold text-white
-                                           bg-gradient-to-r from-[#c0392b] to-[#e67e22] hover:opacity-90 transition-opacity"
+                                           bg-gradient-to-r from-[var(--fp-primary)] to-[#e67e22] hover:opacity-90 transition-opacity"
                                 onClick={() => setIsQRModalOpen(false)}>Fechar</button>
                     </div>
                 </div>
@@ -560,10 +675,10 @@ const LeagueDashboard: React.FC = () => {
                     {auditLogs.length === 0 ? (
                         <p className="text-[#7a5c5c] text-center mt-10 text-sm">Nenhum registro encontrado.</p>
                     ) : auditLogs.map(log => (
-                        <div key={log.id} className="p-3 rounded-xl border border-[rgba(192,57,43,0.15)]
+                        <div key={log.id} className="p-3 rounded-xl border border-[rgba(var(--fp-primary-rgb),0.15)]
                                                       bg-[rgba(255,255,255,0.02)] text-sm">
                             <div className="flex justify-between items-start mb-1">
-                                <span className="font-bold text-[#e74c3c]">{log.action}</span>
+                                <span className="font-bold text-[var(--fp-primary-hi)]">{log.action}</span>
                                 <span className="text-xs text-[#7a5c5c]">{new Date(log.timestamp).toLocaleString('pt-BR')}</span>
                             </div>
                             <p className="text-[#a07070] text-xs">{log.details}</p>
@@ -573,7 +688,7 @@ const LeagueDashboard: React.FC = () => {
                         </div>
                     ))}
                 </div>
-                <div className="p-4 border-t border-[rgba(192,57,43,0.1)]">
+                <div className="p-4 border-t border-[rgba(var(--fp-primary-rgb),0.1)]">
                     <button className="w-full py-2 rounded-xl text-sm font-semibold text-[#a07070]
                                        bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)]
                                        hover:bg-[rgba(255,255,255,0.08)] transition-all"
@@ -599,11 +714,63 @@ const LeagueDashboard: React.FC = () => {
                                            hover:bg-[rgba(255,255,255,0.08)] transition-all"
                                 onClick={() => setIsSeasonModalOpen(false)}>Cancelar</button>
                         <button className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white
-                                           bg-gradient-to-r from-[#c0392b] to-[#e67e22]
+                                           bg-gradient-to-r from-[var(--fp-primary)] to-[#e67e22]
                                            hover:opacity-90 transition-opacity disabled:opacity-50"
                                 onClick={handleArchiveSeason}
                                 disabled={!seasonName.trim()}>
                             Concluir Temporada
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* ── MODAL: Confirmar Saída da Liga ── */}
+            <Modal isOpen={isLeaveModalOpen} onClose={() => !isLeaving && setIsLeaveModalOpen(false)} title="Sair da Liga">
+                <div className="p-6 flex flex-col gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center mx-auto mb-2">
+                        <LogOut size={24} />
+                    </div>
+                    <div className="text-center">
+                        <h4 className="text-lg font-bold text-white mb-2">Deseja realmente sair de "{activeLeague.name}"?</h4>
+                        <p className="text-xs text-[#a07070] leading-relaxed">
+                            Ao confirmar, você deixará de ser participante ativo desta liga para futuros eventos.
+                        </p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col gap-2 text-xs">
+                        <div className="flex items-center gap-2 text-[#2ecc71]">
+                            <Check size={14} className="flex-shrink-0" />
+                            <span>Seus resultados e posições nos torneios já disputados serão <strong>preservados</strong>.</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[#2ecc71]">
+                            <Check size={14} className="flex-shrink-0" />
+                            <span>Sua pontuação histórica já acumulada nesta liga <strong>não será apagada</strong>.</span>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2 mt-2">
+                        <button
+                            className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-[#a07070]
+                                       bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)]
+                                       hover:bg-[rgba(255,255,255,0.08)] transition-all disabled:opacity-50"
+                            disabled={isLeaving}
+                            onClick={() => setIsLeaveModalOpen(false)}
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white
+                                       bg-gradient-to-r from-red-600 to-red-800
+                                       hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-1.5"
+                            disabled={isLeaving}
+                            onClick={handleConfirmLeave}
+                        >
+                            {isLeaving ? (
+                                <RefreshCw size={14} className="animate-spin" />
+                            ) : (
+                                <LogOut size={14} />
+                            )}
+                            Confirmar Saída
                         </button>
                     </div>
                 </div>

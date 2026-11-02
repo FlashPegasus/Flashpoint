@@ -3,7 +3,7 @@ import { db, rtdb } from '../../lib/firebase';
 import { onValue, ref, set, serverTimestamp } from 'firebase/database';
 import {
     doc, getDoc, setDoc, updateDoc, deleteDoc,
-    collection, getDocs, query, where, arrayUnion, arrayRemove, orderBy, limit, addDoc
+    collection, getDocs, query, where, arrayUnion, arrayRemove, orderBy, limit, addDoc, onSnapshot
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { tournamentService } from '../tournaments/tournamentService';
@@ -70,6 +70,7 @@ export const leagueService = {
             nameLowercase,
             description: data.description || '',
             organizerId: data.organizerId,
+            ownerName: data.ownerName || '',
             startDate: data.startDate || new Date().toISOString(),
             endDate: data.endDate || '',
             status: 'active',
@@ -199,6 +200,72 @@ export const leagueService = {
         
         await leagueService.addAuditLog(leagueId, 'REJECT_MEMBER', `Rejeitou a entrada do jogador ${playerId}`, adminId);
         leagueService._notifyUpdate(leagueId);
+    },
+
+    leaveLeague: async (leagueId: string, userId: string): Promise<void> => {
+        const memberRef = doc(db, LEAGUES_COLLECTION, leagueId, 'members', userId);
+        const memberSnap = await getDoc(memberRef);
+        
+        if (memberSnap.exists()) {
+            await updateDoc(memberRef, { status: 'inactive' });
+        }
+
+        // Remove from active memberIds (so they don't count for active rosters/notifications)
+        await updateDoc(doc(db, LEAGUES_COLLECTION, leagueId), {
+            memberIds: arrayRemove(userId)
+        });
+
+        await leagueService.addAuditLog(leagueId, 'LEAVE_LEAGUE', `Jogador ${userId} saiu voluntariamente da liga`, userId);
+        leagueService._notifyUpdate(leagueId);
+    },
+
+    autoEnrollTournamentParticipants: async (leagueId: string, participants: { playerId: string; name: string }[]): Promise<void> => {
+        if (!leagueId || !participants || participants.length === 0) return;
+
+        const leagueRef = doc(db, LEAGUES_COLLECTION, leagueId);
+        const leagueSnap = await getDoc(leagueRef);
+        if (!leagueSnap.exists()) return;
+
+        const newMemberIds: string[] = [];
+
+        for (const p of participants) {
+            if (!p.playerId) continue;
+
+            const memberRef = doc(db, LEAGUES_COLLECTION, leagueId, 'members', p.playerId);
+            const memberSnap = await getDoc(memberRef);
+
+            if (!memberSnap.exists()) {
+                // New member automatically enrolled through tournament participation
+                const newMember: LeagueMember = {
+                    playerId: p.playerId,
+                    playerName: p.name || 'Jogador',
+                    joinedAt: new Date().toISOString(),
+                    status: 'active'
+                };
+                await setDoc(memberRef, newMember);
+                newMemberIds.push(p.playerId);
+                await leagueService.addAuditLog(leagueId, 'AUTO_ENROLL', `Jogador ${p.name} inscrito automaticamente via torneio`, p.playerId);
+            } else {
+                const data = memberSnap.data() as LeagueMember;
+                // If pending, activate automatically because they are actively playing a linked tournament
+                if (data.status === 'pending') {
+                    await updateDoc(memberRef, { status: 'active' });
+                    newMemberIds.push(p.playerId);
+                    await leagueService.addAuditLog(leagueId, 'AUTO_ENROLL_CONFIRM', `Jogador ${p.name} ativado automaticamente via torneio`, p.playerId);
+                } else if (data.status === 'active') {
+                    // Ensure they are in memberIds array
+                    newMemberIds.push(p.playerId);
+                }
+                // If status is 'banned', do NOT re-enroll
+            }
+        }
+
+        if (newMemberIds.length > 0) {
+            await updateDoc(leagueRef, {
+                memberIds: arrayUnion(...newMemberIds)
+            });
+            leagueService._notifyUpdate(leagueId);
+        }
     },
 
     getMembers: async (leagueId: string): Promise<LeagueMember[]> => {
@@ -364,51 +431,83 @@ export const leagueService = {
     },
 
     /**
-     * Recalculate standings after a tournament completes.
-     * Reads all linked tournaments from Firestore and rebuilds standings.
+     * Recalculate standings after a tournament completes or on demand.
+     * Reads all linked tournaments from Firestore, auto-enrolls their participants, and rebuilds standings.
      */
     recalculateStandings: async (leagueId: string): Promise<void> => {
         const league = await leagueService.getLeagueById(leagueId);
         if (!league) return;
 
-        // Collect all completed tournaments
+        // Collect all linked tournaments (use getTournament to read direct from Firestore)
         const tournaments = [];
         for (const tId of league.tournamentIds) {
-            const tournament = await tournamentService.getTournamentById(tId);
-            if (tournament && tournament.status === 'completed') {
+            const tournament = await tournamentService.getTournament(tId);
+            if (tournament && (tournament.status === 'completed' || tournament.status === 'ongoing')) {
                 tournaments.push(tournament);
+            }
+        }
+
+        // Auto-enroll all participants from linked tournaments into league members if not present
+        for (const t of tournaments) {
+            if (t.participants && t.participants.length > 0) {
+                const participantsToEnroll = t.participants
+                    .filter(p => p.playerId)
+                    .map(p => ({ playerId: p.playerId, name: p.name }));
+                await leagueService.autoEnrollTournamentParticipants(leagueId, participantsToEnroll);
             }
         }
 
         // Sort chronologically ascending to calculate streaks properly
         tournaments.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-        // Fetch all active members first to filter standings efficiently
+        // Fetch members to check for banned/rejected players
         const membersRef = collection(db, LEAGUES_COLLECTION, leagueId, 'members');
-        const membersSnap = await getDocs(query(membersRef, where('status', '==', 'active')));
-        const activeMemberIds = new Set(membersSnap.docs.map(d => d.id));
+        const membersSnap = await getDocs(membersRef);
+        const bannedOrRejectedIds = new Set(
+            membersSnap.docs
+                .filter(d => {
+                    const status = d.data().status;
+                    return status === 'banned' || status === 'rejected';
+                })
+                .map(d => d.id)
+        );
 
         // Collect per-player scores
         const playerScores: Record<string, { pointsList: number[]; name: string; currentStreak: number }> = {};
 
         for (const tournament of tournaments) {
             tournament.participants.forEach(p => {
-                // Check if player is an active member using the cached set
-                if (!activeMemberIds.has(p.playerId)) return; // Skip players not approved
+                // Skip banned or rejected players
+                if (bannedOrRejectedIds.has(p.playerId)) return;
 
                 const rank = p.rank ?? 999;
-                let points = league.pointsParticipation ?? 1;
+                const isWithdrawn = p.status === 'withdrawn';
+                
+                // Determine participation points:
+                // 1. If explicit customParticipationPoints is set, use that
+                // 2. Else if earnedParticipation is explicitly boolean, respect it (true -> gets league.pointsParticipation, false -> 0)
+                // 3. Else fallback to default: active players get points, withdrawn/dropped players get 0
+                let participationPts = 0;
+                if (typeof p.customParticipationPoints === 'number') {
+                    participationPts = p.customParticipationPoints;
+                } else if (typeof p.earnedParticipation === 'boolean') {
+                    participationPts = p.earnedParticipation ? (league.pointsParticipation ?? 1) : 0;
+                } else {
+                    participationPts = isWithdrawn ? 0 : (league.pointsParticipation ?? 1);
+                }
+
+                let points = participationPts;
 
                 if (rank === 1) points += (league.pointsWin ?? 5);
-                else if (rank <= 4) points += (league.pointsTop4 ?? 3);
-                else if (rank <= 8) points += (league.pointsTop8 ?? 2);
+                if (rank <= 4) points += (league.pointsTop4 ?? 3);
+                if (rank <= 8) points += (league.pointsTop8 ?? 2);
 
                 if (!playerScores[p.playerId]) {
                     playerScores[p.playerId] = { pointsList: [], name: p.name, currentStreak: 0 };
                 }
 
                 // Top 4 finishes count towards the streak
-                if (rank <= 4) {
+                if (rank <= 4 && !isWithdrawn) {
                     playerScores[p.playerId].currentStreak += 1;
                     if (playerScores[p.playerId].currentStreak >= 2 && league.streakBonus) {
                         points += league.streakBonus;
@@ -418,6 +517,21 @@ export const leagueService = {
                 }
 
                 playerScores[p.playerId].pointsList.push(points);
+            });
+        }
+
+        // ── Tiebreaker stats: count wins, top4s, top8s per player ──
+        const tiebreaker: Record<string, { wins: number; top4s: number; top8s: number }> = {};
+        for (const tournament of tournaments) {
+            tournament.participants.forEach(p => {
+                if (bannedOrRejectedIds.has(p.playerId)) return;
+                if (!tiebreaker[p.playerId]) tiebreaker[p.playerId] = { wins: 0, top4s: 0, top8s: 0 };
+                const rank = p.rank ?? 999;
+                const isWithdrawn = p.status === 'withdrawn';
+                if (isWithdrawn) return;
+                if (rank === 1) tiebreaker[p.playerId].wins += 1;
+                if (rank <= 4) tiebreaker[p.playerId].top4s += 1;
+                if (rank <= 8) tiebreaker[p.playerId].top8s += 1;
             });
         }
 
@@ -435,7 +549,22 @@ export const leagueService = {
                 currentStreak: data.currentStreak,
                 rank: 0
             };
-        }).sort((a, b) => b.totalPoints - a.totalPoints);
+        }).sort((a, b) => {
+            // 1. Most total points
+            if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+            // 2. Most wins (1st place finishes)
+            const tbA = tiebreaker[a.playerId] ?? { wins: 0, top4s: 0, top8s: 0 };
+            const tbB = tiebreaker[b.playerId] ?? { wins: 0, top4s: 0, top8s: 0 };
+            if (tbB.wins !== tbA.wins) return tbB.wins - tbA.wins;
+            // 3. Most top 4 finishes
+            if (tbB.top4s !== tbA.top4s) return tbB.top4s - tbA.top4s;
+            // 4. Most top 8 finishes
+            if (tbB.top8s !== tbA.top8s) return tbB.top8s - tbA.top8s;
+            // 5. Fewest tournaments played (more efficient)
+            if (a.tournamentsPlayed !== b.tournamentsPlayed) return a.tournamentsPlayed - b.tournamentsPlayed;
+            // 6. Alphabetical (last resort)
+            return a.playerName.localeCompare(b.playerName);
+        });
 
         standings.forEach((s, i) => { s.rank = i + 1; });
 
@@ -456,6 +585,33 @@ export const leagueService = {
 
     deleteLeague: async (leagueId: string): Promise<void> => {
         await deleteDoc(doc(db, LEAGUES_COLLECTION, leagueId));
+    },
+
+    subscribePublicLeagues: (callback: (leagues: League[]) => void) => {
+        const leaguesRef = collection(db, LEAGUES_COLLECTION);
+        const q = query(
+            leaguesRef,
+            where('visibility', '==', 'public'),
+            where('status', '==', 'active'),
+            orderBy('createdAt', 'desc'),
+            limit(50)
+        );
+        return onSnapshot(q, (snap) => {
+            const leagues = snap.docs.map(d => d.data() as League);
+            callback(leagues);
+        }, (err) => {
+            console.warn('[Firestore] Error listening to public leagues:', err);
+        });
+    },
+
+    subscribeUserLeagues: (userId: string, callback: (leagues: League[]) => void) => {
+        const q = query(collection(db, LEAGUES_COLLECTION), where('memberIds', 'array-contains', userId));
+        return onSnapshot(q, (snap) => {
+            const leagues = snap.docs.map(d => d.data() as League);
+            callback(leagues);
+        }, (err) => {
+            console.warn('[Firestore] Error listening to user leagues:', err);
+        });
     },
 
     subscribeToUpdates: (leagueId: string, onUpdate: () => void) => {

@@ -42,11 +42,19 @@ const LeagueListItem: React.FC<{ league: League; navigate: (path: string) => voi
 const Leagues: React.FC = () => {
     const navigate = useNavigate();
     const { user, uiMode } = useAuthStore();
-    const { publicLeagues, loadPublicLeagues, isLoading } = useLeagueStore();
+    const { publicLeagues, subscribeToPublicLeagues, subscribeToMyLeagues, isLoading } = useLeagueStore();
 
     useEffect(() => {
-        loadPublicLeagues();
-    }, [loadPublicLeagues]);
+        const unsubPublic = subscribeToPublicLeagues();
+        let unsubMine: (() => void) | undefined;
+        if (user?.id) {
+            unsubMine = subscribeToMyLeagues(user.id);
+        }
+        return () => {
+            unsubPublic();
+            if (unsubMine) unsubMine();
+        };
+    }, [subscribeToPublicLeagues, subscribeToMyLeagues, user?.id]);
 
     const myOrganizedLeagues = publicLeagues.filter(l => l.organizerId === user?.id);
     const otherLeagues = publicLeagues.filter(l => l.organizerId !== user?.id);

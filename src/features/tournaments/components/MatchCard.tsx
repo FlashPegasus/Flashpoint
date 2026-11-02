@@ -82,11 +82,11 @@ export const MatchCard: React.FC<MatchCardProps> = ({
                             </div>
                             {status === 'completed' && res && (
                                 <div className="flex items-center gap-2">
-                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-black flex items-center gap-1.5 transition-colors ${
-                                        res.status === 'WINNER' ? 'bg-[var(--fp-gold-lo)] text-[var(--fp-gold)] border border-[var(--fp-gold-lo)]' : 
-                                        res.status === 'SURVIVED' ? 'bg-green/10 text-green border border-green/20' :
-                                        res.status === 'BYE' ? 'bg-purple/10 text-purple border border-purple/20' :
-                                        'bg-white/5 text-muted border border-white/10'
+                                    <span className={`px-2 py-1 rounded-md text-[10px] font-black flex items-center gap-1.5 transition-colors shadow-sm ${
+                                        res.status === 'WINNER' ? 'bg-[var(--fp-gold-lo)] text-[var(--fp-gold-hi)] border border-[var(--fp-gold-lo)] shadow-[0_0_10px_rgba(212,172,13,0.2)]' : 
+                                        res.status === 'SURVIVED' ? 'bg-[var(--fp-emerald-lo)] text-[var(--fp-emerald-hi)] border border-[var(--fp-emerald-lo)]' :
+                                        res.status === 'BYE' ? 'bg-[rgba(139,92,246,0.1)] text-[#8b5cf6] border border-[rgba(139,92,246,0.2)]' :
+                                        'bg-[var(--fp-primary-lo)] text-[var(--fp-primary-hi)] border border-[var(--fp-primary)]'
                                     }`}>
                                         {res.status === 'WINNER' && <Crown size={10} />}
                                         {res.status === 'SURVIVED' && <CheckCircle2 size={10} />}
@@ -114,10 +114,10 @@ export const MatchCard: React.FC<MatchCardProps> = ({
                                 const player = participants.find(p => p.playerId === res.playerId);
                                 return (
                                     <div key={res.playerId} className="relative flex flex-col items-center group/node">
-                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center text-[8px] font-black z-10 transition-all ${
-                                            res.status === 'WINNER' ? 'bg-[var(--fp-gold)] border-[var(--fp-gold-lo)] text-black scale-110 shadow-[0_0_10px_rgba(245,158,11,0.4)]' :
-                                            res.status === 'SURVIVED' ? 'bg-green border-green/20 text-black' :
-                                            'bg-[var(--fp-void)] border-white/20 text-muted'
+                                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-black z-10 transition-all ${
+                                            res.status === 'WINNER' ? 'bg-[var(--fp-gold)] border-[var(--fp-gold-lo)] text-black scale-125 shadow-[0_0_12px_rgba(245,158,11,0.5)]' :
+                                            res.status === 'SURVIVED' ? 'bg-[var(--fp-emerald-hi)] border-[var(--fp-emerald-lo)] text-black scale-110' :
+                                            'bg-[var(--fp-void)] border-[var(--fp-primary-hi)] text-[var(--fp-primary-hi)]'
                                         }`}>
                                             {res.position || i + 1}
                                         </div>

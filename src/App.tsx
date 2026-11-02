@@ -20,7 +20,10 @@ import Profile from './pages/Profile';
 import JoinTournament from './pages/JoinTournament';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TranslateGuide from './pages/TranslateGuide';
+import Tracker from './pages/Tracker';
 import { BottomNav } from './components/layout';
+import CookieBanner from './components/modals/CookieBanner';
+import WelcomeTutorialModal from './components/modals/WelcomeTutorialModal';
 
 
 
@@ -71,6 +74,7 @@ const App: React.FC = () => {
 
         {/* Public Routes */}
         <Route path="/discover" element={<Discover />} />
+        <Route path="/tracker" element={<Tracker />} />
         <Route path="/ranking" element={<RankingGlobal />} />
         <Route path="/leagues" element={<Leagues />} />
         <Route path="/league/create" element={<ProtectedRoute><LeagueCreate /></ProtectedRoute>} />
@@ -85,6 +89,8 @@ const App: React.FC = () => {
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       <BottomNav />
+      <CookieBanner />
+      <WelcomeTutorialModal />
     </Router>
   );
 };

@@ -11,11 +11,14 @@ interface LeagueStore {
     isLoading: boolean;
 
     loadMyLeagues: (userId: string) => Promise<void>;
+    subscribeToPublicLeagues: () => () => void;
+    subscribeToMyLeagues: (userId: string) => () => void;
     loadPublicLeagues: () => Promise<void>;
     loadMorePublicLeagues: () => Promise<void>;
     loadLeague: (leagueId: string) => Promise<void>;
     createLeague: (data: Partial<League> & { organizerId: string; name: string }) => Promise<League>;
     joinLeagueByCode: (code: string, userId: string, userName: string) => Promise<League>;
+    leaveLeague: (leagueId: string, userId: string) => Promise<void>;
     linkTournament: (leagueId: string, tournamentId: string, organizerId: string) => Promise<void>;
     recalculateStandings: (leagueId: string) => Promise<void>;
     deleteLeague: (leagueId: string) => Promise<void>;
@@ -48,6 +51,18 @@ export const useLeagueStore = create<LeagueStore>((set) => ({
             set({ isLoading: false });
             console.error(err);
         }
+    },
+
+    subscribeToPublicLeagues: () => {
+        return leagueService.subscribePublicLeagues((leagues) => {
+            set({ publicLeagues: leagues, isLoading: false });
+        });
+    },
+
+    subscribeToMyLeagues: (userId: string) => {
+        return leagueService.subscribeUserLeagues(userId, (leagues) => {
+            set({ myLeagues: leagues, isLoading: false });
+        });
     },
 
     loadPublicLeagues: async () => {
@@ -112,6 +127,15 @@ export const useLeagueStore = create<LeagueStore>((set) => ({
         const league = await leagueService.joinLeagueByCode(code, userId, userName);
         set(state => ({ myLeagues: [...state.myLeagues.filter(l => l.id !== league.id), league] }));
         return league;
+    },
+
+    leaveLeague: async (leagueId, userId) => {
+        await leagueService.leaveLeague(leagueId, userId);
+        const updated = await leagueService.getLeagueById(leagueId);
+        set(state => ({
+            activeLeague: updated || null,
+            myLeagues: state.myLeagues.filter(l => l.id !== leagueId)
+        }));
     },
 
     linkTournament: async (leagueId, tournamentId, organizerId) => {

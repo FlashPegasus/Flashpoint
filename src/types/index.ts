@@ -58,6 +58,8 @@ export interface Participant {
     buchholz?: number;
     owp?: number; // Keep existing or use omw interchangeably? OMW% usually refers to OWP
     previousOpponents?: string[]; // Array of playerIds
+    earnedParticipation?: boolean; // If undefined, defaults to (status !== 'withdrawn'). Can be manually overridden.
+    customParticipationPoints?: number; // Optional manual override of participation points
 }
 
 export interface TableResult {
@@ -90,6 +92,7 @@ export interface Tournament {
     pairingMode: 'standard' | 'fair';
     status: TournamentStatus;
     organizerId: string;
+    ownerName?: string;
 
     // Configuration
     minPlayersPerTable: number;
@@ -138,7 +141,7 @@ export interface LeagueMember {
     playerId: string;
     playerName: string;
     joinedAt: string;
-    status: 'active' | 'pending' | 'rejected' | 'banned';
+    status: 'active' | 'pending' | 'rejected' | 'banned' | 'inactive';
     nickname?: string;
 }
 
@@ -188,6 +191,7 @@ export interface League {
     primaryColor?: string;
     description: string;
     organizerId: string;
+    ownerName?: string;
     startDate: string;
     endDate: string;
     status: 'active' | 'completed';

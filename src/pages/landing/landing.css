@@ -93,12 +93,21 @@
 .lp-feature-card:nth-child(4) { left:calc(50% + 40px);  bottom:28px; z-index:4; transform:rotate(4deg);  }
 .lp-feature-card:nth-child(5) { left:calc(50% + 160px); bottom:4px;  z-index:5; transform:rotate(8deg);  }
 
-/* Hover — lift keeping rotation */
-.lp-feature-card:nth-child(1):not(.lp-active):not(.lp-shuffling):hover { transform:rotate(-8deg) translateY(-26px); z-index:10; }
-.lp-feature-card:nth-child(2):not(.lp-active):not(.lp-shuffling):hover { transform:rotate(-4deg) translateY(-26px); z-index:10; }
-.lp-feature-card:nth-child(3):not(.lp-active):not(.lp-shuffling):hover { transform:rotate(0deg)  translateY(-26px); z-index:10; }
-.lp-feature-card:nth-child(4):not(.lp-active):not(.lp-shuffling):hover { transform:rotate(4deg)  translateY(-26px); z-index:10; }
-.lp-feature-card:nth-child(5):not(.lp-active):not(.lp-shuffling):hover { transform:rotate(8deg)  translateY(-26px); z-index:10; }
+/* Hover — lift keeping rotation (PC only) */
+@media (hover: hover) and (pointer: fine) {
+  .lp-feature-card:nth-child(1):not(.lp-active):not(.lp-shuffling):hover { transform:rotate(-8deg) translateY(-26px); z-index:10; }
+  .lp-feature-card:nth-child(2):not(.lp-active):not(.lp-shuffling):hover { transform:rotate(-4deg) translateY(-26px); z-index:10; }
+  .lp-feature-card:nth-child(3):not(.lp-active):not(.lp-shuffling):hover { transform:rotate(0deg)  translateY(-26px); z-index:10; }
+  .lp-feature-card:nth-child(4):not(.lp-active):not(.lp-shuffling):hover { transform:rotate(4deg)  translateY(-26px); z-index:10; }
+  .lp-feature-card:nth-child(5):not(.lp-active):not(.lp-shuffling):hover { transform:rotate(8deg)  translateY(-26px); z-index:10; }
+
+  .lp-feature-card:hover .lp-card-inner::before { opacity: 1; }
+  .lp-feature-card:hover .lp-edge-glow { opacity: 1; }
+  .lp-feature-card:hover .lp-corner { opacity: 1; }
+  .lp-feature-card:hover .lp-card-icon-wrap { transform: scale(1.08); }
+  .lp-feature-card:hover .lp-card-body { opacity:1; transform:translateY(0); }
+  .lp-feature-card:hover .lp-card-tags { opacity:1; transform:translateY(0); }
+}
 
 /* Active — fly to top-center, upright, elevated */
 .lp-feature-card.lp-active {
@@ -459,12 +468,6 @@
   .lp-feature-card:nth-child(3){ left:calc(50% - 60px);  bottom:28px; transform:rotate(0deg);  z-index:3; }
   .lp-feature-card:nth-child(4){ left:calc(50% - 20px);  bottom:14px; transform:rotate(4deg);  z-index:4; }
   .lp-feature-card:nth-child(5){ left:calc(50% + 20px);  bottom:2px;  transform:rotate(8deg);  z-index:5; }
-
-  .lp-feature-card:nth-child(1):not(.lp-active):not(.lp-shuffling):hover { transform:rotate(-8deg) translateY(-18px); }
-  .lp-feature-card:nth-child(2):not(.lp-active):not(.lp-shuffling):hover { transform:rotate(-4deg) translateY(-18px); }
-  .lp-feature-card:nth-child(3):not(.lp-active):not(.lp-shuffling):hover { transform:rotate(0deg)  translateY(-18px); }
-  .lp-feature-card:nth-child(4):not(.lp-active):not(.lp-shuffling):hover { transform:rotate(4deg)  translateY(-18px); }
-  .lp-feature-card:nth-child(5):not(.lp-active):not(.lp-shuffling):hover { transform:rotate(8deg)  translateY(-18px); }
 
   .lp-feature-card.lp-active {
     left:calc(50% - 60px) !important; bottom:85px !important;

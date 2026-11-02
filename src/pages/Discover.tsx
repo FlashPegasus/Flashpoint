@@ -37,7 +37,7 @@ const statusCfg: Record<string, { label: string; cls: string; dot: string }> = {
 
 const Discover: React.FC = () => {
     const { tournaments, loadTournaments, isLoading: loadingTournaments } = useTournamentStore();
-    const { publicLeagues, myLeagues, loadPublicLeagues, loadMyLeagues, isLoading: loadingLeagues } = useLeagueStore();
+    const { publicLeagues, myLeagues, subscribeToPublicLeagues, subscribeToMyLeagues, isLoading: loadingLeagues } = useLeagueStore();
     const { user } = useAuthStore();
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = React.useState('');
@@ -46,9 +46,16 @@ const Discover: React.FC = () => {
 
     React.useEffect(() => { 
         loadTournaments(); 
-        loadPublicLeagues();
-        if (user) loadMyLeagues(user.id);
-    }, [loadTournaments, loadPublicLeagues, loadMyLeagues, user]);
+        const unsubPublic = subscribeToPublicLeagues();
+        let unsubMine: (() => void) | undefined;
+        if (user?.id) {
+            unsubMine = subscribeToMyLeagues(user.id);
+        }
+        return () => {
+            unsubPublic();
+            if (unsubMine) unsubMine();
+        };
+    }, [loadTournaments, subscribeToPublicLeagues, subscribeToMyLeagues, user?.id]);
 
     const filteredTournaments = tournaments.filter(t => {
         const createdDate = new Date(t.date || Date.now());

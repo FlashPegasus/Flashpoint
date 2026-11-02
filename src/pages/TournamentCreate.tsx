@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, Save, HelpCircle } from 'lucide-react';
 import PageShell from '../components/layout';
 import { Button, Card, Input, Select, DynamicIcon } from '../components/ui';
+import ImageUpload from '../components/ui/ImageUpload';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
 import { useTemplateStore } from '../features/tournaments/templateStore';
 import { useLeagueStore } from '../features/leagues/leagueStore';
@@ -21,6 +22,8 @@ const TournamentCreate: React.FC = () => {
     const [saveAsTemplate, setSaveAsTemplate] = useState(false);
     const [templateName, setTemplateName] = useState('');
 
+    const [adminLeagues, setAdminLeagues] = useState<typeof myLeagues>([]);
+
     React.useEffect(() => {
         if (user?.id && !user.isAnonymous) {
             loadMyLeagues(user.id);
@@ -28,11 +31,38 @@ const TournamentCreate: React.FC = () => {
         }
     }, [user, loadMyLeagues, loadTemplates]);
 
+    // Filter leagues where the user is either the creator (organizerId) or has admin/master role
+    React.useEffect(() => {
+        const checkRoles = async () => {
+            if (!user?.id || myLeagues.length === 0) {
+                setAdminLeagues([]);
+                return;
+            }
+            const { leagueService } = await import('../features/leagues/leagueService');
+            const eligible: typeof myLeagues = [];
+
+            for (const league of myLeagues) {
+                if (league.organizerId === user.id) {
+                    eligible.push(league);
+                } else {
+                    try {
+                        const orgs = await leagueService.getOrganizers(league.id);
+                        const isOrg = orgs.some(o => o.userId === user.id && (o.role === 'master' || o.role === 'admin'));
+                        if (isOrg) eligible.push(league);
+                    } catch (_) {}
+                }
+            }
+            setAdminLeagues(eligible);
+        };
+        checkRoles();
+    }, [myLeagues, user?.id]);
+
     const [formData, setFormData] = useState({
         name: '',
         date: new Date().toISOString().split('T')[0],
         location: 'Local Game Store',
         description: '',
+        bannerUrl: '',
         format: 'multiplayer' as TournamentFormat,
         pairingMode: 'standard' as 'standard' | 'fair',
         leagueId: '',
@@ -71,7 +101,7 @@ const TournamentCreate: React.FC = () => {
     const prevStep = () => setStep(step - 1);
 
     const handleCreate = async () => {
-        const payload = { ...formData, organizerId: user?.id || 'anonymous' };
+        const payload = { ...formData, organizerId: user?.id || 'anonymous', ownerName: user?.name || 'Organizador' };
         const { leagueId, ...tournamentData } = payload as any;
 
         if (saveAsTemplate && templateName.trim() && user?.id) {
@@ -158,6 +188,12 @@ const TournamentCreate: React.FC = () => {
                                 value={formData.name}
                                 onChange={e => setFormData({ ...formData, name: e.target.value })}
                             />
+                            <ImageUpload
+                                value={formData.bannerUrl}
+                                onChange={(url) => setFormData({ ...formData, bannerUrl: url })}
+                                label="Capa do Torneio (Opcional)"
+                                description="Adicione um banner para destacar seu evento (Recomendado: 16:9)"
+                            />
                             <div className="grid grid-cols-2 gap-4">
                                 <Input
                                     label="Data"
@@ -173,12 +209,12 @@ const TournamentCreate: React.FC = () => {
                                 />
                             </div>
 
-                            {myLeagues.length > 0 && (
+                            {adminLeagues.length > 0 && (
                                 <Select
                                     label="Vincular a uma Liga (Opcional)"
                                     options={[
                                         { value: '', label: 'Não vincular (Torneio Único)' },
-                                        ...myLeagues.map(l => ({ value: l.id, label: l.name }))
+                                        ...adminLeagues.map(l => ({ value: l.id, label: l.name }))
                                     ]}
                                     value={formData.leagueId}
                                     onChange={e => setFormData({ ...formData, leagueId: e.target.value })}

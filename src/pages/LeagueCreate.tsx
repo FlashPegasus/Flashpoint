@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, Trophy } from 'lucide-react';
 import PageShell from '../components/layout';
-// import { Button, Input } from '../components/ui'; // Unused in this file
+import ImageUpload from '../components/ui/ImageUpload';
 import { useAuthStore } from '../features/auth/authStore';
 import { useLeagueStore } from '../features/leagues/leagueStore';
 import { TCG_PRESETS, type ScoringPreset } from '../utils/tcgPresets';
@@ -36,6 +36,7 @@ const LeagueCreate: React.FC = () => {
     const [formData, setFormData] = useState({
         name: '',
         description: '',
+        bannerUrl: '',
         startDate: new Date().toISOString().split('T')[0],
         endDate: '',
         visibility: 'public' as 'public' | 'private',
@@ -77,7 +78,7 @@ const LeagueCreate: React.FC = () => {
         if (!formData.name.trim()) { toast.error('Dê um nome à sua liga!'); return; }
         setIsSubmitting(true);
         try {
-            const league = await createLeague({ ...formData, organizerId: user.id });
+            const league = await createLeague({ ...formData, organizerId: user.id, ownerName: user.name || 'Organizador' });
             toast.success(`Liga "${league.name}" criada!`);
             navigate(`/league/${league.id}`);
         } catch (err: any) {
@@ -134,6 +135,15 @@ const LeagueCreate: React.FC = () => {
                                     value={formData.description}
                                     onChange={e => update('description', e.target.value)}
                                     className={`${inputCls} resize-none`} />
+                            </div>
+                            <div>
+                                <label className={labelCls}>Banner / Capa da Liga</label>
+                                <ImageUpload
+                                    value={formData.bannerUrl}
+                                    onChange={(url) => update('bannerUrl', url)}
+                                    label=""
+                                    description="Imagem de capa (aparece no topo da página da liga)"
+                                />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>

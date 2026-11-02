@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trophy, RefreshCw, Trash2 } from 'lucide-react';
 import { Button, Card } from '../../../components/ui';
+import ImageUpload from '../../../components/ui/ImageUpload';
 import type { League } from '../../../types';
 
 interface LeagueDetailsTabProps {
@@ -36,6 +37,7 @@ export const LeagueDetailsTab: React.FC<LeagueDetailsTabProps> = ({
                         setEditData({
                             name: activeLeague.name,
                             description: activeLeague.description,
+                            bannerUrl: activeLeague.bannerUrl || '',
                             primaryColor: activeLeague.primaryColor || '#9333ea',
                             pointsParticipation: activeLeague.pointsParticipation,
                             pointsWin: activeLeague.pointsWin,
@@ -67,6 +69,14 @@ export const LeagueDetailsTab: React.FC<LeagueDetailsTabProps> = ({
                     <label className="text-xs text-secondary mt-2">Descrição</label>
                     <textarea className="w-full glass p-3 border-white/5 text-primary"
                         value={editData.description} onChange={e => setEditData({ ...editData, description: e.target.value })} />
+
+                    <label className="text-xs text-secondary mt-4 block">Banner / Capa da Liga</label>
+                    <ImageUpload
+                        value={editData.bannerUrl || ''}
+                        onChange={(url) => setEditData({ ...editData, bannerUrl: url })}
+                        label=""
+                        description="Imagem de capa da liga (16:9 recomendado)"
+                    />
 
                     <label className="text-xs text-secondary mt-2">Visibilidade</label>
                     <select className="w-full glass p-3 border-white/5 text-primary bg-bg-dark"

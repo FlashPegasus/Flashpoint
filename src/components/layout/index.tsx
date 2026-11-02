@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Trophy, Users, LayoutDashboard, LogOut, Search, Menu, X, User, Plus, ChevronDown } from 'lucide-react';
+import { Trophy, Users, LayoutDashboard, LogOut, Search, Menu, X, User, Plus, ChevronDown, QrCode, Activity } from 'lucide-react';
+import CheckInModal from '../modals/CheckInModal';
 import { useAuthStore } from '../../features/auth/authStore';
 import { IconCreatePlus } from '../../assets/icons';
 import AdPlaceholder from '../ui/AdPlaceholder';
@@ -93,8 +94,10 @@ export const Navbar: React.FC = () => {
                                     <Link to="/discover" className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${location.pathname === '/discover' ? 'text-primary' : 'text-secondary hover:text-primary'}`}>
                                         <Search size={14} /><span>Descobrir</span>
                                     </Link>
-                                    <Link to="/leagues" className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${location.pathname === '/leagues' ? 'text-primary' : 'text-secondary hover:text-primary'}`}>
-                                        <Users size={14} /><span>Ligas</span>
+                                    <Link to="/tracker" className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${location.pathname === '/tracker' ? 'text-primary' : 'text-secondary hover:text-primary'}`}>
+                                        <Activity size={14} className="text-[var(--fp-purple)]" />
+                                        <span>Tracker</span>
+                                        <span className="text-[8px] bg-[var(--fp-purple)]/20 text-[var(--fp-purple-hi)] px-1.5 py-0.5 rounded-full font-black">BETA</span>
                                     </Link>
                                 </>
                             ) : (
@@ -193,7 +196,7 @@ export const Navbar: React.FC = () => {
             </nav>
 
             {isMenuOpen && (
-                <div className="md:hidden fixed inset-x-0 top-20 mx-4 glass-card p-6 animate-fade-in shadow-2xl border border-white/10 z-[1001]">
+                <div className="md:hidden fixed inset-x-0 top-20 mx-4 glass-card p-6 animate-fade-in shadow-2xl border border-white/10 z-[1001] pointer-events-auto">
                     <div className="flex flex-col gap-6">
                         {user && (
                             <div className="flex flex-col gap-3">
@@ -225,8 +228,11 @@ export const Navbar: React.FC = () => {
                             <Link to="/discover" onClick={closeAll} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
                                 <Search size={18} /> <span>Descobrir Eventos</span>
                             </Link>
-                            <Link to="/leagues" onClick={closeAll} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
-                                <Users size={18} /> <span>Ver Ligas</span>
+                            <Link to="/tracker" onClick={closeAll} className="flex items-center justify-between text-sm font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <Activity size={18} className="text-[var(--fp-purple)]" /> <span>Tracker</span>
+                                </div>
+                                <span className="text-[9px] bg-[var(--fp-purple)]/20 text-[var(--fp-purple-hi)] px-2 py-0.5 rounded-full font-black">BETA</span>
                             </Link>
                             {user && (
                                 <Link to="/my-area" onClick={closeAll} className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-secondary hover:text-primary transition-colors">
@@ -266,11 +272,13 @@ export const BottomNav: React.FC = () => {
     const { user } = useAuthStore();
     const navigate = useNavigate();
     const [isCreateOpen, setIsCreateOpen] = React.useState(false);
+    const [isCheckInOpen, setIsCheckInOpen] = React.useState(false);
 
     if (!user) return null;
 
     return (
         <>
+            <CheckInModal isOpen={isCheckInOpen} onClose={() => setIsCheckInOpen(false)} />
             {/* Create Overlay Mobile */}
             {isCreateOpen && (
                 <div className="md:hidden fixed inset-0 z-[60] animate-fade-in bg-black/60 backdrop-blur-sm" onClick={() => setIsCreateOpen(false)}>
@@ -315,27 +323,37 @@ export const BottomNav: React.FC = () => {
                     <NavLink
                         to="/discover"
                         className={({ isActive }) =>
-                            `flex flex-col items-center gap-1 transition-all flex-1 ${isActive ? 'text-accent-primary' : 'text-secondary hover:text-primary'}`
+                            `flex flex-col items-center gap-1 transition-all flex-1 relative ${isActive ? 'text-accent-primary' : 'text-secondary hover:text-primary'}`
                         }
                     >
                         {({ isActive }) => (
                             <>
-                                <Search size={22} strokeWidth={isActive ? 2.5 : 2} />
-                                <span className="text-[9px] font-bold uppercase tracking-wider">Descobrir</span>
+                                <span className="relative flex items-center justify-center">
+                                    {isActive && (
+                                        <span className="absolute inset-0 -m-2 rounded-full bg-accent-primary/20 blur-md animate-pulse-subtle" />
+                                    )}
+                                    <Search size={22} strokeWidth={isActive ? 2.5 : 2} className="relative z-10" />
+                                </span>
+                                <span className={`text-[9px] font-bold uppercase tracking-wider transition-all ${isActive ? 'opacity-100' : 'opacity-60'}`}>Descobrir</span>
                             </>
                         )}
                     </NavLink>
 
                     <NavLink
-                        to="/leagues"
+                        to="/tracker"
                         className={({ isActive }) =>
-                            `flex flex-col items-center gap-1 transition-all flex-1 ${isActive ? 'text-accent-primary' : 'text-secondary hover:text-primary'}`
+                            `flex flex-col items-center gap-1 transition-all flex-1 relative ${isActive ? 'text-accent-primary' : 'text-secondary hover:text-primary'}`
                         }
                     >
                         {({ isActive }) => (
                             <>
-                                <Trophy size={22} strokeWidth={isActive ? 2.5 : 2} />
-                                <span className="text-[9px] font-bold uppercase tracking-wider">Ligas</span>
+                                <span className="relative flex items-center justify-center">
+                                    {isActive && (
+                                        <span className="absolute inset-0 -m-2 rounded-full bg-accent-primary/20 blur-md animate-pulse-subtle" />
+                                    )}
+                                    <Activity size={22} strokeWidth={isActive ? 2.5 : 2} className="relative z-10" />
+                                </span>
+                                <span className={`text-[9px] font-bold uppercase tracking-wider transition-all ${isActive ? 'opacity-100' : 'opacity-60'}`}>Tracker</span>
                             </>
                         )}
                     </NavLink>
@@ -353,30 +371,30 @@ export const BottomNav: React.FC = () => {
                     <NavLink
                         to="/my-area"
                         className={({ isActive }) =>
-                            `flex flex-col items-center gap-1 transition-all flex-1 ${isActive ? 'text-accent-primary' : 'text-secondary hover:text-primary'}`
+                            `flex flex-col items-center gap-1 transition-all flex-1 relative ${isActive ? 'text-accent-primary' : 'text-secondary hover:text-primary'}`
                         }
                     >
                         {({ isActive }) => (
                             <>
-                                <LayoutDashboard size={22} strokeWidth={isActive ? 2.5 : 2} />
-                                <span className="text-[9px] font-bold uppercase tracking-wider">Gestão</span>
+                                <span className="relative flex items-center justify-center">
+                                    {isActive && (
+                                        <span className="absolute inset-0 -m-2 rounded-full bg-accent-primary/20 blur-md animate-pulse-subtle" />
+                                    )}
+                                    <LayoutDashboard size={22} strokeWidth={isActive ? 2.5 : 2} className="relative z-10" />
+                                </span>
+                                <span className={`text-[9px] font-bold uppercase tracking-wider transition-all ${isActive ? 'opacity-100' : 'opacity-60'}`}>Gestão</span>
                             </>
                         )}
                     </NavLink>
 
-                    <NavLink
-                        to="/profile"
-                        className={({ isActive }) =>
-                            `flex flex-col items-center gap-1 transition-all flex-1 ${isActive ? 'text-accent-primary' : 'text-secondary hover:text-primary'}`
-                        }
+                    {/* Quick Check-in / QR Scan */}
+                    <button
+                        onClick={() => setIsCheckInOpen(true)}
+                        className="flex flex-col items-center gap-1 transition-all flex-1 text-secondary hover:text-primary active:scale-90"
                     >
-                        {({ isActive }) => (
-                            <>
-                                <User size={22} strokeWidth={isActive ? 2.5 : 2} />
-                                <span className="text-[9px] font-bold uppercase tracking-wider">Perfil</span>
-                            </>
-                        )}
-                    </NavLink>
+                        <QrCode size={22} strokeWidth={2} />
+                        <span className="text-[9px] font-bold uppercase tracking-wider opacity-60">Entrar</span>
+                    </button>
                 </div>
             </nav>
         </>
@@ -406,7 +424,7 @@ const PageShell: React.FC<PageShellProps> = ({ children, showAd = true, showBack
                 </>
             )}
 
-            <main className="flex-grow pt-32 animate-fade-in relative">
+            <main className="flex-grow pt-32 pb-24 md:pb-8 animate-fade-in relative">
                 {children}
 
                 {showAd && (
@@ -415,7 +433,7 @@ const PageShell: React.FC<PageShellProps> = ({ children, showAd = true, showBack
                     </div>
                 )}
             </main>
-            <footer className="py-16 mt-auto border-t border-white/5 bg-white/[0.02]">
+            <footer className="py-16 pb-28 md:pb-16 mt-auto border-t border-white/5 bg-white/[0.02]">
                 <div className="container text-center text-muted">
                     <p>© {new Date().getFullYear()} FlashPoint - Gerenciador de Torneios TCG</p>
                     <p className="text-sm mt-1">Feito para a comunidade de TCG.</p>

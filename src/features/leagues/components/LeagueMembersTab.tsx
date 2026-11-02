@@ -31,6 +31,7 @@ export const LeagueMembersTab: React.FC<LeagueMembersTabProps> = ({
                                 <p className="font-bold flex items-center gap-2">
                                     {m.playerName}
                                     {m.status === 'banned' && <span className="bg-red-500/20 text-red-500 text-[10px] px-2 py-0.5 rounded-full border border-red-500/30">BANIDO</span>}
+                                    {m.status === 'inactive' && <span className="bg-white/10 text-[#7a5c5c] text-[10px] px-2 py-0.5 rounded-full border border-white/10">INATIVO</span>}
                                 </p>
                                 <p className="text-xs text-muted">Entrou em: {new Date(m.joinedAt).toLocaleDateString()}</p>
                             </div>

@@ -2,6 +2,16 @@
 
 Este arquivo serve como um diário de bordo da evolução do projeto. Cada "Fase" concluída deve ser registrada aqui para manter a continuidade do desenvolvimento.
 
+## 2026-08-28: Fase 33 - Modais de Confirmação, Tracker Beta, Sync em Tempo Real e Nome de Organizador
+- **Objetivo**: Implementar confirmação transparente ao entrar em eventos, adicionar Tracker (Beta) na navegação principal, sincronizar ligas em tempo real com Firestore `onSnapshot` e exibir nome do organizador nos eventos.
+- **Implementações**:
+  - Modal de seleção e validação de nome de Convidado (máx 26 chars, letras/números/espaços).
+  - Componente reutilizável `JoinConfirmationModal` integrado em `JoinTournament.tsx` e `JoinLeague.tsx` com detecção de participante já cadastrado.
+  - Sincronização em tempo real das ligas públicas e do usuário (`subscribePublicLeagues`, `subscribeUserLeagues`) em `leagueService.ts`, `leagueStore.ts`, `Leagues.tsx` e `Discover.tsx`.
+  - Substituição da aba "Ligas" por "Tracker (Beta)" na barra desktop, mobile drawer e bottom navigation, direcionando para a nova página `Tracker.tsx` (`/tracker`).
+  - Campo `ownerName` adicionado em `Tournament` e `League`, salvo na criação e exibido logo abaixo do título em `TournamentPublic.tsx` e `LeagueDashboard.tsx`.
+- **Status**: Concluída.
+
 ## 2026-03-16: Fase 32 - Estabilização de Ligas, Relatórios e E2E
 - **Objetivo**: Refinamento da gestão de Ligas, vínculos seguros com torneios, melhorias de UI nos relatórios de resultados e testes rápidos (E2E).
 - **Implementações**:

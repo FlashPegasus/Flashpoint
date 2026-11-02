@@ -13,6 +13,9 @@ const Login: React.FC = () => {
     const [name, setName] = React.useState('');
     const [showPassword, setShowPassword] = React.useState(false);
     const [validationError, setValidationError] = React.useState('');
+    const [guestName, setGuestName] = React.useState('');
+    const [showGuestModal, setShowGuestModal] = React.useState(false);
+    const [guestNameError, setGuestNameError] = React.useState('');
     // Google login username customization
     const [googleUser, setGoogleUser] = React.useState<{ uid: string; suggestedName: string; avatar: string } | null>(null);
     const [googleUsername, setGoogleUsername] = React.useState('');
@@ -72,15 +75,53 @@ const Login: React.FC = () => {
         navigate('/my-area');
     };
 
-    const handleGuestLogin = async () => {
+    const handleGuestLogin = () => {
+        setShowGuestModal(true);
+    };
+
+    const handleGuestConfirm = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const trimmed = guestName.trim();
+        const valid = /^[A-Za-z0-9 ]+$/.test(trimmed) && trimmed.length > 0 && trimmed.length <= 26;
+        if (!valid) {
+            setGuestNameError('Nome deve ter até 26 caracteres, apenas letras, números e espaços.');
+            return;
+        }
+        setGuestNameError('');
         await loginAnonymously();
+        await updateProfile({ name: trimmed });
         navigate('/my-area');
+        setShowGuestModal(false);
     };
 
     const displayError = validationError || error;
 
     return (
         <PageShell>
+            {/* Guest username modal */}
+            {showGuestModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="glass-card p-8 w-full max-w-sm shadow-2xl text-center">
+                        <h2 className="text-xl font-bold mb-4">Escolha seu nome</h2>
+                        <form onSubmit={handleGuestConfirm} className="flex flex-col gap-4">
+                            <input
+                                type="text"
+                                value={guestName}
+                                onChange={(e) => setGuestName(e.target.value)}
+                                placeholder="Nome no torneio"
+                                maxLength={26}
+                                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-accent"
+                            />
+                            {guestNameError && <p className="text-red-400 text-xs">{guestNameError}</p>}
+                            <div className="flex gap-2">
+                                <button type="button" onClick={() => setShowGuestModal(false)} className="flex-1 py-2 text-sm text-secondary">Cancelar</button>
+                                <button type="submit" className="flex-1 py-2 rounded-lg bg-accent text-white text-sm font-bold">Entrar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {/* Google username confirmation modal */}
             {googleUser && (
                 <div className="container section flex justify-center">

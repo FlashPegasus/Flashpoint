@@ -81,10 +81,12 @@ body::after {
                 border-color var(--fp-duration) var(--fp-ease),
                 box-shadow var(--fp-duration) var(--fp-ease);
   }
-  .fp-card:hover {
-    transform: translateY(-3px);
-    border-color: var(--fp-border-hi);
-    box-shadow: var(--fp-shadow-lg), var(--fp-shadow-primary);
+  @media (hover: hover) and (pointer: fine) {
+    .fp-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--fp-border-hi);
+      box-shadow: var(--fp-shadow-lg), var(--fp-shadow-primary);
+    }
   }
 
   /* Botões */
