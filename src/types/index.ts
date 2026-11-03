@@ -9,6 +9,7 @@ export interface User {
     bio?: string;
     isAnonymous?: boolean;
     isPublic?: boolean;
+    hiddenTournaments?: string[];
     rank?: number;
     stats: {
         tournamentsPlayed: number;

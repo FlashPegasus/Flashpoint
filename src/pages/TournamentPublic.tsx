@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Calendar, Users, MapPin, Trophy, Info, Search, Sword, Crown, Medal, Shield } from 'lucide-react';
+import { Calendar, Users, MapPin, Trophy, Info, Search, Sword, Crown, Medal, Shield, LogOut, EyeOff, Eye } from 'lucide-react';
 import PageShell from '../components/layout';
 import { Button, Card, LoadingScreen, Modal, Input } from '../components/ui';
 import { useTournamentStore } from '../features/tournaments/tournamentStore';
@@ -9,6 +9,7 @@ import { MatchCard } from '../features/tournaments/components/MatchCard';
 import { IconPairingTable, IconShareInvite } from '../assets/icons';
 import { getInviteLink, copyToClipboard } from '../utils/inviteHelper';
 import { syncService } from '../features/tournaments/syncService';
+import { tournamentService } from '../features/tournaments/tournamentService';
 import { leagueService } from '../features/leagues/leagueService';
 import type { League } from '../types';
 import toast from 'react-hot-toast';
@@ -20,7 +21,7 @@ import toast from 'react-hot-toast';
 const TournamentPublic: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { user } = useAuthStore();
+    const { user, updateProfile } = useAuthStore();
     const { activeTournament, loadTournament, addParticipant } = useTournamentStore();
     const [linkedLeague, setLinkedLeague] = useState<League | null>(null);
 
@@ -111,6 +112,34 @@ const TournamentPublic: React.FC = () => {
 
     const joinedParticipant = activeTournament.participants.find(p => p.playerId === user?.id);
     const isJoined = joinedParticipant && joinedParticipant.status === 'active';
+
+    const isOrganizerView = user?.id === activeTournament.organizerId;
+    const isHiddenByMe = !!id && (user?.hiddenTournaments || []).includes(id);
+
+    const handleLeaveOrDrop = async () => {
+        if (!user || !id) return;
+        const isRegistration = activeTournament.status === 'registration';
+        const msg = isRegistration
+            ? 'Cancelar sua inscrição neste torneio?'
+            : 'Desistir deste torneio?\n\nVocê sai da competição, mas seu histórico é mantido. Esta ação não pode ser desfeita.';
+        if (!window.confirm(msg)) return;
+        try {
+            if (isRegistration) await tournamentService.removeParticipant(id, user.id);
+            else await tournamentService.withdrawParticipant(id, user.id);
+            await loadTournament(id);
+            toast.success(isRegistration ? 'Inscrição cancelada.' : 'Você desistiu do torneio.');
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao concluir a ação.');
+        }
+    };
+
+    const handleToggleHidden = async () => {
+        if (!user || !id) return;
+        const current = user.hiddenTournaments || [];
+        const next = isHiddenByMe ? current.filter(h => h !== id) : [...current, id];
+        await updateProfile({ hiddenTournaments: next });
+        toast.success(isHiddenByMe ? 'Torneio restaurado na sua lista.' : 'Removido da sua lista. Para restaurar, use o filtro "Ocultos" na Minha Área.');
+    };
 
     const handleJoin = async () => {
         if (!user) {
@@ -382,6 +411,15 @@ const TournamentPublic: React.FC = () => {
                                             <Button variant="glow" onClick={() => navigate(`/tournament/${id}`)}>Acessar Painel</Button>
                                         )}
                                         <Button variant="secondary" onClick={() => navigate('/my-area')}>Minha Área</Button>
+                                        {!isOrganizerView && (activeTournament.status === 'registration' || activeTournament.status === 'ongoing') && (
+                                            <button
+                                                onClick={handleLeaveOrDrop}
+                                                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-wider text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-colors"
+                                            >
+                                                <LogOut size={14} />
+                                                {activeTournament.status === 'registration' ? 'Cancelar inscrição' : 'Desistir do torneio'}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ) : (
@@ -393,6 +431,17 @@ const TournamentPublic: React.FC = () => {
                                 >
                                     {activeTournament.status === 'registration' || (activeTournament.status === 'ongoing' && activeTournament.allowLateRegistration) ? 'Quero Participar' : 'Encerrado'}
                                 </Button>
+                            )}
+
+                            {user && (
+                                <button
+                                    onClick={handleToggleHidden}
+                                    title="Não apaga o torneio, só tira da sua lista"
+                                    className="mt-6 flex items-center justify-center gap-2 w-full py-2 text-[10px] font-bold uppercase tracking-wider text-muted hover:text-white transition-colors"
+                                >
+                                    {isHiddenByMe ? <Eye size={13} /> : <EyeOff size={13} />}
+                                    {isHiddenByMe ? 'Restaurar na minha lista' : 'Remover da minha lista'}
+                                </button>
                             )}
 
                             {activeTournament.status === 'registration' && (

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Trophy, Plus, Users, Calendar, ArrowRight, Shield as ShieldIcon, Zap, Eye, EyeOff, LayoutGrid } from 'lucide-react';
+import { Trophy, Plus, Users, Calendar, ArrowRight, Shield as ShieldIcon, Zap, Eye, EyeOff, LayoutGrid, LogOut, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageShell from '../components/layout';
 import { Button } from '../components/ui';
@@ -15,6 +15,27 @@ const statusCfg: Record<string, { label: string; cls: string }> = {
     registration: { label: 'Aberto',        cls: 'bg-primary/10 text-primary border border-primary/30' },
     ongoing:      { label: 'Em Andamento',  cls: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' },
     completed:    { label: 'Concluído',     cls: 'bg-amber-500/10 text-amber-400 border border-amber-500/30' },
+    cancelled:    { label: 'Cancelado',     cls: 'bg-red-500/10 text-red-400 border border-red-500/30' },
+};
+
+type StatusFilter = 'active' | 'registration' | 'ongoing' | 'completed' | 'cancelled' | 'hidden' | 'all';
+
+const FILTERS: { key: StatusFilter; label: string }[] = [
+    { key: 'active',       label: 'Ativos' },
+    { key: 'registration', label: 'Abertos' },
+    { key: 'ongoing',      label: 'Em andamento' },
+    { key: 'completed',    label: 'Concluídos' },
+    { key: 'cancelled',    label: 'Cancelados' },
+    { key: 'hidden',       label: 'Ocultos' },
+    { key: 'all',          label: 'Todos' },
+];
+
+const STATUS_ORDER: Record<string, number> = { ongoing: 0, registration: 1, draft: 2, completed: 3, cancelled: 4 };
+
+const matchesFilter = (status: string, f: StatusFilter) => {
+    if (f === 'all') return true;
+    if (f === 'active') return status === 'draft' || status === 'registration' || status === 'ongoing';
+    return status === f;
 };
 
 const dicebear = (seed: string, size = 36) =>
@@ -26,6 +47,18 @@ const MyArea: React.FC = () => {
     const { myLeagues, loadMyLeagues } = useLeagueStore();
     const [stats, setStats] = React.useState<any>(null);
     const navigate = useNavigate();
+    const [filter, setFilter] = React.useState<StatusFilter>('active');
+    const filterStorageKey = `myarea.filter.${uiMode === 'organizer' ? 'organizer' : 'player'}`;
+
+    React.useEffect(() => {
+        const saved = localStorage.getItem(filterStorageKey);
+        setFilter(FILTERS.some(f => f.key === saved) ? (saved as StatusFilter) : 'active');
+    }, [filterStorageKey]);
+
+    const changeFilter = (f: StatusFilter) => {
+        setFilter(f);
+        localStorage.setItem(filterStorageKey, f);
+    };
 
     React.useEffect(() => {
         loadTournaments();
@@ -42,6 +75,53 @@ const MyArea: React.FC = () => {
     const participatingTournaments = React.useMemo(() => 
         tournaments.filter(t => (t.participants || []).some(p => p.playerId === user?.id)),
     [tournaments, user?.id]);
+
+    const baseList = uiMode === 'organizer' ? myTournaments : participatingTournaments;
+    const hiddenIds = React.useMemo(() => user?.hiddenTournaments || [], [user?.hiddenTournaments]);
+    const currentList = React.useMemo(() => baseList.filter(t => !hiddenIds.includes(t.id)), [baseList, hiddenIds]);
+    const hiddenList = React.useMemo(() => baseList.filter(t => hiddenIds.includes(t.id)), [baseList, hiddenIds]);
+
+    const setHidden = async (e: React.MouseEvent, id: string, hide: boolean) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const next = hide ? [...hiddenIds, id] : hiddenIds.filter(h => h !== id);
+        await updateProfile({ hiddenTournaments: next });
+        toast.success(hide ? 'Removido da sua lista. Para restaurar, use o filtro "Ocultos".' : 'Torneio restaurado na sua lista.');
+    };
+
+    const handleLeave = async (e: React.MouseEvent, id: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!user || !window.confirm('Cancelar sua inscrição neste torneio?')) return;
+        try {
+            await tournamentService.removeParticipant(id, user.id);
+            await loadTournaments();
+            toast.success('Inscrição cancelada.');
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao cancelar inscrição.');
+        }
+    };
+
+    const handleDrop = async (e: React.MouseEvent, id: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!user || !window.confirm('Desistir deste torneio?\n\nVocê sai da competição, mas seu histórico é mantido. Esta ação não pode ser desfeita.')) return;
+        try {
+            await tournamentService.withdrawParticipant(id, user.id);
+            await loadTournaments();
+            toast.success('Você desistiu do torneio.');
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao desistir do torneio.');
+        }
+    };
+
+    const visibleList = React.useMemo(() =>
+        (filter === 'hidden' ? hiddenList : currentList)
+            .filter(t => filter === 'hidden' || matchesFilter(t.status, filter))
+            .sort((a, b) =>
+                (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99) ||
+                new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [currentList, hiddenList, filter]);
 
     const organizedCount = React.useMemo(() => 
         tournaments.filter(t =>
@@ -184,8 +264,27 @@ const MyArea: React.FC = () => {
                             </h2>
                         </div>
 
+                        {baseList.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                                {FILTERS.map(f => {
+                                    const count = f.key === 'hidden' ? hiddenList.length : currentList.filter(t => matchesFilter(t.status, f.key)).length;
+                                    const selected = filter === f.key;
+                                    if (count === 0 && !selected && f.key !== 'active' && f.key !== 'all') return null;
+                                    return (
+                                        <button
+                                            key={f.key}
+                                            onClick={() => changeFilter(f.key)}
+                                            className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border transition-all ${selected ? 'bg-primary/20 text-primary border-primary/40' : 'bg-white/5 text-muted border-white/10 hover:text-white'}`}
+                                        >
+                                            {f.label} ({count})
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+
                         <div className="grid gap-4">
-                            {(uiMode === 'organizer' ? myTournaments : participatingTournaments).length === 0 ? (
+                            {baseList.length === 0 ? (
                                 <div className="fp-card p-12 text-center border-dashed opacity-50">
                                     <Zap size={48} className="mx-auto mb-4 text-muted" />
                                     <h3 className="text-xl font-bold mb-2">Nada por aqui...</h3>
@@ -194,8 +293,13 @@ const MyArea: React.FC = () => {
                                         {uiMode === 'organizer' ? 'Criar Torneio' : 'Encontrar Torneios'}
                                     </Button>
                                 </div>
+                            ) : visibleList.length === 0 ? (
+                                <div className="fp-card p-12 text-center border-dashed opacity-70">
+                                    <h3 className="text-xl font-bold mb-4">Nenhum torneio neste filtro</h3>
+                                    <Button variant="ghost" onClick={() => changeFilter('all')}>Mostrar todos</Button>
+                                </div>
                             ) : (
-                                (uiMode === 'organizer' ? myTournaments : participatingTournaments).map(t => (
+                                visibleList.map(t => (
                                     <Link key={t.id} to={uiMode === 'organizer' ? `/tournament/${t.id}` : `/tournament/${t.id}/public`} className="group">
                                         <div className="fp-card p-5 group-hover:border-primary/50 transition-all flex justify-between items-center group-hover:bg-white/[0.02]">
                                             <div className="flex gap-4">
@@ -213,10 +317,41 @@ const MyArea: React.FC = () => {
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-3">
+                                                {(() => {
+                                                    const me = uiMode !== 'organizer' ? t.participants?.find(p => p.playerId === user?.id) : undefined;
+                                                    if (!me) return null;
+                                                    if (me.status === 'withdrawn') {
+                                                        return <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Você desistiu</span>;
+                                                    }
+                                                    if (t.status === 'registration') {
+                                                        return (
+                                                            <button onClick={e => handleLeave(e, t.id)} title="Cancelar minha inscrição"
+                                                                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-colors">
+                                                                <LogOut size={12} /> Cancelar inscrição
+                                                            </button>
+                                                        );
+                                                    }
+                                                    if (t.status === 'ongoing') {
+                                                        return (
+                                                            <button onClick={e => handleDrop(e, t.id)} title="Desistir do torneio"
+                                                                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-colors">
+                                                                <LogOut size={12} /> Desistir
+                                                            </button>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
                                                 <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${statusCfg[t.status]?.cls || ''}`}>
                                                     {statusCfg[t.status]?.label || t.status}
                                                 </div>
+                                                <button
+                                                    onClick={e => setHidden(e, t.id, filter !== 'hidden')}
+                                                    title={filter === 'hidden' ? 'Restaurar na minha lista' : 'Remover da minha lista (não apaga o torneio)'}
+                                                    className="p-1.5 rounded-lg text-muted hover:text-white hover:bg-white/10 transition-colors"
+                                                >
+                                                    {filter === 'hidden' ? <RotateCcw size={15} /> : <EyeOff size={15} />}
+                                                </button>
                                                 <ArrowRight size={18} className="text-muted group-hover:text-primary transition-all group-hover:translate-x-1" />
                                             </div>
                                         </div>
